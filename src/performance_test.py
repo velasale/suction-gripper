@@ -171,16 +171,23 @@ class RoboticGripper():
         self.noise_yaw_command = 0
         self.noise_yaw_real = 0
 
+        # ---- Pose variables
+        self.start_pose = tf2_geometry_msgs.PoseStamped()
+        self.goal_pose = tf2_geometry_msgs.PoseStamped()
+        self.previous_pose = tf2_geometry_msgs.PoseStamped()
 
 
+    def go_to_preliminary_position(self):
 
+        # --- Place marker with text in RVIZ
+        caption = "Going to a preliminary pose"
+        self.place_marker_text(x=0, y=0, z=1.5, scale=0.1, text=caption)
 
+        # --- Initiate object joint
+        goal_pose = self.move_group.get_current_joint_values()
 
+        goal_pose[0] = +180 * pi /180
 
-
-
-
-def go_to_preliminary_position(self):
 
     def go_to_starting_position(self):
 
