@@ -1,4 +1,39 @@
+## --- Standard Library Imports
+import copy
+import csv
+import math
+import matplotlib.pyplot as pp
+import numpy as np
+from numpy import pi, cos, sin, arccos, arange
+import os
+import keyboard
+from random import random
+import rospy
+import time
+import statistics as st
+import subprocess, shlex, psutil
+import sys
+import rosbag
+import json
+import datetime
 
+## --- Related 3rd party imports
+import geometry_msgs.msg
+from geometry_msgs.msg import Pose, Point, Quaternion, Vector3, Polygon
+import moveit_commander
+from moveit_commander.conversions import pose_to_list
+import moveit_msgs.msg
+from moveit_msgs.msg import Constraints, JointConstraint
+from std_msgs.msg import String, Int32
+# import sympy as sym
+import tf
+from tf.transformations import euler_from_quaternion, quaternion_about_axis, quaternion_from_euler
+import tf2_ros
+import tf2_geometry_msgs  # **Do not use geometry_msgs. Use this instead for PoseStamped
+from visualization_msgs.msg import Marker, MarkerArray
+
+## --- Self developed imports
+from bagfile_reader import *
 
 
 def main():
@@ -75,8 +110,77 @@ def real_picks():
 class RoboticGripper():
 
     def __init__(self):
+        super(RoboticGripper, self).__init__()
+        moveit_commander.roscpp_initialize(sys.argv)
+        rospy.init_node('robotic_gripper', anonymous=True)
 
-    def go_to_preliminary_position(self):
+        # ---- Initial Setup
+        robot = moveit_commander.RobotCommander()
+        scene = moveit_commander.PlanningSceneInterface()
+
+        group_name = "manipulator"
+        move_group = moveit_commander.MoveGroupCommander(group_name)
+        #TODO update gripper geometry and mesh files
+        move_group.set_end_effector_link("_todo_")
+
+        display_trajectory_publisher = rospy.Publisher('/move_group/display_planned_path',
+                                                       moveit_msgs.msg.DisplayTrajectory, queue_size=20)
+        event_publisher = rospy.Publisher('/experiment_steps', String, queue_size=20)
+        marker_text_publisher = rospy.Publisher('captions', Marker, queue_size=1000, latch=True)
+
+        planning_frame = move_group.get_planning_frame()
+        print("=========== Planning frame: %s" % planning_frame)
+
+        # ---- Variables and Parameters
+        self.robot = robot
+        self.scene = scene
+        self.move_group = move_group
+        self.display_trajectory_publisher = display_trajectory_publisher
+        self.event_publisher = event_publisher
+        self.planning_frame = planning_frame
+
+        # ---- Variables for markers
+        self.marker_text_publisher = marker_text_publisher
+        wiper = Marker()
+        wiper.id = 0
+        wiper.action = Marker.DELETEALL
+        self.marker_text_publisher.publish(wiper)
+
+        # ---- Experiment Parameters
+        self.ROBOT_NAME = "UR5e"
+        self.pressure_at_compressor = 100
+        self.pressure_at_valve = 60
+        self.PERSON = "Alejo"
+
+        # Source https://www.piab.com/inriverassociations/0206204/#specifications
+        self.SUCTION_CUP_NAME = "F-BX20 Silicone"
+        self.SUCTION_CUP_GIVE = 0.010
+        self.SUCTION_CUP_RADIUS = 0.021 / 2
+
+        # ---- Noise variables
+        self.noise_z_command = 0
+        self.noise_z_real = 0
+        self.noise_y_command = 0
+        self.noise_y_real = 0
+        self.noise_x_command = 0
+        self.noise_x_real = 0
+        self.noise_roll_command = 0
+        self.noise_roll_real = 0
+        self.noise_pitch_command = 0
+        self.noise_pitch_real = 0
+        self.noise_yaw_command = 0
+        self.noise_yaw_real = 0
+
+
+
+
+
+
+
+
+
+
+def go_to_preliminary_position(self):
 
     def go_to_starting_position(self):
 
