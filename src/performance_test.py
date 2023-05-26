@@ -36,6 +36,30 @@ from visualization_msgs.msg import Marker, MarkerArray
 from bagfile_reader import *
 
 
+def all_close(goal, current, tolerance):
+    """
+    Convenient method for testing if a lits of values are within a tolerance
+    @param goal:
+    @param current:
+    @param tolerance:
+    @return:
+    """
+    if type(goal) is list:
+        for index in range(len(goal)):
+            if abs(current[index] - goal[index]) > tolerance:
+                return False
+
+    elif type(goal) is geometry_msgs.msg.PoseStamped:
+        # TODO difference between Pose and PoseStamped
+        return all_close(goal.pose, current.pose, tolerance)
+
+    elif type(goal) is geometry_msgs.msg.Pose:
+        return all_close(pose_to_list(goal), pose_to_list(current), tolerance)
+
+    return True
+
+
+
 def main():
 
     # TODO modify joint_limits.yaml for this test
@@ -138,6 +162,7 @@ class RoboticGripper():
         self.display_trajectory_publisher = display_trajectory_publisher
         self.event_publisher = event_publisher
         self.planning_frame = planning_frame
+        self.TOLERANCE = 1/1000     # movement precision in [m]
 
         # ---- Variables for markers
         self.marker_text_publisher = marker_text_publisher
@@ -178,6 +203,7 @@ class RoboticGripper():
 
 
     def go_to_preliminary_position(self):
+        """Reaches a desired joint position (Forward Kinematics)"""
 
         # --- Place marker with text in RVIZ
         caption = "Going to a preliminary pose"
@@ -186,12 +212,126 @@ class RoboticGripper():
         # --- Initiate object joint
         goal_pose = self.move_group.get_current_joint_values()
 
-        goal_pose[0] = +180 * pi /180
+        goal_pose[0] = +180 * pi / 180
+        goal_pose[1] = - 65 * pi / 180
+        goal_pose[2] = -100 * pi / 180
+        goal_pose[3] = - 90 * pi / 180
+        goal_pose[4] = + 90 * pi / 180
+        goal_pose[5] = +  0 * pi / 180
+
+        # --- Move to the goal pose
+        self.move_group.go(goal_pose, wait=True)
+        self.move_group.stop()
+
+        # --- Compare final pose with goal pose
+        current_pose = self.move_group.get_current_joint_values()
+
+        return all_close(goal_pose, current_pose, self.TOLERANCE)
 
 
     def go_to_starting_position(self):
+        """Reaches a desired End Effector pose (Inverse Kinematics)"""
 
-    def add_cartesian_noise(self):
+        # --- Place marker with text in RVIZ
+        caption = "Going to an ideal starting End Effector pose (IK)"
+        self.place_marker_text(x=0, y=0, z=1.5, scale=0.1, text=caption)
+
+        # --- ROS tool for transformation among c-frames
+        tf_buffer = tf2_ros.Buffer()
+        listener = tf2_ros.TransformListener(tf_buffer)
+
+        # --- Step 1: Set Goal in the intuitive/easy c-frame
+        goal_pose = tf2_geometry_msgs.PoseStamped()
+        goal_pose.header.frame_id = "TODO"
+        goal_pose.header.stamp = rospy.Time(0)
+
+        goal_pose.pose.position.x =
+        goal_pose.pose.position.y =
+        goal_pose.pose.position.z =
+
+        # Euler angles
+        roll =
+        pitch =
+        yaw =
+        q = quaternion_from_euler(roll, pitch, yaw)
+        goal_pose.pose.orientation.x = q[0]
+        goal_pose.pose.orientation.y = q[1]
+        goal_pose.pose.orientation.z = q[2]
+        goal_pose.pose.orientation.w = q[3]
+
+        self.start_pose = goal_pose
+
+        # --- Step 2: Transform Goal into Planning Frame
+        try:
+            goal_pose_pframe = tf_buffer.transform(goal_pose, self.planning_frame, rospy.Duration(1))
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            raise
+
+        # --- Step 3: Move robot
+        self.move_group.set_pose_targets(goal_pose_pframe.pose)
+        self.move_group.go(wait=True)
+        self.move_group.stop()
+
+        # --- Step 4: Compare goal with current state
+        current_pose = self.move_group.get_current_pose().pose
+        success = all_close(goal_pose_pframe.pose, current_pose, self.TOLERANCE)
+
+        # --- Step 5: Save pose for future steps
+        self.previous_pose = current_pose
+
+        return success
+
+
+    def add_cartesian_noise(self, x_noise, y_noise, z_noise):
+
+        # --- Place marker with text in RVIZ
+        caption = "Adding gaussian noise"
+        self.place_marker_text(x=0, y=0, z=1.5, scale=0.05, text=caption)
+
+        # --- ROS tool for transformation across c-frames
+        tf_buffer = tf2_ros.Buffer()
+        listener = tf2_ros.TransformListener(tf_buffer)
+
+        # --- Step 1: Read the current pose in the planning frame
+        cur_pose_pframe = tf2_geometry_msgs.PoseStamped()
+        cur_pose_pframe.pose = self.move_group.get_current_pose().pose
+        cur_pose_pframe.header.frame_id = self.planning_frame
+        cur_pose_pframe.header.stamp = rospy.Time(0)
+
+        # --- Step 2: Transform current pose into intuitive cframe and add noise
+        try:
+            cur_pose_ezframe = tf_buffer.transform(cur_pose_pframe, "TODO_ezframe", rospy.Duration(1))
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            raise
+
+        cur_pose_ezframe.pose.position.x += x_noise
+        cur_pose_ezframe.pose.position.y += y_noise
+        cur_pose_ezframe.pose.position.z += z_noise
+        cur_pose_ezframe.header.stamp = rospy.Time(0)
+
+        # --- Step 3: Transform goal pose back to planning frame
+        try:
+            goal_pose_pframe = tf_buffer.transform(cur_pose_ezframe, self.planning_frame, rospy.Duration(1))
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            raise
+
+        # --- Step 4: Move to the new goal
+        self.move_group.set_pose_targets(goal_pose_pframe.pose)
+        self.move_group.go(wait=True)
+        self.move_group.stop()
+        self.move_group.clear_pose_targets()    # good practice
+
+        # --- Step 5: Compare poses
+        current_pose = self.move_group.get_current_pose().pose
+        success = all_close(goal_pose_pframe, current_pose, self.TOLERANCE)
+
+        self.check_real_noise()
+
+        return success
+
+
+
+
 
     def place_marker_text(self):
 
@@ -200,10 +340,6 @@ class RoboticGripper():
     def publish_event(self):
 
     def check_real_noise(self):
-
-
-
-
 
 
 
