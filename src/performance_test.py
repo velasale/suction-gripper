@@ -330,16 +330,125 @@ class RoboticGripper():
         return success
 
 
+    def place_marker_text(self, x=0,y=0,z=0, scale=0.01, text='caption'):
+        """
+        Places text as a marker in RVIZ
+        @param x:
+        @param y:
+        @param z:
+        @param scale:
+        @param text:
+        @return:
+        """
+        # Create a marker.  Markers of all shapes share a common type.
+        caption = Marker()
+
+        # Set the frame ID and type.  The frame ID is the frame in which the position of the marker
+        # is specified.  The type is the shape of the marker, detailed on the wiki page.
+        caption.header.frame_id = "world"
+        caption.type = caption.TEXT_VIEW_FACING
+
+        # Each marker has a unique ID number.  If you have more than one marker that you want displayed at a
+        # given time, then each needs to have a unique ID number.  If you publish a new marker with the same
+        # ID number and an existing marker, it will replace the existing marker with that ID number.
+        caption.id = 0
+
+        # Set the action.  We can add, delete, or modify markers.
+        caption.action = caption.ADD
+
+        # These are the size parameters for the marker.  The effect of these on the marker will vary by shape,
+        # but, basically, they specify how big the marker along each of the axes of the coordinate frame named
+        # in frame_id.
+        caption.scale.x = scale
+        caption.scale.y = scale
+        caption.scale.z = scale
+
+        # Color, as an RGB triple, from 0 to 1.
+        caption.color.r = 0
+        caption.color.g = 0
+        caption.color.b = 0
+        caption.color.a = 1
+
+        caption.text = text
+
+        # Specify the pose of the marker.  Since spheres are rotationally invarient, we're only going to specify
+        # the positional elements.  As usual, these are in the coordinate frame named in frame_id.  Every time the
+        # marker is displayed in rviz, ROS will use tf to determine where the marker should appear in the scene.
+        # in this case, the position will always be directly above the robot, and will move with it.
+        caption.pose.position.x = x
+        caption.pose.position.y = y
+        caption.pose.position.z = z
+
+        # Set up a publisher.  We're going to publish on a topic called balloon.
+        self.markerTextPublisher.publish(caption)
+
+        # Set a rate.  10 Hz is a good default rate for a marker moving with the Fetch robot.
+        rate = rospy.Rate(10)
 
 
+    def check_real_noise(self):
+        """ Gets real noise"""
 
-    def place_marker_text(self):
+        ideal_pose = self.start_pose.pose
 
-    def save_metadata(self):
+        # --- Step 1: Read current pose
+        tf_buffer = tf2_ros.Buffer()
+        listener = tf2_ros.TransformListener(tf_buffer)
+
+        current_pose_plframe = self.move_group.get_current_pose()
+        current_pose_plframe.header.stamp = rospy.Time(0)
+
+        # --- Step 2: Transform current pose into easy c-frame
+        try:
+            cur_pose_ezframe = tf_buffer.transform(current_pose_plframe, "EASYFRAME", rospy.Duration(1))
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            raise
+
+        self.noize_x_real = cur_pose_ezframe.pose.position.x - ideal_pose.position.x
+        self.noize_y_real = cur_pose_ezframe.pose.position.y - ideal_pose.position.y
+        self.noize_z_real = cur_pose_ezframe.pose.position.z - ideal_pose.position.z
+
+        # TODO prints
+
+
+    def save_metadata(self, filename):
+        """
+        Create json file and save it with the same name as the bag file
+        @param filename:
+        @return:
+        """
+
+        experiment_info = {
+            "general": {
+                "date": str(datetime.datetime.now()),
+                "person": self.PERSON,
+                "experiment type": self.experiment_type,
+                "repetition": self.repetition
+            },
+            "robot": {
+                "robot": self.ROBOT_NAME,
+                "z noise command [m]": self.noise_z_command,
+                "z noise real[m]": self.noise_z_real,
+                "x noise command [m]": self.noise_x_command,
+                "x noise real [m]": self.noise_x_real,
+                # TODO"roll noise command [rad]":
+            },
+            "gripper": {
+                "Suction Cup": self.SUCTION_CUP_NAME,
+                "Pressure at Compressor": self.pressure_at_compressor,
+                "Pressure at valve": self.pressure_at_valve
+            }
+            "target": {
+                #TODO "Stiffnesses": self.STIFN
+                #TODO "Apple Diameter": self.OBJECTRADIUS
+            }
+        }
+
+
 
     def publish_event(self):
 
-    def check_real_noise(self):
+
 
 
 
