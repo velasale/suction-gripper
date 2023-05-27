@@ -59,7 +59,6 @@ def all_close(goal, current, tolerance):
     return True
 
 
-
 def main():
 
     # TODO modify joint_limits.yaml for this test
@@ -129,6 +128,38 @@ def proxy_picks():
 def real_picks():
     ...
 
+
+def start_rosbag(name='trial'):
+    """Convenient method to start saving bagfile"""
+
+    filename = name
+
+    topics =   " wrench" \
+             + " joint_states" \
+             + " experiment_steps" \
+             + " /gripper/distance" \
+             + " /gripper/pressure/sc1" \
+             + " /gripper/pressure/sc2" \
+             + " /gripper/pressure/sc3" \
+             + " /usb_cam/image_raw"
+
+    command = "rosbag record -0 " + filename + topics
+    command = shlex.split(command)
+
+    return command, subprocess.Popen(command)
+
+
+def stop_rosbag(cmd, process):
+    """Stop saving rosbag"""
+
+    for proc in psutil.process_iter():
+        if "record" in proc.name() and set(cmd[2:]).issubset(proc.cmdline()):
+            proc.send_signal(subprocess.signal.SIGINT)
+    process.send_signal(subprocess.signal.SIGINT)
+
+
+def service_call(service):
+    #TODO I WAS RIGHT HERE
 
 
 class RoboticGripper():
@@ -445,13 +476,13 @@ class RoboticGripper():
         }
 
 
-
-    def publish_event(self):
-
-
-
-
-
+    def publish_event(self, event):
+        """
+        Handy method to have the code events saved within the bagfile
+        @param event:
+        @return:
+        """
+        self.event_publisher.publisher(event)
 
 
 
