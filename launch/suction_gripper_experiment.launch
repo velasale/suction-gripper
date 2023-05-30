@@ -3,14 +3,14 @@
   <!-- Launch robot -->
   <include file="$(find apple_proxy)/launch/ur5e_bringup.launch">
     <arg name="robot_ip" value="169.254.174.50" doc="Joe's ur5e IP: 169.254.174.50  Cindy's ur5e IP: 169.254.177.232."/>
-    <arg name="kinematics_config" value="$(find apple_proxy)/calibration/joes_ur5e_calibration.yaml"/>
+    <arg name="kinematics_config" value="$(find suction-gripper)/calibration/joes_ur5e_calibration.yaml"/>
     <arg name="robot_description_file" value="(find suction-gripper)/launch/load_ur5e.launch" />
   </include>
   
 
   <!-- Launch lab setup with moveIt -->
   <!-- Remember that line 27 of pickApp_real.launch is commented, to avoid the node issue-->
-  <include file="$(find apple_proxy)/launch/pickApp_real.launch">
+  <include file="$(find suction-gripper)/launch/pickApp_real.launch">
   </include>
   
 
