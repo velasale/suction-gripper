@@ -1,0 +1,72 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro"
+       name="ur5e_robot" >
+
+    <xacro:arg name="transmission_hw_interface" default="hardware_interface/PositionJointInterface"/>
+
+
+
+    <!-- STEP 1: IMPORT THE URDF XACROS -->
+    <!-- ur5e -->
+    <xacro:include filename="$(find ur_description)/urdf/ur5e.xacro" />
+    <!--  Tables and Walls -->
+    <xacro:include filename="$(find apple_proxy)/urdf/scene_C.xacro" />
+    <xacro:tables />
+
+
+    <!-- STEP 2: DEFINE THE INTERFACES AMONG ALL THE LINKS FROM -->
+    <!-- Here is where you define the scene and how the cframes are related -->
+
+    <link name="world" />
+    <link name="suction_cup" />
+
+    <!-- Describe the interface between the robot and the gripper -->
+    <joint name="robotiq_coupler_joint" type="fixed">
+    <parent link="tool0" />
+    <child link="test_rig" />
+    <origin xyz="-0.026 -0.039 0.175" rpy="-1.5708 0 0" />
+        <!-- Note: x and y offset is because the cframe of the 3d model is not located in the center -->
+    </joint>
+
+    <!-- Describe the interface between the world and the tables -->
+    <joint name="world_big_table" type="fixed">
+    <parent link="world" />
+    <child link="big_table" />
+    <origin xyz="0 0 0" rpy="0 0 1.5708" />
+    </joint>
+
+    <joint name="world_small_table" type="fixed">
+    <parent link="world" />
+    <child link="joes_ur5_table" />
+    <origin xyz="0.915 0.097 0.7660" rpy="-3.1416 0 3.1416" />
+    </joint>
+
+    <!-- Describe the interface between the world and the Semi sphere -->
+    <joint name = "bigTable_simpleProxy" type="fixed"> -->
+    <parent link = "big_table" /> -->
+    <child link = "sphere" /> -->
+    <origin xyz = "0.115 0 1.0325" rpy="0 3.1416 0" />
+    </joint>
+
+    <!-- Describe the interface between the world and the robot" -->
+    <joint name="world_joint" type="fixed">
+    <parent link="joes_ur5_table" />
+    <child link = "base_link" />
+    <origin xyz="0.71 0.25 0" rpy="3.1416 0.0 -0.7854" />
+    </joint>
+
+    <!-- Describe the location of the tip of the suction cup -->
+    <joint name="suction_cup" type="fixed">
+    <parent link="tool0" />
+    <child link="suction_cup" />
+    <origin xyz="0 0 0.203" rpy="0 0 0" />
+    </joint>
+
+    <!-- Describe the location of the tip of the suction cup -->
+    <joint name="suction_cup_model" type="fixed">
+    <parent link="tool0" />
+    <child link="suction_cup_model" />
+    <origin xyz="-0.0165 0.0165 0.203" rpy="3.1416 0 0" />
+    </joint>
+
+</robot>

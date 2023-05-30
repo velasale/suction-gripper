@@ -1,0 +1,81 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro"
+       name="ur5e_robot" >
+
+    <xacro:arg name="transmission_hw_interface" default="hardware_interface/PositionJointInterface"/>
+
+
+
+    <!-- STEP 1: IMPORT THE URDF XACROS -->
+    <!-- ur5e -->
+    <xacro:include filename="$(find ur_description)/urdf/ur5e.xacro" />
+    <!--  Tables and Walls -->
+    <xacro:include filename="$(find apple_proxy)/urdf/scene_B.xacro" />
+    <xacro:tables />
+
+
+    <!-- STEP 2: DEFINE THE INTERFACES AMONG ALL THE LINKS FROM -->
+    <!-- Here is where you define the scene and how the cframes are related -->
+
+    <link name="world" />
+    <link name="palm" />
+
+    <!-- Describe the interface between the robot and the gripper -->
+    <joint name="robotiq_coupler_joint" type="fixed">
+    <parent link="tool0" />
+    <child link="lisas_hand" />
+    <origin xyz="-0.0675 0.0675 0.004" rpy="0 0 ${-pi/2.0}" />
+        <!-- Note: x and y offset is because the cframe of the 3d model is not located in the center -->
+    </joint>
+
+    <!-- Describe the interface between the world and the tables -->
+    <joint name="world_big_table" type="fixed">
+    <parent link="world" />
+    <child link="big_table" />
+    <origin xyz="0 0 0" rpy="0 0 1.5708" />
+    </joint>
+
+    <joint name="world_small_table" type="fixed">
+    <parent link="world" />
+    <child link="small_table" />
+    <origin xyz="-0.29 -1.31 +0.24" rpy="0 0 1.5708" />
+        <!-- x_offset = 1.56 - 1.85 = -.29  distances from next wall -->
+        <!-- y_offset = -1.31 -->
+        
+        <!-- Media Fellowship setup -->
+        <!-- xyz="-0.11 -1.41 +0.24" rpy="0 0 1.5708"-->
+
+        <!-- Fenced area setup -->
+        <!-- xyz="-0.29 -1.31 0" rpy="0 0 1.5708"-->
+
+    </joint>
+
+    <!-- Describe the interface between the world and the Apple Proxy -->
+    <joint name = "bigTable_simpleProxy" type="fixed"> -->
+    <parent link = "big_table" /> -->
+    <child link = "apple_proxy" /> -->
+    <origin xyz = "0.4572 0.91 0.975" rpy="1.5708 0 -1.5708" />
+        <!-- Media Fellowship setup -->
+        <!-- xyz="+0.4572 +0.75 0.975" rpy="1.5708 0 -1.5708"-->
+
+        <!-- Fenced area setup -->
+        <!-- xyz="+0.4572 +0.91 0.975" rpy="1.5708 0 -1.5708"-->
+    </joint>
+
+    <!-- Describe the interface between the world and the robot" -->
+    <joint name="world_joint" type="fixed">
+    <parent link="small_table" />
+    <child link = "base_link" />
+    <origin xyz="0.358 0.357 0.858" rpy="0.0 0.0 3.1416" />
+    </joint>
+
+    <!-- Describe the location of the palm -->
+    <joint name="hand_palm" type="fixed">
+    <parent link="tool0" />
+    <child link="palm" />
+<!--        <origin xyz="0 0 0.13" rpy="0 0 0.2618 " />      &lt;!&ndash; Add in Z the hand's thickness (approx 13cm) &ndash;&gt;-->
+    <origin xyz="0 0 0.165" rpy="0 0 0.2618 " />      <!-- Add in Z the hand's thickness (approx 13cm) -->
+    </joint>
+
+
+</robot>
