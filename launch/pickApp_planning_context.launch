@@ -6,9 +6,8 @@
   <arg name="robot_description" default="robot_description"/>
 
   <!-- Load universal robot description format (URDF) -->
-  <param if="$(arg load_robot_description)" name="$(arg robot_description)" command="xacro  '$(find suction-gripper)/urdf/ur5e_robot_suction.urdf.xacro'"/>
-  <!-- param if="$(arg load_robot_description)" name="$(arg robot_description)" command="xacro  '$(find ur_description)/urdf/ur5e.xacro'"/ -->
-
+  <param if="$(arg load_robot_description)" name="$(arg robot_description)" command="xacro  '$(find suction-gripper)/urdf/ur5e_sgripper.urdf.xacro'"/>
+  
   <!-- The semantic description that corresponds to the URDF -->
   <param name="$(arg robot_description)_semantic" textfile="$(find suction-gripper)/config/ur5e.srdf" />
 
