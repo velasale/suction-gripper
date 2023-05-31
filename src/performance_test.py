@@ -11,7 +11,6 @@ from random import random
 import rospy
 import time
 import statistics as st
-import subprocess, shlex, psutil
 import sys
 import rosbag
 import json
@@ -21,11 +20,8 @@ import datetime
 import geometry_msgs.msg
 from geometry_msgs.msg import Pose, Point, Quaternion, Vector3, Polygon
 import moveit_commander
-from moveit_commander.conversions import pose_to_list
 import moveit_msgs.msg
-from moveit_msgs.msg import Constraints, JointConstraint
 from std_msgs.msg import String, Int32
-# import sympy as sym
 import tf
 from tf.transformations import euler_from_quaternion, quaternion_about_axis, quaternion_from_euler
 import tf2_ros
@@ -34,29 +30,8 @@ from visualization_msgs.msg import Marker, MarkerArray
 
 ## --- Self developed imports
 from bagfile_reader import *
+from useful_ros import *
 
-
-def all_close(goal, current, tolerance):
-    """
-    Convenient method for testing if a lits of values are within a tolerance
-    @param goal:
-    @param current:
-    @param tolerance:
-    @return:
-    """
-    if type(goal) is list:
-        for index in range(len(goal)):
-            if abs(current[index] - goal[index]) > tolerance:
-                return False
-
-    elif type(goal) is geometry_msgs.msg.PoseStamped:
-        # TODO difference between Pose and PoseStamped
-        return all_close(goal.pose, current.pose, tolerance)
-
-    elif type(goal) is geometry_msgs.msg.Pose:
-        return all_close(pose_to_list(goal), pose_to_list(current), tolerance)
-
-    return True
 
 
 def main():
@@ -67,8 +42,10 @@ def main():
     # TODO organize electronics of apple proxy
 
     # Initialize Class
+    suction_gripper = RoboticGripper()
 
     # --- Step 1: Place robot at waypoint (preliminary position)
+    suction_gripper.go_to_preliminary_position()
 
     # --- Step 2: Obtain info from user
     # Info about gripper: pressure
@@ -128,38 +105,6 @@ def proxy_picks():
 def real_picks():
     ...
 
-
-def start_rosbag(name='trial'):
-    """Convenient method to start saving bagfile"""
-
-    filename = name
-
-    topics =   " wrench" \
-             + " joint_states" \
-             + " experiment_steps" \
-             + " /gripper/distance" \
-             + " /gripper/pressure/sc1" \
-             + " /gripper/pressure/sc2" \
-             + " /gripper/pressure/sc3" \
-             + " /usb_cam/image_raw"
-
-    command = "rosbag record -0 " + filename + topics
-    command = shlex.split(command)
-
-    return command, subprocess.Popen(command)
-
-
-def stop_rosbag(cmd, process):
-    """Stop saving rosbag"""
-
-    for proc in psutil.process_iter():
-        if "record" in proc.name() and set(cmd[2:]).issubset(proc.cmdline()):
-            proc.send_signal(subprocess.signal.SIGINT)
-    process.send_signal(subprocess.signal.SIGINT)
-
-
-def service_call(service):
-    #TODO I WAS RIGHT HERE
 
 
 class RoboticGripper():
@@ -242,12 +187,13 @@ class RoboticGripper():
 
         # --- Initiate object joint
         goal_pose = self.move_group.get_current_joint_values()
+        print(goal_pose)
 
         goal_pose[0] = +180 * pi / 180
         goal_pose[1] = - 65 * pi / 180
         goal_pose[2] = -100 * pi / 180
-        goal_pose[3] = - 90 * pi / 180
-        goal_pose[4] = + 90 * pi / 180
+        goal_pose[3] = - 1
+        goal_pose[4] = + 5
         goal_pose[5] = +  0 * pi / 180
 
         # --- Move to the goal pose
@@ -276,14 +222,14 @@ class RoboticGripper():
         goal_pose.header.frame_id = "TODO"
         goal_pose.header.stamp = rospy.Time(0)
 
-        goal_pose.pose.position.x =
-        goal_pose.pose.position.y =
-        goal_pose.pose.position.z =
+        goal_pose.pose.position.x = 0.5
+        goal_pose.pose.position.y = 0.5
+        goal_pose.pose.position.z = 0.5
 
         # Euler angles
-        roll =
-        pitch =
-        yaw =
+        roll =      0 * pi / 180
+        pitch =     0 * pi / 180
+        yaw =       0 * pi / 180
         q = quaternion_from_euler(roll, pitch, yaw)
         goal_pose.pose.orientation.x = q[0]
         goal_pose.pose.orientation.y = q[1]
@@ -411,7 +357,7 @@ class RoboticGripper():
         caption.pose.position.z = z
 
         # Set up a publisher.  We're going to publish on a topic called balloon.
-        self.markerTextPublisher.publish(caption)
+        self.marker_text_publisher.publish(caption)
 
         # Set a rate.  10 Hz is a good default rate for a marker moving with the Fetch robot.
         rate = rospy.Rate(10)
@@ -468,7 +414,7 @@ class RoboticGripper():
                 "Suction Cup": self.SUCTION_CUP_NAME,
                 "Pressure at Compressor": self.pressure_at_compressor,
                 "Pressure at valve": self.pressure_at_valve
-            }
+            },
             "target": {
                 #TODO "Stiffnesses": self.STIFN
                 #TODO "Apple Diameter": self.OBJECTRADIUS
