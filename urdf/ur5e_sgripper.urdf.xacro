@@ -10,7 +10,7 @@
     <!-- ur5e -->
     <xacro:include filename="$(find ur_description)/urdf/ur5e.xacro" />
     <!--  Tables and Walls -->
-    <xacro:include filename="$(find apple_proxy)/urdf/scene_D.xacro" />
+    <xacro:include filename="$(find suction-gripper)/urdf/scene_D.xacro" />
     <xacro:tables />
 
 
@@ -24,8 +24,7 @@
     <joint name="robotiq_coupler_joint" type="fixed">
     <parent link="tool0" />
     <child link="suction_gripper" />
-    <origin xyz="-0.026 -0.039 0.175" rpy="-1.5708 0 0" />
-        <!-- Note: x and y offset is because the cframe of the 3d model is not located in the center -->
+    <origin xyz="0 0 0.15" rpy="1.5708 0 0" />        
     </joint>
 
     <!-- Describe the interface between the world and the tables -->
