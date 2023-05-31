@@ -1,50 +1,69 @@
 <launch>
 
-  <!-- Launch robot -->
-  <include file="$(find ur_robot_driver)/launch/ur5e_bringup.launch">
-    <arg name="robot_ip" value="169.254.174.50" doc="Joe's ur5e IP: 169.254.174.50  Cindy's ur5e IP: 169.254.177.232."/>
-    <arg name="kinematics_config" value="$(find suction-gripper)/calibration/joes_ur5e_calibration.yaml"/>
-    <arg name="robot_description_file" value="$(find suction-gripper)/launch/load_ur5e.launch" />
-  </include>
+  <!-- Specify whether with real robot or just rviz-->
+  <arg name="with_robot" default="no"  />
+
+  <group if="$(eval arg('with_robot') == 'yes')">
+
+      <!-- Step 1: Launch robot -->
+      <include file="$(find ur_robot_driver)/launch/ur5e_bringup.launch">
+        <arg name="robot_ip" value="169.254.174.50" doc="Joe's ur5e IP: 169.254.174.50  Cindy's ur5e IP: 169.254.177.232."/>
+        <arg name="kinematics_config" value="$(find suction-gripper)/calibration/joes_ur5e_calibration.yaml"/>
+        <arg name="robot_description_file" value="$(find suction-gripper)/launch/load_ur5e.launch" />
+      </include>
+    
+
+      <!-- Step 2: Launch lab setup with moveIt -->
+      <!-- Remember that line 27 of pickApp_real.launch is commented, to avoid the node issue-->
+      <include file="$(find suction-gripper)/launch/pickApp_real.launch">
+      </include> 
   
 
-  <!-- Launch lab setup with moveIt -->
-  <!-- Remember that line 27 of pickApp_real.launch is commented, to avoid the node issue-->
-  <include file="$(find suction-gripper)/launch/pickApp_real.launch">
-  </include>
+      <!-- Step 3:Launch Camera -->
+
+      <!-- <include file="$(find video_stream_opencv)/launch/camera.launch">
+        <arg name="video_stream_provider" value="/dev/video2"/>
+        <arg name="visualize" value="true" />
+      </include> -->
+
+      <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="screen" >
+        <param name="video_device" value="/dev/video2" />
+        <param name="image_width" value="640" />
+        <param name="image_height" value="480" />
+        <param name="pixel_format" value="yuyv" />
+        <param name="color_format" value="yuv422p" />
+        <param name="camera_frame_id" value="usb_cam" />
+        <param name="io_method" value="mmap"/>
+        <param name="saturation" value="128" />
+        <param name="contrast" value="128" />
+        <param name="brightness" value="128" />   
+        <param name="autofocus" value="true" />
+
+      </node>
+      <node name="image_view" pkg="image_view" type="image_view" respawn="false" output="screen">
+        <remap from="image" to="/usb_cam/image_raw"/>
+        <param name="autosize" value="true" />
+      </node>
+
+
+      <!-- Step 4: Launch ROS Serial -->
+      <node pkg="rosserial_python" type="serial_node.py" name="rosserial" output="screen">
+        <param name="port" value="/dev/ttyACM0" />
+        <param name="baud" value="57600" />
+      </node>
+
+  </group>
+
   
+  <group if="$(eval arg('with_robot') == 'no')">
 
-  <!-- Launch Camera -->
-  <!-- <include file="$(find video_stream_opencv)/launch/camera.launch">
-    <arg name="video_stream_provider" value="/dev/video2"/>
-    <arg name="visualize" value="true" />
-  </include> -->
+    <include file="$(find suction-gripper)/launch/pickApp.launch">
+      </include> 
 
-  <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="screen" >
-    <param name="video_device" value="/dev/video2" />
-    <param name="image_width" value="640" />
-    <param name="image_height" value="480" />
-    <param name="pixel_format" value="yuyv" />
-    <param name="color_format" value="yuv422p" />
-    <param name="camera_frame_id" value="usb_cam" />
-    <param name="io_method" value="mmap"/>
-    <param name="saturation" value="128" />
-    <param name="contrast" value="128" />
-    <param name="brightness" value="128" />   
-    <param name="autofocus" value="true" />
-
-  </node>
-  <node name="image_view" pkg="image_view" type="image_view" respawn="false" output="screen">
-    <remap from="image" to="/usb_cam/image_raw"/>
-    <param name="autosize" value="true" />
-  </node>
+  </group>
 
 
-  <!-- Launch ROS Serial -->
-  <node pkg="rosserial_python" type="serial_node.py" name="rosserial" output="screen">
-    <param name="port" value="/dev/ttyACM0" />
-    <param name="baud" value="57600" />
-   </node>
+  
 
 
 </launch>
