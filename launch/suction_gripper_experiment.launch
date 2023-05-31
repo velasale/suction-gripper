@@ -3,6 +3,7 @@
   <!-- Specify whether with real robot or just rviz-->
   <arg name="with_robot" default="no"  />
 
+  <!-- Real Robot and Rviz-->
   <group if="$(eval arg('with_robot') == 'yes')">
 
       <!-- Step 1: Launch robot -->
@@ -15,7 +16,10 @@
 
       <!-- Step 2: Launch lab setup with moveIt -->
       <!-- Remember that line 27 of pickApp_real.launch is commented, to avoid the node issue-->
-      <include file="$(find suction-gripper)/launch/pickApp_real.launch">
+      <include file="$(find suction-gripper)/launch/pickApp.launch">
+        <arg name="with_robot" value="$(arg with_robot)"/>
+        <arg name="use_gui" value="false"/>
+        <arg name="fake_execution" value="false"/>
       </include> 
   
 
@@ -54,16 +58,18 @@
 
   </group>
 
-  
+  <!-- Just Rviz-->  
   <group if="$(eval arg('with_robot') == 'no')">
 
     <include file="$(find suction-gripper)/launch/pickApp.launch">
-      </include> 
+      <arg name="with_robot" value="$(arg with_robot)"/>
+      <arg name="use_gui" value="true"/>
+      <arg name="fake_execution" value="true"/>
+    </include> 
 
   </group>
 
-
-  
+ 
 
 
 </launch>
