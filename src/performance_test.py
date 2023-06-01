@@ -16,7 +16,7 @@ import rosbag
 import json
 import datetime
 
-## --- Related 3rd party imports
+## --- 3rd party related imports
 import geometry_msgs.msg
 from geometry_msgs.msg import Pose, Point, Quaternion, Vector3, Polygon
 import moveit_commander

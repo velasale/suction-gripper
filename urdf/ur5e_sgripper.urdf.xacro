@@ -8,7 +8,7 @@
 
     <!-- STEP 1: IMPORT THE URDF XACROS -->
     <!-- ur5e -->
-    <xacro:include filename="$(find ur_description)/urdf/ur5e.xacro" />
+    <xacro:include filename="$(find suction-gripper)/urdf/ur5e.xacro" />
     <!--  Tables and Walls -->
     <xacro:include filename="$(find suction-gripper)/urdf/scene_D.xacro" />
     <xacro:tables />
