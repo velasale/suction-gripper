@@ -33,7 +33,6 @@ from bagfile_reader import *
 from useful_ros import *
 
 
-
 def main():
 
     # TODO solve better the srdf
