@@ -37,6 +37,8 @@ from useful_ros import *
 def main():
 
     # TODO modify joint_limits.yaml for this test
+    # TODO solve better the srdf
+    # TODO check are thes joint_limits loaded src/universal_robot/ur_description/config/ur5e/joint_limits.yaml
     # TODO update the environment and scene
     # TODO place camera on Apple Proxy
     # TODO organize electronics of apple proxy
@@ -48,6 +50,17 @@ def main():
     suction_gripper.go_to_preliminary_position()
 
     # --- Step 2: Obtain info from user
+    print("\n\n ***** Suction Gripper Experiments *****")
+    print("a. Experiment Type: proxy, real")
+    experiment = ''
+    while(experiment != ''):
+        experiment = input()
+    suction_gripper.TYPE = experiment
+
+    print("b. Pressure at the Valve [PSI]): ")
+    print("Tip: If the desired pressure is lower than the current one (at the pressure regulator),\n then first pass that pressure and the go up to the desired pressure")
+    suction_gripper.pressure_at_valve = int(input())
+
     # Info about gripper: pressure
     # Info about apple: stiffness -- type of springs, apples used
     # Pass these properties to the class
@@ -152,6 +165,7 @@ class RoboticGripper():
         self.pressure_at_compressor = 100
         self.pressure_at_valve = 60
         self.PERSON = "Alejo"
+        self.TYPE = "Proxy"
 
         # Source https://www.piab.com/inriverassociations/0206204/#specifications
         self.SUCTION_CUP_NAME = "F-BX20 Silicone"
@@ -193,7 +207,7 @@ class RoboticGripper():
         goal_pose[1] = - 65 * pi / 180
         goal_pose[2] = -100 * pi / 180
         goal_pose[3] = - 1
-        goal_pose[4] = + 5
+        goal_pose[4] = + 1.6
         goal_pose[5] = +  0 * pi / 180
 
         # --- Move to the goal pose
