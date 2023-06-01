@@ -36,9 +36,8 @@ from useful_ros import *
 
 def main():
 
-    # TODO modify joint_limits.yaml for this test
     # TODO solve better the srdf
-    # TODO check are thes joint_limits loaded src/universal_robot/ur_description/config/ur5e/joint_limits.yaml
+    # TODO Move mesh files from apple proxy package
     # TODO update the environment and scene
     # TODO place camera on Apple Proxy
     # TODO organize electronics of apple proxy
