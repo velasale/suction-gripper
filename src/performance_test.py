@@ -50,7 +50,7 @@ def main():
     print("\n\n ***** Suction Gripper Experiments *****")
     print("a. Experiment Type: proxy, real")
     experiment = ''
-    while(experiment != ''):
+    while (experiment == ''):
         experiment = input()
     suction_gripper.TYPE = experiment
 
