@@ -35,8 +35,6 @@ from useful_ros import *
 
 def main():
 
-    # TODO Move mesh files from apple proxy package
-    # TODO update the environment and scene
     # TODO place camera on Apple Proxy
     # TODO organize electronics of apple proxy
 
@@ -69,10 +67,12 @@ def main():
     # Check camera, and all signals
 
     # --- Step 4: Pick the desired experiment
-    # Exp 1: Real Apples
-    # Exp 2: Apple Proxy
+    if experiment == "proxy":
+        proxy_picks(suction_gripper)
 
-    ...
+    elif experiment == "real":
+        real_picks(suction_gripper)
+
 
 
 def proxy_picks():
@@ -206,8 +206,8 @@ class RoboticGripper():
         print(goal_pose)
 
         goal_pose[0] = - 180 * pi / 180
-        goal_pose[1] = -  65 * pi / 180
-        goal_pose[2] = +  70 * pi / 180
+        goal_pose[1] = -  80 * pi / 180
+        goal_pose[2] = +  85 * pi / 180
         goal_pose[3] = +   0 * pi / 180
         goal_pose[4] = +  85 * pi / 180
         goal_pose[5] = +   0 * pi / 180

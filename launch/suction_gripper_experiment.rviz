@@ -6,7 +6,13 @@ Panels:
       Expanded:
         - /Status1
         - /MotionPlanning1/Scene Robot1
+        - /Axes1
         - /Axes3
+        - /Axes4
+        - /Axes5
+        - /Axes6
+        - /Axes7
+        - /Axes8
       Splitter Ratio: 0.7868480682373047
     Tree Height: 553
   - Class: rviz/Help
@@ -72,6 +78,11 @@ Visualization Manager:
           Expand Link Details: false
           Expand Tree: false
           Link Tree Style: Links in Alphabetic Order
+          apple_proxy:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
           base:
             Alpha: 1
             Show Axes: false
@@ -103,12 +114,12 @@ Visualization Manager:
             Show Axes: false
             Show Trail: false
             Value: true
-          joes_ur5_table:
+          shoulder_link:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
-          shoulder_link:
+          small_table:
             Alpha: 1
             Show Axes: false
             Show Trail: false
@@ -192,6 +203,11 @@ Visualization Manager:
           Expand Link Details: false
           Expand Tree: false
           Link Tree Style: Links in Alphabetic Order
+          apple_proxy:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
           base:
             Alpha: 1
             Show Axes: false
@@ -223,12 +239,12 @@ Visualization Manager:
             Show Axes: false
             Show Trail: false
             Value: true
-          joes_ur5_table:
+          shoulder_link:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
-          shoulder_link:
+          small_table:
             Alpha: 1
             Show Axes: false
             Show Trail: false
@@ -309,20 +325,11 @@ Visualization Manager:
       Value: true
     - Alpha: 1
       Class: rviz/Axes
-      Enabled: true
-      Length: 0.25
-      Name: Axes
-      Radius: 0.009999999776482582
-      Reference Frame: base_link
-      Show Trail: false
-      Value: true
-    - Alpha: 1
-      Class: rviz/Axes
       Enabled: false
       Length: 0.25
       Name: Axes
       Radius: 0.009999999776482582
-      Reference Frame: world
+      Reference Frame: base_link
       Show Trail: false
       Value: false
     - Alpha: 1
@@ -331,9 +338,18 @@ Visualization Manager:
       Length: 0.25
       Name: Axes
       Radius: 0.009999999776482582
-      Reference Frame: tool0
+      Reference Frame: world
       Show Trail: false
       Value: true
+    - Alpha: 1
+      Class: rviz/Axes
+      Enabled: false
+      Length: 0.25
+      Name: Axes
+      Radius: 0.009999999776482582
+      Reference Frame: tool0
+      Show Trail: false
+      Value: false
     - Alpha: 1
       Class: rviz/Axes
       Enabled: false
@@ -358,45 +374,27 @@ Visualization Manager:
       Length: 0.25
       Name: Axes
       Radius: 0.009999999776482582
-      Reference Frame: test_rig
-      Show Trail: false
-      Value: false
-    - Alpha: 1
-      Class: rviz/Axes
-      Enabled: false
-      Length: 0.25
-      Name: Axes
-      Radius: 0.009999999776482582
-      Reference Frame: sphere
-      Show Trail: false
-      Value: false
-    - Alpha: 1
-      Class: rviz/Axes
-      Enabled: true
-      Length: 0.25
-      Name: Axes
-      Radius: 0.009999999776482582
-      Reference Frame: joes_ur5_table
-      Show Trail: false
-      Value: true
-    - Alpha: 1
-      Class: rviz/Axes
-      Enabled: false
-      Length: 0.25
-      Name: Axes
-      Radius: 0.0010000000474974513
-      Reference Frame: suction_cup_model
-      Show Trail: false
-      Value: false
-    - Alpha: 1
-      Class: rviz/Axes
-      Enabled: true
-      Length: 0.25
-      Name: Axes
-      Radius: 0.009999999776482582
       Reference Frame: eef
       Show Trail: false
+      Value: false
+    - Alpha: 1
+      Class: rviz/Axes
+      Enabled: true
+      Length: 0.25
+      Name: Axes
+      Radius: 0.009999999776482582
+      Reference Frame: small_table
+      Show Trail: false
       Value: true
+    - Alpha: 1
+      Class: rviz/Axes
+      Enabled: false
+      Length: 0.25
+      Name: Axes
+      Radius: 0.004999999888241291
+      Reference Frame: suction_gripper
+      Show Trail: false
+      Value: false
     - Class: rviz/Marker
       Enabled: true
       Marker Topic: /captions
@@ -448,7 +446,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 2.3192524909973145
+      Distance: 3.5333454608917236
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -456,17 +454,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.2984601855278015
-        Y: -0.15292426943778992
-        Z: 1.7881393432617188e-07
+        X: 2.4913313388824463
+        Y: 1.9403605461120605
+        Z: 3.5733984304897604e-07
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.09870974719524384
+      Pitch: 0.47371023893356323
       Target Frame: base_link
-      Yaw: 6.250855445861816
+      Yaw: 5.48402214050293
     Saved: ~
 Window Geometry:
   Displays:
@@ -482,7 +480,7 @@ Window Geometry:
     collapsed: false
   MotionPlanning - Trajectory Slider:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd0000000100000000000002250000039efc0200000008fb000000100044006900730070006c006100790073010000003d00000266000000c900fffffffb0000000800480065006c00700000000342000000bb0000006e00fffffffb0000000a00560069006500770073000000032b000000b0000000a400fffffffb0000000c00430061006d00650072006100000002ff000001610000000000000000fb0000001e004d006f00740069006f006e00200050006c0061006e006e0069006e00670100000374000001890000000000000000fb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000001600000016fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e0067000000003d0000049d0000017d00fffffffb0000000a0049006d00610067006501000002a9000001320000001600ffffff0000050d0000039e00000001000000020000000100000002fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000100000000000001b70000039efc0200000008fb000000100044006900730070006c006100790073010000003d00000266000000c900fffffffb0000000800480065006c00700000000342000000bb0000006e00fffffffb0000000a00560069006500770073000000032b000000b0000000a400fffffffb0000000c00430061006d00650072006100000002ff000001610000000000000000fb0000001e004d006f00740069006f006e00200050006c0061006e006e0069006e00670100000374000001890000000000000000fb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000001600000016fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e0067000000003d0000049d0000017d00fffffffb0000000a0049006d00610067006501000002a9000001320000001600ffffff0000057b0000039e00000001000000020000000100000002fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Views:
     collapsed: false
   Width: 1848
