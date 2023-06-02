@@ -37,6 +37,7 @@ def main():
 
     # TODO place camera on Apple Proxy
     # TODO organize electronics of apple proxy
+    # TODO initial plot of pressures
 
     # Initialize Class
     suction_gripper = RoboticGripper()
@@ -75,29 +76,35 @@ def main():
 
 
 
-def proxy_picks():
+def proxy_picks(gripper):
 
     # --- Experiment Parameters ---
+
     # Number of experiments
     # Amount of noise
 
         # Measure Apple Position (simply add a fiducial marker)
 
-        # Move to Starting Position
+        # Move to Ideal Starting Position
 
         # Start Recording Rosbag file
 
         # Add noise
 
-        # Open Valve (apply vacuum)
+        # --- Open Valve (apply vacuum)
+        print("Applying vacuum")
+        gripper.publish_event("Vacuum On")
+        service_call("openValve")
 
-        # Approach Surface
+        # --- Approach Apple
 
-        # Label number of cups
+        # --- Label the cups that were engaged with apple
+        gripper.label_cups()
 
-        # Retreieve
+        # Retrieve
 
-        # Label result
+        # --- Label result
+        gripper.label_pick()
 
         # Close Valve (stop vacuum)
 
@@ -112,7 +119,7 @@ def proxy_picks():
     ...
 
 
-def real_picks():
+def real_picks(gripper):
     ...
 
 
@@ -130,7 +137,6 @@ class RoboticGripper():
 
         group_name = "manipulator"
         move_group = moveit_commander.MoveGroupCommander(group_name)
-        #TODO update gripper geometry and mesh files
         move_group.set_end_effector_link("eef")
 
         display_trajectory_publisher = rospy.Publisher('/move_group/display_planned_path',
@@ -169,6 +175,9 @@ class RoboticGripper():
         self.SUCTION_CUP_NAME = "F-BX20 Silicone"
         self.SUCTION_CUP_GIVE = 0.010
         self.SUCTION_CUP_RADIUS = 0.021 / 2
+        self.cupA_engaged = "no"
+        self.cupB_engaged = "no"
+        self.cupC_engaged = "no"
 
         # ---- Apple Proxy Parameters
         self.MAIN_SPRING_STIFFNESS = 540
@@ -192,7 +201,6 @@ class RoboticGripper():
         self.start_pose = tf2_geometry_msgs.PoseStamped()
         self.goal_pose = tf2_geometry_msgs.PoseStamped()
         self.previous_pose = tf2_geometry_msgs.PoseStamped()
-
 
     def go_to_preliminary_position(self):
         """Reaches a desired joint position (Forward Kinematics)"""
@@ -220,7 +228,6 @@ class RoboticGripper():
         current_pose = self.move_group.get_current_joint_values()
 
         return all_close(goal_pose, current_pose, self.TOLERANCE)
-
 
     def go_to_starting_position(self):
         """Reaches a desired End Effector pose (Inverse Kinematics)"""
@@ -446,7 +453,32 @@ class RoboticGripper():
         """
         self.event_publisher.publisher(event)
 
+    def label_cups(self):
+        """Method to label if the suction cups engaged with the apple after the initial approach"""
 
+        print("Is Suction cup-A engaged? yes or no")
+        state = ''
+        while (state != 'yes' or state != 'no'):
+            self.cupA_engaged = state
+
+        print("Is Suction cup-B engaged? yes or no")
+        state = ''
+        while (state != 'yes' or state != 'no'):
+            self.cupB_engaged = state
+
+        print("Is Suction cup-C engaged? yes or no")
+        state = ''
+        while (state != 'yes' or state != 'no'):
+            self.cupC_engaged = state
+
+    def label_pick(self):
+        """Method to label the result of the apple pick"""
+
+        print("How did the apple pick end up?")
+        print("(a) Successful pick")
+        print("(b) Successful pick but apple fell afterwards")
+        print("(c) Un-successful pick")
+        print("(d) Unsure and would like to repeat the trial")
 
 
 if __name__ == '__main__':
