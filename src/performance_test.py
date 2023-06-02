@@ -35,7 +35,6 @@ from useful_ros import *
 
 def main():
 
-    # TODO solve better the srdf
     # TODO Move mesh files from apple proxy package
     # TODO update the environment and scene
     # TODO place camera on Apple Proxy
@@ -165,10 +164,15 @@ class RoboticGripper():
         self.PERSON = "Alejo"
         self.TYPE = "Proxy"
 
+        # ---- Gripper Parameters
         # Source https://www.piab.com/inriverassociations/0206204/#specifications
         self.SUCTION_CUP_NAME = "F-BX20 Silicone"
         self.SUCTION_CUP_GIVE = 0.010
         self.SUCTION_CUP_RADIUS = 0.021 / 2
+
+        # ---- Apple Proxy Parameters
+        self.MAIN_SPRING_STIFFNESS = 540
+        self.LATERAL_SPRING_STIFFNESS = 200
 
         # ---- Noise variables
         self.noise_z_command = 0

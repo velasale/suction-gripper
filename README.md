@@ -8,12 +8,16 @@ The following steps were performed under Ubuntu 20.04.5 LTS (Focal Fossa)(https:
 
 ### Arduino  
 1. Install Arduino  
-2. Search and install the libraries **rosserial**, **adafruit mprls** and **Adafruit_VL53L0X**
-3. If after compiling you encounter issues with *cstring*, try:  
-open **msg.h**  
-replace `#include <cstring>` with `#include<string.h>`  
-replace `std::memcpy()` with `memcpy()` 
-4. Also have in mind that **roserial** was developed for AVR Arduino processors. If you have SAMD21 based Arduino boards (e.g. Arduino Zero) then you will need a SAMD21 Compatible ros_lib for rosserial which can be found [here](https://github.com/MWahbahCC/ros_lib/tree/main) as suggested [here](https://answers.ros.org/question/328712/rosserial_python-on-samd21/).
+2. Search and install the libraries:
+    * **rosserial**
+    * **adafruit mprls** (Atmospheric Pressure Sensor)
+    * **adafruit VL53L0X** (Time Of Flight Sensor)
+3. Warning:
+    * If after compiling you encounter issues with *cstring*, try:  
+   open **msg.h**  
+   replace `#include <cstring>` with `#include<string.h>`  
+   replace `std::memcpy()` with `memcpy()` 
+    * If you are using a SAMD21 based Arduino board (e.g. Arduino Zero) then you will need a SAMD21 Compatible ros_lib for rosserial which can be found [here](https://github.com/MWahbahCC/ros_lib/tree/main) as suggested [here](https://answers.ros.org/question/328712/rosserial_python-on-samd21/).
      
 ### ROS
 1. Install ROS [noetic](http://wiki.ros.org/noetic/Installation/Ubuntu)
