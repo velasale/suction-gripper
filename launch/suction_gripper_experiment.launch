@@ -8,8 +8,8 @@
 
       <!--       Step 1: Launch robot -->
       <include file="$(find ur_robot_driver)/launch/ur5e_bringup.launch">
-        <arg name="robot_ip" value="169.254.174.50" doc="Joe's ur5e IP: 169.254.174.50  Cindy's ur5e IP: 169.254.177.232."/>
-        <arg name="kinematics_config" value="$(find suction-gripper)/calibration/joes_ur5e_calibration.yaml"/>
+        <arg name="robot_ip" value="169.254.177.232" doc="Joe's ur5e IP: 169.254.174.50  Cindy's ur5e IP: 169.254.177.232."/>
+        <arg name="kinematics_config" value="$(find suction-gripper)/calibration/cindys_ur5e_calibration.yaml"/>
         <arg name="robot_description_file" value="$(find suction-gripper)/launch/load_ur5e.launch" />
       </include>
     
@@ -51,10 +51,10 @@
 
 
       <!-- Step 4: Launch ROS Serial -->
-      <node pkg="rosserial_python" type="serial_node.py" name="rosserial" output="screen">
-        <param name="port" value="/dev/ttyACM0" />
-        <param name="baud" value="250000" />
-      </node>
+<!--       <node pkg="rosserial_python" type="serial_node.py" name="rosserial" output="screen"> -->
+<!--         <param name="port" value="/dev/ttyACM0" /> -->
+<!--         <param name="baud" value="250000" /> -->
+<!--       </node> -->
 
   </group>
 
