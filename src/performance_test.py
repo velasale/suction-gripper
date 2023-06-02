@@ -106,9 +106,16 @@ def proxy_picks(gripper):
         # --- Label result
         gripper.label_pick()
 
-        # Close Valve (stop vacuum)
+        # --- Close Valve (stop vacuum)
+        print("Stop vacuum")
+        gripper.publish_event("Vacuum Off")
+        service_call("closeValve")
+        time.sleep(0.05)
 
         # Stop Recording Rosbag file
+        stop_rosbag(command, rosbag_process)
+        print("Stop recording Rosbag")
+        time.sleep(1)
 
         # Save metadata in yaml file
 
