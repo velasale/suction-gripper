@@ -24,7 +24,7 @@
     <joint name="robotiq_coupler_joint" type="fixed">
     <parent link="tool0" />
     <child link="suction_gripper" />
-    <origin xyz="0 0 0.15" rpy="1.5708 0 0" />        
+    <origin xyz="0 0 0.162" rpy="1.5708 0 0" />        
     </joint>
 
     <!-- Describe the interface between the world and the tables -->
@@ -36,16 +36,24 @@
 
     <joint name="world_small_table" type="fixed">
     <parent link="world" />
-    <child link="joes_ur5_table" />
-    <origin xyz="0.915 0.097 0.7660" rpy="-3.1416 0 3.1416" />
+    <child link="small_table" />
+    <origin xyz="-0.29 -1.57 0" rpy="0 0 1.5708" />       
+    </joint>
+
+
+    <!-- Describe the interface between the world and the Apple Proxy -->
+    <joint name = "bigTable_simpleProxy" type="fixed"> 
+    <parent link = "big_table" /> 
+    <child link = "apple_proxy" /> 
+    <origin xyz = "0.4572 0.91 0.895" rpy="1.5708 0 -1.5708" />
     </joint>
 
     
     <!-- Describe the interface between the world and the robot" -->
     <joint name="world_joint" type="fixed">
-    <parent link="joes_ur5_table" />
+    <parent link="small_table" />
     <child link = "base_link" />
-    <origin xyz="0.71 0.25 0" rpy="3.1416 0.0 -0.7854" />
+    <origin xyz="0.358 0.357 0.858" rpy="0.0 0.0 3.1416" />
     </joint>
 
 

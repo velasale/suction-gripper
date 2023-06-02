@@ -205,12 +205,12 @@ class RoboticGripper():
         goal_pose = self.move_group.get_current_joint_values()
         print(goal_pose)
 
-        goal_pose[0] = +180 * pi / 180
-        goal_pose[1] = - 65 * pi / 180
-        goal_pose[2] = -100 * pi / 180
-        goal_pose[3] = - 1
-        goal_pose[4] = + 1.6
-        goal_pose[5] = +  0 * pi / 180
+        goal_pose[0] = - 180 * pi / 180
+        goal_pose[1] = -  65 * pi / 180
+        goal_pose[2] = +  70 * pi / 180
+        goal_pose[3] = +   0 * pi / 180
+        goal_pose[4] = +  85 * pi / 180
+        goal_pose[5] = +   0 * pi / 180
 
         # --- Move to the goal pose
         self.move_group.go(goal_pose, wait=True)

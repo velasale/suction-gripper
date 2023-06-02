@@ -57,5 +57,7 @@
     <!-- Disable collisions of the suction_gripper -->
     <disable_collisions link1="wrist_3_link" link2="suction_gripper" reason="Adjacent" />
     
+    <!-- Disable collisions of the scene -->
+    <disable_collisions link1="big_table" link2="apple_proxy" reason="Adjancent" />
 
 </robot>
