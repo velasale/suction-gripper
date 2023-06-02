@@ -132,7 +132,7 @@ class RoboticGripper():
         group_name = "manipulator"
         move_group = moveit_commander.MoveGroupCommander(group_name)
         #TODO update gripper geometry and mesh files
-        move_group.set_end_effector_link("_todo_")
+        move_group.set_end_effector_link("eef")
 
         display_trajectory_publisher = rospy.Publisher('/move_group/display_planned_path',
                                                        moveit_msgs.msg.DisplayTrajectory, queue_size=20)

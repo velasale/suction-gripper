@@ -6,7 +6,7 @@ Panels:
       Expanded:
         - /Status1
         - /MotionPlanning1/Scene Robot1
-        - /Axes10
+        - /Axes3
       Splitter Ratio: 0.7868480682373047
     Tree Height: 553
   - Class: rviz/Help
@@ -330,7 +330,7 @@ Visualization Manager:
       Enabled: true
       Length: 0.25
       Name: Axes
-      Radius: 0.004999999888241291
+      Radius: 0.009999999776482582
       Reference Frame: tool0
       Show Trail: false
       Value: true
@@ -388,6 +388,15 @@ Visualization Manager:
       Reference Frame: suction_cup_model
       Show Trail: false
       Value: false
+    - Alpha: 1
+      Class: rviz/Axes
+      Enabled: true
+      Length: 0.25
+      Name: Axes
+      Radius: 0.009999999776482582
+      Reference Frame: eef
+      Show Trail: false
+      Value: true
     - Class: rviz/Marker
       Enabled: true
       Marker Topic: /captions
@@ -411,15 +420,6 @@ Visualization Manager:
       Torque Color: 204; 204; 51
       Unreliable: false
       Value: true
-    - Alpha: 1
-      Class: rviz/Axes
-      Enabled: false
-      Length: 1
-      Name: Axes
-      Radius: 0.10000000149011612
-      Reference Frame: tool0
-      Show Trail: false
-      Value: false
     - Class: rviz/Image
       Enabled: true
       Image Topic: /usb_cam/image_raw
@@ -464,9 +464,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.4687095880508423
+      Pitch: 0.09870974719524384
       Target Frame: base_link
-      Yaw: 5.210850238800049
+      Yaw: 6.250855445861816
     Saved: ~
 Window Geometry:
   Displays:
