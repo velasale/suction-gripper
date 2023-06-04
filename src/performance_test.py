@@ -62,12 +62,9 @@ def main():
     # Pass these properties to the class
 
     # --- Step 3: Check that the vacuum circuit is free of holes
-    # Turn on valve
-    # Place flat object
-    # Plot and check all sensors are @20KPa
-    # Check camera, and all signals
+    suction_gripper.suction_cup_test()
 
-    # --- Step 4: Pick the desired experiment
+    # --- Step 4: Start the desired experiment
     if experiment == "proxy":
         proxy_picks(suction_gripper)
 
@@ -589,7 +586,7 @@ class RoboticGripper():
         name = "vacuum_test"
         filename = location + foldername + name
         topics = ["/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3"]
-        command, rosbag_process = start_saving_rosbag(filename, topics)
+        command, rosbag_process = start_rosbag(filename, topics)
         print("Start recording Rosbag")
         time.sleep(1)
 
