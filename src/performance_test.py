@@ -88,8 +88,17 @@ def proxy_picks(gripper):
         # Move to Ideal Starting Position
 
         # Start Recording Rosbag file
+        location = os.path.dirname(os.getcwd())
+        folder = "/data/"
+        name = 'trial'  #todo
+        filename = location + folder + name
+        command, rosbag_process = start_rosbag(filename)
+        print("Start recording Rosbag")
+        time.sleep(0.1)
 
         # Add noise
+
+
 
         # --- Open Valve (apply vacuum)
         print("Applying vacuum")
@@ -97,11 +106,17 @@ def proxy_picks(gripper):
         service_call("openValve")
 
         # --- Approach Apple
+        print("Approaching apple")
+        gripper.publish_event("Approach")
+        move = gripper.move_normal(0.05)
 
         # --- Label the cups that were engaged with apple
         gripper.label_cups()
 
         # Retrieve
+        print("Picking Apple")
+        gripper.publish_event("Retrieving")
+        move = gripper.move_normal(-0.05)
 
         # --- Label result
         gripper.label_pick()
@@ -121,9 +136,6 @@ def proxy_picks(gripper):
 
         # Plot results, and decide to toss experiment away or not
 
-
-
-    ...
 
 
 def real_picks(gripper):
@@ -288,7 +300,6 @@ class RoboticGripper():
 
         return success
 
-
     def add_cartesian_noise(self, x_noise, y_noise, z_noise):
 
         # --- Place marker with text in RVIZ
@@ -335,7 +346,6 @@ class RoboticGripper():
         self.check_real_noise()
 
         return success
-
 
     def place_marker_text(self, x=0,y=0,z=0, scale=0.01, text='caption'):
         """
@@ -392,7 +402,6 @@ class RoboticGripper():
         # Set a rate.  10 Hz is a good default rate for a marker moving with the Fetch robot.
         rate = rospy.Rate(10)
 
-
     def check_real_noise(self):
         """ Gets real noise"""
 
@@ -416,7 +425,6 @@ class RoboticGripper():
         self.noize_z_real = cur_pose_ezframe.pose.position.z - ideal_pose.position.z
 
         # TODO prints
-
 
     def save_metadata(self, filename):
         """
@@ -451,32 +459,34 @@ class RoboticGripper():
             }
         }
 
-
     def publish_event(self, event):
         """
         Handy method to have the code events saved within the bagfile
         @param event:
         @return:
         """
-        self.event_publisher.publisher(event)
+        self.event_publisher.publish(event)
 
     def label_cups(self):
         """Method to label if the suction cups engaged with the apple after the initial approach"""
 
         print("Is Suction cup-A engaged? yes or no")
         state = ''
-        while (state != 'yes' or state != 'no'):
-            self.cupA_engaged = state
+        while (state != 'yes' and state != 'no'):
+            state = input()
+        self.cupA_engaged = state
 
         print("Is Suction cup-B engaged? yes or no")
         state = ''
-        while (state != 'yes' or state != 'no'):
-            self.cupB_engaged = state
+        while (state != 'yes' and state != 'no'):
+            state = input()
+        self.cupB_engaged = state
 
         print("Is Suction cup-C engaged? yes or no")
         state = ''
-        while (state != 'yes' or state != 'no'):
-            self.cupC_engaged = state
+        while (state != 'yes' and state != 'no'):
+            state = input()
+        self.cupC_engaged = state
 
     def label_pick(self):
         """Method to label the result of the apple pick"""
@@ -486,6 +496,50 @@ class RoboticGripper():
         print("(b) Successful pick but apple fell afterwards")
         print("(c) Un-successful pick")
         print("(d) Unsure and would like to repeat the trial")
+
+    def move_normal(self, z):
+
+        # --- Place a marker with text in RVIZ
+        text = "Moving in Z-Axis"
+        self.place_marker_text(0, 0, 1.5, 0.05, text)
+
+        # --- ROS tool for transformation across c-frames
+        tf_buffer = tf2_ros.Buffer()
+        listener = tf2_ros.TransformListener(tf_buffer)
+
+        # --- Read current pose (planning frame)
+        cur_pose_pframe = tf2_geometry_msgs.PoseStamped()
+        cur_pose_pframe.pose = self.move_group.get_current_pose().pose
+        cur_pose_pframe.header.frame_id = self.planning_frame
+        cur_pose_pframe.header.stamp = rospy.Time(0)
+
+        # ---- Step 2: Transform current pose into the intutitive/easy frame and add noise
+        try:
+            cur_pose_ezframe = tf_buffer.transform(cur_pose_pframe, "eef", rospy.Duration(1))
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            raise
+
+        cur_pose_ezframe.pose.position.z += z
+        cur_pose_ezframe.header.stamp = rospy.Time(0)
+
+        # ---- Step 3: Transform again the goal pose into the planning frame
+        try:
+            goal_pose_pframe = tf_buffer.transform(cur_pose_ezframe, self.planning_frame, rospy.Duration(1))
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            raise
+
+        # --- Step 4: Move to the new pose
+        self.move_group.set_pose_target(goal_pose_pframe.pose)
+        plan = self.move_group.go(wait=True)
+        self.move_group.stop()
+        self.move_group.clear_pose_targets()
+
+        # --- Step 5: Compare poses
+        cur_pose = self.move_group.get_current_pose().pose
+        success = all_close(goal_pose_pframe.pose, cur_pose, self.TOLERANCE)
+
+        return success
+
 
 
 if __name__ == '__main__':

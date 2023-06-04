@@ -6,13 +6,13 @@
   <!-- Real Robot and Rviz-->
   <group if="$(eval arg('with_robot') == 'yes')">
 
-<!--        --><!--       Step 1: Launch robot -->
-<!--       <include file="$(find ur_robot_driver)/launch/ur5e_bringup.launch"> -->
-<!--         <arg name="robot_ip" value="169.254.177.232" doc="Joe's ur5e IP: 169.254.174.50  Cindy's ur5e IP: 169.254.177.232."/> -->
-<!--         <arg name="kinematics_config" value="$(find suction-gripper)/calibration/cindys_ur5e_calibration.yaml"/> -->
-<!--         <arg name="robot_description_file" value="$(find suction-gripper)/launch/load_ur5e.launch" /> -->
-<!--       </include> -->
-<!--      -->
+       <!--    Step 1: Launch robot -->
+      <include file="$(find ur_robot_driver)/launch/ur5e_bringup.launch">
+        <arg name="robot_ip" value="169.254.177.232" doc="Joe's ur5e IP: 169.254.174.50  Cindy's ur5e IP: 169.254.177.232."/>
+        <arg name="kinematics_config" value="$(find suction-gripper)/calibration/cindys_ur5e_calibration.yaml"/>
+        <arg name="robot_description_file" value="$(find suction-gripper)/launch/load_ur5e.launch" />
+      </include>
+    
 
       <!--      Step 2: Launch lab setup with moveIt -->
       <!-- Remember that line 27 of pickApp_real.launch is commented, to avoid the node issue-->

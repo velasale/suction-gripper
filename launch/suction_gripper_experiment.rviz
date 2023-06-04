@@ -6,6 +6,7 @@ Panels:
       Expanded:
         - /Status1
         - /MotionPlanning1/Scene Robot1
+        - /Axes3
       Splitter Ratio: 0.7868480682373047
     Tree Height: 553
   - Class: rviz/Help
@@ -336,13 +337,13 @@ Visualization Manager:
       Value: true
     - Alpha: 1
       Class: rviz/Axes
-      Enabled: false
+      Enabled: true
       Length: 0.25
       Name: Axes
       Radius: 0.009999999776482582
       Reference Frame: tool0
       Show Trail: false
-      Value: false
+      Value: true
     - Alpha: 1
       Class: rviz/Axes
       Enabled: false
@@ -363,13 +364,13 @@ Visualization Manager:
       Value: false
     - Alpha: 1
       Class: rviz/Axes
-      Enabled: false
+      Enabled: true
       Length: 0.25
       Name: Axes
       Radius: 0.009999999776482582
       Reference Frame: eef
       Show Trail: false
-      Value: false
+      Value: true
     - Alpha: 1
       Class: rviz/Axes
       Enabled: true
@@ -439,7 +440,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 3.5333454608917236
+      Distance: 2.5448076725006104
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -447,17 +448,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 1.7175185680389404
-        Y: -0.4971485137939453
+        X: -0.2747466564178467
+        Y: 0.6981211304664612
         Z: 5.957584221505385e-07
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.47371023893356323
+      Pitch: 0.2887103855609894
       Target Frame: base_link
-      Yaw: 5.48402214050293
+      Yaw: 2.1658363342285156
     Saved: ~
 Window Geometry:
   Displays:
