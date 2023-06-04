@@ -7,6 +7,7 @@ import os
 import geometry_msgs.msg
 from moveit_commander.conversions import pose_to_list
 
+
 def all_close(goal, current, tolerance):
     """
     Convenient method for testing if a lits of values are within a tolerance
@@ -30,21 +31,16 @@ def all_close(goal, current, tolerance):
     return True
 
 
-def start_rosbag(name='trial'):
+def start_rosbag(name='trial', topics=""):
     """Convenient method to start saving bagfile"""
 
     filename = name
 
-    topics =   " wrench" \
-             + " joint_states" \
-             + " experiment_steps" \
-             + " /gripper/distance" \
-             + " /gripper/pressure/sc1" \
-             + " /gripper/pressure/sc2" \
-             + " /gripper/pressure/sc3" \
-             + " /usb_cam/image_raw"
+    topics_string = ""
+    for topic in topics:
+        topics_string = topics_string + " " + topic
 
-    command = "rosbag record -O " + filename + topics
+    command = "rosbag record -O " + filename + topics_string
     command = shlex.split(command)
 
     return command, subprocess.Popen(command)

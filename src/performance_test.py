@@ -92,7 +92,10 @@ def proxy_picks(gripper):
         folder = "/data/"
         name = 'trial'  #todo
         filename = location + folder + name
-        command, rosbag_process = start_rosbag(filename)
+        topics = ["wrench", "joint_states", "experiment_steps", "/gripper/distance",
+                  "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3",
+                  "/usb_cam/image_raw"]
+        command, rosbag_process = start_rosbag(filename, topics)
         print("Start recording Rosbag")
         time.sleep(0.1)
 
