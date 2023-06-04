@@ -44,7 +44,7 @@ def start_rosbag(name='trial'):
              + " /gripper/pressure/sc3" \
              + " /usb_cam/image_raw"
 
-    command = "rosbag record -0 " + filename + topics
+    command = "rosbag record -O " + filename + topics
     command = shlex.split(command)
 
     return command, subprocess.Popen(command)
