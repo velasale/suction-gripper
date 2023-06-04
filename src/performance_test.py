@@ -75,75 +75,80 @@ def main():
         real_picks(suction_gripper)
 
 
-
 def proxy_picks(gripper):
 
     # --- Experiment Parameters ---
+    n_samples = 10  # starting positions to start gripper's pose
+    n_reps = 3  # number of repetitions at each configuration
 
-    # Number of experiments
-    # Amount of noise
+    cart_noises = [0, 5/1000, 10/1000, 15/1000, 20/1000]
+    ang_noises = [0, 5, 10, 15, 20]
 
-        # Measure Apple Position (simply add a fiducial marker)
+    for sample in range(n_samples):
 
-        # Move to Ideal Starting Position
+        for rep in range(n_reps):
 
-        # Start Recording Rosbag file
-        location = os.path.dirname(os.getcwd())
-        folder = "/data/"
-        name = 'trial'  #todo
-        filename = location + folder + name
-        topics = ["wrench", "joint_states", "experiment_steps", "/gripper/distance",
-                  "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3",
-                  "/usb_cam/image_raw"]
-        command, rosbag_process = start_rosbag(filename, topics)
-        print("Start recording Rosbag")
-        time.sleep(0.1)
+            # Measure Apple Position (simply add a fiducial marker)
 
-        # Add noise
+            # Move to Ideal Starting Position
+
+            # Start Recording Rosbag file
+            location = os.path.dirname(os.getcwd())
+            folder = "/data/"
+            name = 'trial'  #todo
+            filename = location + folder + name
+            topics = ["wrench", "joint_states", "experiment_steps", "/gripper/distance",
+                      "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3",
+                      "/usb_cam/image_raw"]
+            command, rosbag_process = start_rosbag(filename, topics)
+            print("\n... Start recording Rosbag")
+            time.sleep(0.1)
+
+            # Add noise
 
 
 
-        # --- Open Valve (apply vacuum)
-        print("Applying vacuum")
-        gripper.publish_event("Vacuum On")
-        service_call("openValve")
+            # --- Open Valve (apply vacuum)
+            print("\n... Applying vacuum")
+            gripper.publish_event("Vacuum On")
+            service_call("openValve")
 
-        # --- Approach Apple
-        print("Approaching apple")
-        gripper.publish_event("Approach")
-        move = gripper.move_normal(0.05)
+            # --- Approach Apple
+            print("\n... Approaching apple")
+            gripper.publish_event("Approach")
+            move = gripper.move_normal(0.05)
 
-        # --- Label the cups that were engaged with apple
-        gripper.label_cups()
+            # --- Label the cups that were engaged with apple
+            gripper.label_cups()
 
-        # Retrieve
-        print("Picking Apple")
-        gripper.publish_event("Retrieving")
-        move = gripper.move_normal(-0.05)
+            # Retrieve
+            print("\n... Picking Apple")
+            gripper.publish_event("Retrieving")
+            move = gripper.move_normal(-0.05)
 
-        # --- Label result
-        gripper.label_pick()
+            # --- Label result
+            gripper.label_pick()
 
-        # --- Close Valve (stop vacuum)
-        print("Stop vacuum")
-        gripper.publish_event("Vacuum Off")
-        service_call("closeValve")
-        time.sleep(0.05)
+            # --- Close Valve (stop vacuum)
+            print("\n... Stop vacuum")
+            gripper.publish_event("Vacuum Off")
+            service_call("closeValve")
+            time.sleep(0.05)
 
-        # Stop Recording Rosbag file
-        stop_rosbag(command, rosbag_process)
-        print("Stop recording Rosbag")
-        time.sleep(1)
+            # Stop Recording Rosbag file
+            stop_rosbag(command, rosbag_process)
+            print("\n... Stop recording Rosbag")
+            time.sleep(1)
 
-        # Save metadata in yaml file
+            # Save metadata in yaml file
+            gripper.save_metadata(filename)
+            print("\n... Saving metadata in *yaml file")
 
-        # Plot results, and decide to toss experiment away or not
-
+            # Plot results, and decide to toss experiment away or not
 
 
 def real_picks(gripper):
     ...
-
 
 
 class RoboticGripper():
@@ -191,15 +196,13 @@ class RoboticGripper():
         self.pressure_at_valve = 60
         self.PERSON = "Alejo"
         self.TYPE = "Proxy"
+        self.repetition = 0
 
         # ---- Gripper Parameters
         # Source https://www.piab.com/inriverassociations/0206204/#specifications
         self.SUCTION_CUP_NAME = "F-BX20 Silicone"
         self.SUCTION_CUP_GIVE = 0.010
         self.SUCTION_CUP_RADIUS = 0.021 / 2
-        self.cupA_engaged = "no"
-        self.cupB_engaged = "no"
-        self.cupC_engaged = "no"
 
         # ---- Apple Proxy Parameters
         self.MAIN_SPRING_STIFFNESS = 540
@@ -223,6 +226,12 @@ class RoboticGripper():
         self.start_pose = tf2_geometry_msgs.PoseStamped()
         self.goal_pose = tf2_geometry_msgs.PoseStamped()
         self.previous_pose = tf2_geometry_msgs.PoseStamped()
+
+        # --- Experiment Labels
+        self.cupA_engaged = "no"
+        self.cupB_engaged = "no"
+        self.cupC_engaged = "no"
+        self.pick_result = ""
 
     def go_to_preliminary_position(self):
         """Reaches a desired joint position (Forward Kinematics)"""
@@ -436,12 +445,13 @@ class RoboticGripper():
         @return:
         """
 
+        # --- Organize metatada
         experiment_info = {
             "general": {
                 "date": str(datetime.datetime.now()),
                 "person": self.PERSON,
-                "experiment type": self.experiment_type,
-                "repetition": self.repetition
+                "experiment type": self.TYPE,
+                "repetition": str(self.repetition)
             },
             "robot": {
                 "robot": self.ROBOT_NAME,
@@ -457,10 +467,21 @@ class RoboticGripper():
                 "Pressure at valve": self.pressure_at_valve
             },
             "target": {
-                #TODO "Stiffnesses": self.STIFN
-                #TODO "Apple Diameter": self.OBJECTRADIUS
+                "Stem Stiffness": "",   #TODO "Stiffnesses": self.STIFN
+                "Apple Diameter": "",   #TODO "Apple Diameter": self.OBJECTRADIUS
+            },
+            "labels": {
+                "Suction Cup A": self.cupA_engaged,
+                "Suction Cup B": self.cupB_engaged,
+                "Suction Cup C": self.cupC_engaged,
+                "Apple pick result": self.pick_result
             }
         }
+
+        # --- Save metadata in file
+        filename += ".json"
+        with open(filename, "w") as outfile:
+            json.dump(experiment_info, outfile, indent=4)
 
     def publish_event(self, event):
         """
@@ -473,19 +494,26 @@ class RoboticGripper():
     def label_cups(self):
         """Method to label if the suction cups engaged with the apple after the initial approach"""
 
-        print("Is Suction cup-A engaged? yes or no")
+        # https://stackoverflow.com/questions/287871/how-do-i-print-colored-text-to-the-terminal
+        CRED = '\033[91m'
+        CGREEN = '\033[92m'
+        CEND = '\033[0m'
+
+        print("\n**** Label the engagement of the suction cups ****")
+
+        print("Is Suction" + CGREEN + " cup-A " + CEND + "engaged? yes or no")
         state = ''
         while (state != 'yes' and state != 'no'):
             state = input()
         self.cupA_engaged = state
 
-        print("Is Suction cup-B engaged? yes or no")
+        print("Is Suction" + CGREEN + " cup-B " + CEND + "engaged? yes or no")
         state = ''
         while (state != 'yes' and state != 'no'):
             state = input()
         self.cupB_engaged = state
 
-        print("Is Suction cup-C engaged? yes or no")
+        print("Is Suction" + CGREEN + " cup-C " + CEND + "engaged? yes or no")
         state = ''
         while (state != 'yes' and state != 'no'):
             state = input()
@@ -494,11 +522,19 @@ class RoboticGripper():
     def label_pick(self):
         """Method to label the result of the apple pick"""
 
+        print("\n**** Label the result of the apple pick ****")
+
+
         print("How did the apple pick end up?")
         print("(a) Successful pick")
         print("(b) Successful pick but apple fell afterwards")
         print("(c) Un-successful pick")
         print("(d) Unsure and would like to repeat the trial")
+
+        result = ''
+        while (result != 'a' and result != 'b' and result != 'c' and result != 'd'):
+            result = input()
+        self.apple_pick_result = result
 
     def move_normal(self, z):
 
@@ -543,6 +579,45 @@ class RoboticGripper():
 
         return success
 
+    def suction_cup_test(self):
+
+        print("\n **** Testing Vacuum Levels ****")
+
+        # --- Start Rosbag
+        location = os.path.dirname(os.getcwd())
+        foldername = "/data/"
+        name = "vacuum_test"
+        filename = location + foldername + name
+        topics = ["/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3"]
+        command, rosbag_process = start_saving_rosbag(filename, topics)
+        print("Start recording Rosbag")
+        time.sleep(1)
+
+        # --- Apply Vacuum
+        print("\n... Applying vacuum")
+        self.publish_event("Vacuum On")
+        # time.sleep(0.001)
+        service_call("openValve")
+        time.sleep(1)
+
+        # --- Wait some time
+        self.publish_event("\n... Steady -> put object against cups")
+        time.sleep(5)
+
+        # --- Stop Vacuum
+        print("\n... Stop vacuum")
+        self.publish_event("Vacuum Off")
+        # time.sleep(0.01)
+        service_call("closeValve")
+        time.sleep(1)
+
+        # --- Stop recording Rosbag
+        stop_rosbag(command, rosbag_process)
+        print("Stop recording Rosbag")
+        time.sleep(1)
+
+        # --- Plot to check vacuum levels
+        #todo
 
 
 if __name__ == '__main__':
