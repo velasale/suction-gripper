@@ -37,7 +37,7 @@ def main():
 
     # TODO place camera on Apple Proxy
     # TODO organize electronics of apple proxy
-    # TODO initial plot of pressures
+
 
     # Initialize Class
     suction_gripper = RoboticGripper()
@@ -62,6 +62,7 @@ def main():
     # Pass these properties to the class
 
     # --- Step 3: Check that the vacuum circuit is free of holes
+    # TODO initial plot of pressures
     suction_gripper.suction_cup_test()
 
     # --- Step 4: Start the desired experiment
