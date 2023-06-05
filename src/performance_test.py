@@ -33,6 +33,17 @@ from bagfile_reader import *
 from useful_ros import *
 
 
+def plot_vacuum(filename):
+    """Simply plots vacuum using methods and functions from bagfile_reader.py"""
+
+    bag_to_csvs(filename + ".bag")
+    metadata = read_json(filename + ".json")
+    experim = read_csvs(metadata, filename)
+    experim.elapsed_times()
+    # experim.get_steady_vacuum('Steady', 'Vacuum Off')
+    experim.plot_only_pressure()
+    plt.show()
+
 def main():
 
     # TODO place camera on Apple Proxy
@@ -95,9 +106,11 @@ def proxy_picks(gripper):
             folder = "/data/"
             name = 'trial'  #todo
             filename = location + folder + name
+            # topics = ["wrench", "joint_states", "experiment_steps", "/gripper/distance",
+            #           "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3",
+            #           "/usb_cam/image_raw"]
             topics = ["wrench", "joint_states", "experiment_steps", "/gripper/distance",
-                      "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3",
-                      "/usb_cam/image_raw"]
+                      "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3"]
             command, rosbag_process = start_rosbag(filename, topics)
             print("\n... Start recording Rosbag")
             time.sleep(0.1)
@@ -115,6 +128,7 @@ def proxy_picks(gripper):
             print("\n... Approaching apple")
             gripper.publish_event("Approach")
             move = gripper.move_normal(0.05)
+            # todo: should we stop saving rosbaf to avoid wasting space during labeling?
 
             # --- Label the cups that were engaged with apple
             gripper.label_cups()
@@ -126,6 +140,7 @@ def proxy_picks(gripper):
 
             # --- Label result
             gripper.label_pick()
+            # todo: should we stop saving rosbaf to avoid wasting space during labeling?
 
             # --- Close Valve (stop vacuum)
             print("\n... Stop vacuum")
@@ -586,7 +601,7 @@ class RoboticGripper():
         foldername = "/data/"
         name = "vacuum_test"
         filename = location + foldername + name
-        topics = ["/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3"]
+        topics = ["experiment_steps", "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3"]
         command, rosbag_process = start_rosbag(filename, topics)
         print("Start recording Rosbag")
         time.sleep(1)
@@ -599,7 +614,7 @@ class RoboticGripper():
         time.sleep(1)
 
         # --- Wait some time
-        self.publish_event("\n... Steady -> put object against cups")
+        self.publish_event("Steady")
         time.sleep(5)
 
         # --- Stop Vacuum
@@ -614,8 +629,13 @@ class RoboticGripper():
         print("Stop recording Rosbag")
         time.sleep(1)
 
-        # --- Plot to check vacuum levels
-        #todo
+        # --- Finally save the metadata
+        self.save_metadata(filename)
+        print("Saving Metadata")
+
+        # ----------------- Plot data to check vacuum levels --------------
+        print("Vacuum Preview")
+        plot_vacuum(filename)
 
 
 if __name__ == '__main__':

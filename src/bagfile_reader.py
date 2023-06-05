@@ -55,26 +55,59 @@ def read_json(file):
 
         # Add metadata as attributes
         experiment.file_source = file
-        experiment.exp_type = json_data["generalInfo"]["experimentType"]
-        experiment.repetition = json_data["generalInfo"]["repetition"]
-        experiment.surface = json_data["surfaceInfo"]["type"]
+        try:
+            experiment.exp_type = json_data["generalInfo"]["experimentType"]
+        except KeyError:
+            experiment.exp_type = ""
 
-        experiment.x_noise = abs(json_data["robotInfo"]["x noise real [m]"])
-        experiment.z_noise = abs(json_data["robotInfo"]["z noise real [m]"])
+        try:
+            experiment.repetition = json_data["generalInfo"]["repetition"]
+        except KeyError:
+            experiment.repetition = ""
 
-        experiment.x_noise_command = abs(json_data["robotInfo"]["x noise command [m]"])
-        experiment.z_noise_command = abs(json_data["robotInfo"]["z noise command [m]"])
+        try:
+            experiment.surface = json_data["surfaceInfo"]["type"]
+        except KeyError:
+            experiment.surface = ""
 
-        experiment.pitch = json_data["robotInfo"]["pitch [rad]"]
+
+        try:
+            experiment.x_noise = abs(json_data["robotInfo"]["x noise real [m]"])
+        except KeyError:
+            experiment.x_noise = 0
+
+        try:
+            experiment.z_noise = abs(json_data["robotInfo"]["z noise real [m]"])
+        except KeyError:
+            experiment.z_noise = 0
+
+        try:
+            experiment.x_noise_command = abs(json_data["robotInfo"]["x noise command [m]"])
+        except KeyError:
+            experiment.x_noise_command = 0
+
+        try:
+            experiment.z_noise_command = abs(json_data["robotInfo"]["z noise command [m]"])
+        except KeyError:
+            experiment.z_noise_command = 0
+
+        try:
+            experiment.pitch = json_data["robotInfo"]["pitch [rad]"]
+        except KeyError:
+            experiment.pitch = 0
+
 
         try:
             experiment.pressure = json_data["gripperInfo"]["pressureAtValve [PSI]"]
         except KeyError:
-            experiment.pressure = json_data["gripperInfo"]["pressureAtValve"]
+            # experiment.pressure = json_data["gripperInfo"]["pressureAtValve"]
+            experiment.pressure = ""
+
         try:
             experiment.surface_radius = json_data["surfaceInfo"]["radius [m]"]
         except KeyError:
-            experiment.surface_radius = json_data["surfaceInfo"]["radius"]
+            # experiment.surface_radius = json_data["surfaceInfo"]["radius"]
+            experiment.surface_radius = ""
 
 
 
@@ -96,6 +129,24 @@ def read_csvs(experiment, folder):
                 experiment.pressure_values = data_list.iloc[:, 1].tolist()
                 # Convert to kPa (1000 Pa) which is more standard than hPa (100 Pa)
                 experiment.pressure_values = np.divide(experiment.pressure_values, 10)
+
+            if file == "gripper-pressure-sc1.csv":
+                experiment.pressure_sc1_time_stamp = data_list.iloc[:, 0].tolist()
+                experiment.pressure_sc1_values = data_list.iloc[:, 1].tolist()
+                # Convert to kPa (1000 Pa) which is more standard than hPa (100 Pa)
+                experiment.pressure_sc1_values = np.divide(experiment.pressure_sc1_values, 10)
+
+            if file == "gripper-pressure-sc2.csv":
+                experiment.pressure_sc2_time_stamp = data_list.iloc[:, 0].tolist()
+                experiment.pressure_sc2_values = data_list.iloc[:, 1].tolist()
+                # Convert to kPa (1000 Pa) which is more standard than hPa (100 Pa)
+                experiment.pressure_sc2_values = np.divide(experiment.pressure_sc2_values, 10)
+
+            if file == "gripper-pressure-sc3.csv":
+                experiment.pressure_sc3_time_stamp = data_list.iloc[:, 0].tolist()
+                experiment.pressure_sc3_values = data_list.iloc[:, 1].tolist()
+                # Convert to kPa (1000 Pa) which is more standard than hPa (100 Pa)
+                experiment.pressure_sc3_values = np.divide(experiment.pressure_sc3_values, 10)
 
 
             if file == "rench.csv":
@@ -341,6 +392,18 @@ class Experiment:
         self.pressure_elapsed_time = []
         self.pressure_values = []
 
+        self.pressure_sc1_time_stamp = []
+        self.pressure_sc1_elapsed_time = []
+        self.pressure_sc1_values = []
+
+        self.pressure_sc2_time_stamp = []
+        self.pressure_sc2_elapsed_time = []
+        self.pressure_sc2_values = []
+
+        self.pressure_sc3_time_stamp = []
+        self.pressure_sc3_elapsed_time = []
+        self.pressure_sc3_values = []
+
         self.wrench_time_stamp = []
         self.wrench_elapsed_time = []
 
@@ -436,8 +499,17 @@ class Experiment:
     def initial_stamp(self):
         """Takes the initial stamp from all the topics. This is useful to subtract from all Time stamps and get a readable time"""
         try:
-            self.first_time_stamp = min(min(self.pressure_time_stamp), min(self.wrench_time_stamp),
-                                        min(self.event_time_stamp))
+            # self.first_time_stamp = min(min(self.pressure_time_stamp), min(self.wrench_time_stamp),
+            #                             min(self.event_time_stamp))
+
+            self.first_time_stamp = min(min(self.pressure_time_stamp),
+                                        min(self.wrench_time_stamp),
+                                        min(self.event_time_stamp),
+                                        min(self.pressure_sc1_time_stamp),
+                                        min(self.pressure_sc2_time_stamp),
+                                        min(self.pressure_sc3_time_stamp)
+                                        )
+
         except ValueError:
             self.first_time_stamp = 0
 
@@ -458,6 +530,19 @@ class Experiment:
         self.event_elapsed_time = [None] * len(self.event_time_stamp)
         for i in range(len(self.event_time_stamp)):
             self.event_elapsed_time[i] = self.event_time_stamp[i] - self.first_time_stamp
+
+        # Values for the three suction cups
+        self.pressure_sc1_elapsed_time = [None] * len(self.pressure_sc1_time_stamp)
+        for i in range(len(self.pressure_sc1_time_stamp)):
+            self.pressure_sc1_elapsed_time[i] = self.pressure_sc1_time_stamp[i] - self.first_time_stamp
+
+        self.pressure_sc2_elapsed_time = [None] * len(self.pressure_sc2_time_stamp)
+        for i in range(len(self.pressure_sc2_time_stamp)):
+            self.pressure_sc2_elapsed_time[i] = self.pressure_sc2_time_stamp[i] - self.first_time_stamp
+
+        self.pressure_sc3_elapsed_time = [None] * len(self.pressure_sc3_time_stamp)
+        for i in range(len(self.pressure_sc3_time_stamp)):
+            self.pressure_sc3_elapsed_time[i] = self.pressure_sc3_time_stamp[i] - self.first_time_stamp
 
     def get_atmospheric_pressure(self):
         """Takes initial and last reading as the atmospheric pressure.
@@ -810,43 +895,50 @@ class Experiment:
         TICKSIZE = 22
         FIGURESIZE = (8.7, 6.8)
 
-        plt.figure(figsize=FIGURESIZE)
 
-        pressure_time = self.pressure_elapsed_time
-        pressure_values = self.pressure_values
+
+        # pressure_time = self.pressure_elapsed_time
+        # pressure_values = self.pressure_values
+
+        pressure_times = [self.pressure_sc1_elapsed_time, self.pressure_sc2_elapsed_time, self.pressure_sc3_elapsed_time]
+        pressure_values = [self.pressure_sc1_values, self.pressure_sc2_values, self.pressure_sc3_values]
 
         event_x = self.event_elapsed_time
         event_y = self.event_values
 
-        plt.plot(pressure_time, pressure_values, linewidth=2)
+        for pressure_time, pressure_value in zip(pressure_times, pressure_values):
+            plt.figure(figsize=FIGURESIZE)
+            plt.plot(pressure_time, pressure_value, linewidth=2)
 
-        for event, label in zip(event_x, event_y):
-            plt.axvline(x=event, color='black', linestyle='dotted', linewidth=2)
-            plt.text(event, 50, label, rotation=90, color='black', fontsize=FONTSIZE)
-            plt.xlabel("Elapsed Time [sec]", fontsize=FONTSIZE)
-            plt.ylabel("Pressure [kPa]", fontsize=FONTSIZE)
-            plt.ylim([0, 110])
+            for event, label in zip(event_x, event_y):
+                plt.axvline(x=event, color='black', linestyle='dotted', linewidth=2)
+                plt.text(event, 50, label, rotation=90, color='black', fontsize=FONTSIZE)
+                plt.xlabel("Elapsed Time [sec]", fontsize=FONTSIZE)
+                plt.ylabel("Pressure [kPa]", fontsize=FONTSIZE)
+                plt.ylim([0, 110])
 
-        # --- Add error in the title if there was any ---
-        try:
-            error_type = self.errors[0]
-        except IndexError:
-            error_type = "data looks good"
-        plt.suptitle(self.filename + "\n\n" + error_type)
-        print(self.filename)
+            # --- Add error in the title if there was any ---
+            try:
+                error_type = self.errors[0]
+            except IndexError:
+                error_type = "data looks good"
+            plt.suptitle(self.filename + "\n\n" + error_type)
+            print(self.filename)
 
-        title_text = "Experiment Type: " + str(self.exp_type) + \
-                     ", F.P.: " + str(self.pressure) + "PSI" \
-                     ", Diameter: " + str(self.surface_radius * 2000) + "mm" \
-                     "\n,Pitch: " + str(int(round(math.degrees(self.pitch), 0))) + "deg" \
-                     ", xNoise Command: " + str(round(self.x_noise_command * 1000, 2)) + "mm" \
-                     ", Repetition No: " + str(self.repetition)
+            title_text = "Experiment Type: " + str(self.exp_type) + \
+                         ", F.P.: " + str(self.pressure) + "PSI" \
+                         ", Diameter: " + str(self.surface_radius * 2000) + "mm" \
+                         "\n,Pitch: " + str(int(round(math.degrees(self.pitch), 0))) + "deg" \
+                         ", xNoise Command: " + str(round(self.x_noise_command * 1000, 2)) + "mm" \
+                         ", Repetition No: " + str(self.repetition)
 
-        plt.grid()
-        plt.xticks(size=TICKSIZE)
-        plt.yticks(size=TICKSIZE)
-        plt.title(self.filename + "\n" + error_type, fontsize=8)
-        plt.suptitle(title_text)
+            plt.grid()
+            plt.xticks(size=TICKSIZE)
+            plt.yticks(size=TICKSIZE)
+            plt.title(self.filename + "\n" + error_type, fontsize=8)
+            plt.suptitle(title_text)
+
+
 
     def plot_only_total_force(self):
         """Plots wrench (forces and moments) and pressure readings"""
