@@ -1,3 +1,6 @@
+# @Time : 6/6/2023 11:15 AM
+# @Author : Alejandro Velasquez
+
 ## --- Standard Library Imports
 import copy
 import csv
@@ -92,6 +95,7 @@ def proxy_picks(gripper):
     n_samples = 10  # starting positions to start gripper's pose
     n_reps = 3  # number of repetitions at each configuration
 
+
     cart_noises = [0, 5/1000, 10/1000, 15/1000, 20/1000]
     ang_noises = [0, 5, 10, 15, 20]
 
@@ -130,7 +134,7 @@ def proxy_picks(gripper):
             print("\n... Approaching apple")
             gripper.publish_event("Approach")
             move = gripper.move_normal(0.05)
-            # todo: should we stop saving rosbaf to avoid wasting space during labeling?
+            # todo: should we stop saving rosbag to avoid wasting space during labeling?
 
             # --- Label the cups that were engaged with apple
             gripper.label_cups()
@@ -142,7 +146,7 @@ def proxy_picks(gripper):
 
             # --- Label result
             gripper.label_pick()
-            # todo: should we stop saving rosbaf to avoid wasting space during labeling?
+            # todo: should we stop saving rosbag to avoid wasting space during labeling?
 
             # --- Close Valve (stop vacuum)
             print("\n... Stop vacuum")
