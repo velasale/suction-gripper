@@ -5,7 +5,7 @@ from matplotlib import pyplot as plt
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
 
-def running_plot_and_vide(location, filename, time_list, values_list, xlabel='Elapsed time [sec]', ylabel='Pressure [kPa]'):
+def running_plot_and_video(location, filename, time_list, values_list, xlabel='Elapsed time [sec]', ylabel='Pressure [kPa]'):
     """
     Plots a graph with a vertical line running while playing a video given images
     @param location: Folder

@@ -1,3 +1,4 @@
+## --- Standard Library Imports
 import json
 import math
 import os
@@ -20,7 +21,9 @@ from sklearn.metrics import r2_score
 from scipy.ndimage import gaussian_filter, median_filter
 import pyautogui
 
-
+## --- Self developed imports
+from ros_scripts import *
+from plot_scripts import *
 
 def read_json(file):
     """Creates a list of experiments as objects. It then reads their respective json file and adds the metadata as
@@ -1491,7 +1494,7 @@ def plot_and_video():
     experiment.get_steady_vacuum('Steady', "Vacuum Off")
 
     # 6. Plot each experiment if needed
-    experiment.plot_only_pressure_animated(location, filename)
+    running_plot_and_video(location, filename, experiment.pressure_elapsed_time, experiment.pressure_values)
     plt.show()
 
 
