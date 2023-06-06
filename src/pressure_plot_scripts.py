@@ -337,6 +337,7 @@ def circle_plots(x_noises, z_noises, radius, x_forces, z_forces, pressure):
     plt.show()
 
 
+#todo: create class Experiment and then Class Apple_Pick_Experiment
 class Experiment:
     """Class to define experiments as objects. Each experiment has properties from its json file.
     """
