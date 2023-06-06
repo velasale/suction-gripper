@@ -29,12 +29,13 @@ import tf2_geometry_msgs  # **Do not use geometry_msgs. Use this instead for Pos
 from visualization_msgs.msg import Marker, MarkerArray
 
 ## --- Self developed imports
-from bagfile_reader import *
-from useful_ros import *
+from pressure_plot_scripts import *
+from ros_scripts import *
+from plot_scripts import *
 
 
 def plot_vacuum(filename):
-    """Simply plots vacuum using methods and functions from bagfile_reader.py"""
+    """Simply plots vacuum using methods and functions from pressure_plot_scripts.py"""
 
     bag_to_csvs(filename + ".bag")
     metadata = read_json(filename + ".json")
@@ -43,6 +44,7 @@ def plot_vacuum(filename):
     # experim.get_steady_vacuum('Steady', 'Vacuum Off')
     experim.plot_only_pressure()
     plt.show()
+
 
 def main():
 
@@ -603,6 +605,7 @@ class RoboticGripper():
         filename = location + foldername + name
         topics = ["experiment_steps", "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3"]
         command, rosbag_process = start_rosbag(filename, topics)
+
         print("Start recording Rosbag")
         time.sleep(1)
 

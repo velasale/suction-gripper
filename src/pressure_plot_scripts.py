@@ -21,26 +21,6 @@ from scipy.ndimage import gaussian_filter, median_filter
 import pyautogui
 
 
-def bag_to_csvs(file):
-    """Open all bagfiles in a folder and saves all topics as csvs"""
-
-    if file.endswith(".bag"):
-        print(file)
-        bag = bagreader(file)
-        # print("\n\n", file)
-
-        # --- Get the topics available in the bagfile ---
-        topics = bag.topic_table
-        # print("Bagfile topics:\n", topics)
-
-        # --- Read the desired topic ---
-        for topic in topics["Topics"]:
-            if topic != '/usb_cam/image_raw':
-                # Once opened, data is saved automatically into a csv file.
-                data = bag.message_by_topic(topic)
-            else:
-                pass
-
 
 def read_json(file):
     """Creates a list of experiments as objects. It then reads their respective json file and adds the metadata as
@@ -355,8 +335,7 @@ def circle_plots(x_noises, z_noises, radius, x_forces, z_forces, pressure):
 
 
 class Experiment:
-    """Class to define experiments as objects.
-    Each experiment has properties from the json file.
+    """Class to define experiments as objects. Each experiment has properties from its json file.
     """
     def __init__(self, id=0,
                  exp_type="vertical",
@@ -456,46 +435,7 @@ class Experiment:
         self.normal_force_values = []
         self.tangent_force_values = []
 
-    def get_features(self):
-        """Basically run all the methods"""
-        self.elapsed_times()
-        self.get_atmospheric_pressure()
-        self.get_steady_vacuum()
-
-        # filter wrench signals
-        self.filter_wrench(40)
-        self.get_relative_values()
-
-        # Normal and Tangential Forces
-        self.get_normal_angle()
-        self.normal_and_tangent_forces()
-
-        self.get_detach_values()
-        self.check_errors()
-
-    def get_normal_angle(self):
-        try:
-            self.normal_angle = math.acos(self.x_noise / self.surface_radius)
-        except ValueError:
-            ...
-
-    def normal_and_tangent_forces(self):
-        """Method to transform the Forces at the XZ cframe into a Normal-Tangential Cframe"""
-
-        for fx, fz in zip(self.wrench_xforce_relative_values, self.wrench_zforce_relative_values):
-            fn = fz * math.sin(self.normal_angle) + fx * math.cos(self.normal_angle)
-            ft = -fz * math.cos(self.normal_angle) + fx * math.sin(self.normal_angle)
-            self.normal_force_values.append(fn)
-            self.tangent_force_values.append(ft)
-
-    def filter_wrench(self, filter_param):
-        self.wrench_xforce_values = median_filter(self.wrench_xforce_values, filter_param)
-        self.wrench_yforce_values = median_filter(self.wrench_yforce_values, filter_param)
-        self.wrench_zforce_values = median_filter(self.wrench_zforce_values, filter_param)
-        self.wrench_xtorque_values = median_filter(self.wrench_xtorque_values, filter_param)
-        self.wrench_ytorque_values = median_filter(self.wrench_ytorque_values, filter_param)
-        self.wrench_ztorque_values = median_filter(self.wrench_ztorque_values, filter_param)
-
+    # --- Functions and methods to use in different experiments ---
     def initial_stamp(self):
         """Takes the initial stamp from all the topics. This is useful to subtract from all Time stamps and get a readable time"""
         try:
@@ -544,6 +484,52 @@ class Experiment:
         for i in range(len(self.pressure_sc3_time_stamp)):
             self.pressure_sc3_elapsed_time[i] = self.pressure_sc3_time_stamp[i] - self.first_time_stamp
 
+    def filter_wrench(self, filter_param):
+        self.wrench_xforce_values = median_filter(self.wrench_xforce_values, filter_param)
+        self.wrench_yforce_values = median_filter(self.wrench_yforce_values, filter_param)
+        self.wrench_zforce_values = median_filter(self.wrench_zforce_values, filter_param)
+        self.wrench_xtorque_values = median_filter(self.wrench_xtorque_values, filter_param)
+        self.wrench_ytorque_values = median_filter(self.wrench_ytorque_values, filter_param)
+        self.wrench_ztorque_values = median_filter(self.wrench_ztorque_values, filter_param)
+
+    def get_relative_values(self):
+
+        for i in range(len(self.wrench_time_stamp)):
+            relative_zforce = self.wrench_zforce_values[i] - self.wrench_zforce_values[0]
+            relative_yforce = self.wrench_yforce_values[i] - self.wrench_yforce_values[0]
+            relative_xforce = self.wrench_xforce_values[i] - self.wrench_xforce_values[0]
+            relative_sumforce = math.sqrt(relative_zforce ** 2 + relative_xforce ** 2)
+            relative_ztorque = self.wrench_ztorque_values[i] - self.wrench_ztorque_values[0]
+            relative_ytorque = self.wrench_ytorque_values[i] - self.wrench_ytorque_values[0]
+            relative_xtorque = self.wrench_xtorque_values[i] - self.wrench_xtorque_values[0]
+
+            self.wrench_zforce_relative_values.append(relative_zforce)
+            self.wrench_yforce_relative_values.append(relative_yforce)
+            self.wrench_xforce_relative_values.append(relative_xforce)
+            self.wrench_sumforce_relative_values.append(relative_sumforce)
+            self.wrench_ztorque_relative_values.append(relative_ztorque)
+            self.wrench_ytorque_relative_values.append(relative_ytorque)
+            self.wrench_xtorque_relative_values.append(relative_xtorque)
+
+    def get_features(self):
+        """Basically run all the methods"""
+        self.elapsed_times()
+        self.get_atmospheric_pressure()
+        self.get_steady_vacuum()
+
+        # filter wrench signals
+        self.filter_wrench(40)
+        self.get_relative_values()
+
+        # Normal and Tangential Forces
+        self.get_normal_angle()
+        self.normal_and_tangent_forces()
+
+        self.get_detach_values()
+        self.check_errors()
+
+
+    # --- Functions specifically for pressure related stuff ---
     def get_atmospheric_pressure(self):
         """Takes initial and last reading as the atmospheric pressure.
         Both are taken because in some cases the valve was already on, hence the last one (after valve is off) is also checked
@@ -552,6 +538,21 @@ class Experiment:
         last_reading = self.pressure_values[1]
 
         self.atmospheric_pressure = max(first_reading, last_reading)
+
+    def get_normal_angle(self):
+        try:
+            self.normal_angle = math.acos(self.x_noise / self.surface_radius)
+        except ValueError:
+            ...
+
+    def normal_and_tangent_forces(self):
+        """Method to transform the Forces at the XZ cframe into a Normal-Tangential Cframe"""
+
+        for fx, fz in zip(self.wrench_xforce_relative_values, self.wrench_zforce_relative_values):
+            fn = fz * math.sin(self.normal_angle) + fx * math.cos(self.normal_angle)
+            ft = -fz * math.cos(self.normal_angle) + fx * math.sin(self.normal_angle)
+            self.normal_force_values.append(fn)
+            self.tangent_force_values.append(ft)
 
     def get_steady_vacuum(self, start_label='Steady', end_label='Retrieve'):
         """Method to obtain the mean and std deviation of the vacuum during steady state"""
@@ -579,25 +580,6 @@ class Experiment:
         # print("\n\nMean: %.2f and Std: %.2f" % (self.steady_vacuum_mean, self.steady_vacuum_std))
 
         return self.steady_vacuum_mean, self.steady_vacuum_std
-
-    def get_relative_values(self):
-
-        for i in range(len(self.wrench_time_stamp)):
-            relative_zforce = self.wrench_zforce_values[i] - self.wrench_zforce_values[0]
-            relative_yforce = self.wrench_yforce_values[i] - self.wrench_yforce_values[0]
-            relative_xforce = self.wrench_xforce_values[i] - self.wrench_xforce_values[0]
-            relative_sumforce = math.sqrt(relative_zforce ** 2 + relative_xforce ** 2)
-            relative_ztorque = self.wrench_ztorque_values[i] - self.wrench_ztorque_values[0]
-            relative_ytorque = self.wrench_ytorque_values[i] - self.wrench_ytorque_values[0]
-            relative_xtorque = self.wrench_xtorque_values[i] - self.wrench_xtorque_values[0]
-
-            self.wrench_zforce_relative_values.append(relative_zforce)
-            self.wrench_yforce_relative_values.append(relative_yforce)
-            self.wrench_xforce_relative_values.append(relative_xforce)
-            self.wrench_sumforce_relative_values.append(relative_sumforce)
-            self.wrench_ztorque_relative_values.append(relative_ztorque)
-            self.wrench_ytorque_relative_values.append(relative_ytorque)
-            self.wrench_xtorque_relative_values.append(relative_xtorque)
 
     def get_detach_values(self):
         """Method to obtain the max force during the retrieval
@@ -937,8 +919,6 @@ class Experiment:
             plt.yticks(size=TICKSIZE)
             plt.title(self.filename + "\n" + error_type, fontsize=8)
             plt.suptitle(title_text)
-
-
 
     def plot_only_total_force(self):
         """Plots wrench (forces and moments) and pressure readings"""

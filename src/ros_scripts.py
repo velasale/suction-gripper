@@ -31,8 +31,18 @@ def all_close(goal, current, tolerance):
     return True
 
 
+def service_call(service):
+    """Method to call service from the command line.
+    Note: The services are described in the Arduino file"""
+    text = "rosservice call " + service
+    os.system(text)
+
+
+# ---------------- ROSBAG FUNCTIONS AND METHODS --------------------- #
+
+
 def start_rosbag(name='trial', topics=""):
-    """Convenient method to start saving bagfile"""
+    """Convenient method to start saving a bagfile"""
 
     filename = name
 
@@ -55,8 +65,22 @@ def stop_rosbag(cmd, process):
     process.send_signal(subprocess.signal.SIGINT)
 
 
-def service_call(service):
-    """Method to call service from the command line.
-    Note: The services are described in the Arduino file"""
-    text = "rosservice call " + service
-    os.system(text)
+def bag_to_csvs(file):
+    """Open all bagfiles in a folder and saves all topics as csvs"""
+
+    if file.endswith(".bag"):
+        print(file)
+        bag = bagreader(file)
+        # print("\n\n", file)
+
+        # --- Get the topics available in the bagfile ---
+        topics = bag.topic_table
+        # print("Bagfile topics:\n", topics)
+
+        # --- Read the desired topic ---
+        for topic in topics["Topics"]:
+            if topic != '/usb_cam/image_raw':
+                # Once opened, data is saved automatically into a csv file.
+                data = bag.message_by_topic(topic)
+            else:
+                pass
