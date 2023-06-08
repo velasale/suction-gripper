@@ -6,6 +6,8 @@ import copy
 import csv
 import math
 import matplotlib.pyplot as pp
+import mpl_toolkits.mplot3d
+
 import numpy as np
 from numpy import pi, cos, sin, arccos, arange
 import os
@@ -93,24 +95,28 @@ def proxy_picks(gripper):
 
     # --- Experiment Parameters ---
     n_samples = 10  # starting positions to start gripper's pose
-    n_reps = 3  # number of repetitions at each configuration
-
+    n_reps = 1  # number of repetitions at each configuration
 
     cart_noises = [0, 5/1000, 10/1000, 15/1000, 20/1000]
     ang_noises = [0, 5, 10, 15, 20]
 
-    # Provide location of Apple and Stem
+    # --- Provide location of Apple and Stem ---
     # Measure Apple Position (simply add a fiducial marker)
-    gripper.place
+    # Place Apple in Rviz
+    gripper.place_marker_sphere([1, 0, 0, 0.5], gripper.apple_pose[:3], gripper.apple_diam)
+    # Place Sphere in Rviz
+    gripper.place_marker_sphere([0, 1, 0, 0.5], gripper.apple_pose[:3], gripper.sphere_diam)
 
+    # --- Sample points on Sphere
+    gripper.point_sampling(n_points=40)
+    apples_to_pick = len(gripper.x_coord)
 
     # --- Sample points on a sphere around the apple
-    for sample in range(n_samples):
+    for sample in range(apples_to_pick):
 
+        gripper.go_to_starting_position_sphere(sample)
 
         for rep in range(n_reps):
-
-
 
             # Move to Ideal Starting Position
 
@@ -140,7 +146,7 @@ def proxy_picks(gripper):
             # --- Approach Apple
             print("\n... Approaching apple")
             gripper.publish_event("Approach")
-            move = gripper.move_normal(0.05)
+            move = gripper.move_normal(0.02)
             # todo: should we stop saving rosbag to avoid wasting space during labeling?
 
             # --- Label the cups that were engaged with apple
@@ -196,6 +202,7 @@ class RoboticGripper():
                                                        moveit_msgs.msg.DisplayTrajectory, queue_size=20)
         event_publisher = rospy.Publisher('/experiment_steps', String, queue_size=20)
         marker_text_publisher = rospy.Publisher('captions', Marker, queue_size=1000, latch=True)
+        marker_balls_publisher = rospy.Publisher('balloons', MarkerArray, queue_size=100)
 
         planning_frame = move_group.get_planning_frame()
         print("=========== Planning frame: %s" % planning_frame)
@@ -206,15 +213,22 @@ class RoboticGripper():
         self.move_group = move_group
         self.display_trajectory_publisher = display_trajectory_publisher
         self.event_publisher = event_publisher
+
         self.planning_frame = planning_frame
         self.TOLERANCE = 1/1000     # movement precision in [m]
 
         # ---- Variables for markers
+        self.marker_id = 1
+        self.proxy_markers = MarkerArray()
         self.marker_text_publisher = marker_text_publisher
+        self.marker_balls_publisher = marker_balls_publisher
+
         wiper = Marker()
         wiper.id = 0
         wiper.action = Marker.DELETEALL
         self.marker_text_publisher.publish(wiper)
+        self.proxy_markers.markers.append(wiper)
+        self.marker_balls_publisher.publish(self.proxy_markers)
 
         # ---- Experiment Parameters
         self.ROBOT_NAME = "UR5e"
@@ -236,7 +250,8 @@ class RoboticGripper():
 
         # ---- Noise variables
         # x,y,z and r,p,y
-        self.NOISE_RANGES = [15/1000, 15/1000, 15/1000, 15 * pi() / 180, 15 * pi() / 180, 15 * pi() / 180]
+        # self.NOISE_RANGES = [15/1000, 15/1000, 15/1000, 15 * pi() / 180, 15 * pi() / 180, 15 * pi() / 180]
+        self.NOISE_RANGES = [15 / 1000, 15 / 1000, 15 / 1000, 15, 15, 15]
         self.noise_commands = []    #todo
         self.noise_reals = []       #todo
 
@@ -253,7 +268,7 @@ class RoboticGripper():
         self.noise_yaw_command = 0
         self.noise_yaw_real = 0
 
-        # ---- Pose variables
+        # ---- Gripper Pose variables
         self.start_pose = tf2_geometry_msgs.PoseStamped()
         self.goal_pose = tf2_geometry_msgs.PoseStamped()
         self.previous_pose = tf2_geometry_msgs.PoseStamped()
@@ -265,27 +280,119 @@ class RoboticGripper():
         self.pick_result = ""
 
         # --- Apple variables
-        self.apple_pose = [-0.50, -0.27, +1.30, 0.00, 0.00, 0.00]
+        self.apple_pose = [-0.50, -0.37, +1.30, 0.00, 0.00, 0.00]
         self.stem_pose =  [-0.49, -0.30, +1.28, 0.00, 0.00, 0.00]
+        self.apple_diam = 75/1000   # in [m]
 
+        # --- Variables for Spherical Sampling
+        self.sphere_diam = self.apple_diam * 1.5
+        self.x_coord = []
+        self.y_coord = []
+        self.z_coord = []
+        self.pose_starts = []
+
+    def go_to_starting_position_sphere(self, index):
+        """
+        Places the end effector tangent to a sphere, and at the indexed point
+        @param index: index of coordinates
+        @return:
+        """
+
+        text = "Going to an IDEAL Starting Position # " + str(index)
+        # Place a marker for the text
+        self.place_marker_text([self.apple_pose[0], self.apple_pose[1], self.apple_pose[2] + 0.5], 0.1, text)
+
+        current_pose = self.move_group.get_current_pose().pose
+
+        # A. Sphere center location = apple's location
+        # Center of Sphere = Location of apple
+        h = self.apple_pose[0]
+        k = self.apple_pose[1]
+        l = self.apple_pose[2]
+
+        x = self.x_coord[index] + h
+        y = self.y_coord[index] + k
+        z = self.z_coord[index] + l
+
+        self.azimuth = math.atan2(self.y_coord[index], self.x_coord[index]) * 180 / pi
+
+        # Step 1 - Get the vector pointing to the center of the sphere
+        delta_x = x - h
+        delta_y = y - k
+        delta_z = z - l
+        length = math.sqrt(delta_x ** 2 + delta_y ** 2 + delta_z ** 2)
+        # print("deltas", delta_x, delta_y, delta_z, length)
+
+        # Step 2 - Make the cross product between that vector and the vector normal to the palm "z" to obtain the rotation vector
+        V1 = [0, 0, 1]
+        V2 = [-delta_x / length, -delta_y / length, -delta_z / length]  # Normalize it
+        V3 = np.cross(V1, V2)
+
+        self.vector = [delta_x, delta_y, delta_z]
+        self.cross_vector = V3
+
+        # Step 3 - Make the dot product to obtain the angle of rotation
+        dot = np.dot(V1, V2)
+        angle = math.acos(dot)
+
+        # Step 4 - Obtain the quaternion from the single axis rotation
+        q = quaternion_about_axis(angle, V3)
+
+        pose_goal = self.move_group.get_current_pose().pose
+
+        pose_goal.orientation.x = q[0]
+        pose_goal.orientation.y = q[1]
+        pose_goal.orientation.z = q[2]
+        pose_goal.orientation.w = q[3]
+
+        # Cartesian adjustment of the gripper's position, after PITCH rotation so the palm's normal vector points towards the apple
+        pose_goal.position.x = x
+        pose_goal.position.y = y
+        pose_goal.position.z = z
+
+        self.move_group.set_pose_target(pose_goal)
+        plan = self.move_group.go(wait=True)
+        self.move_group.stop()
+
+        # Get the current pose to compare it
+        current_pose = self.move_group.get_current_pose().pose
+
+        # Save this pose in a global variable, to come back to it after picking the apple
+        self.previous_pose = current_pose
+
+        # Places a blue dot in the sphere's surface to keep track of all the sampled points
+        self.place_marker_sphere(color=[0, 0, 1, 1], pos=[x, y, z], scale=0.01)
+
+        success = all_close(pose_goal, current_pose, 0.01)
+        self.pose_starts.append(success)
+        print("Pose Starts history", self.pose_starts)
+
+        return success
 
     def go_to_preliminary_position(self):
         """Reaches a desired joint position (Forward Kinematics)"""
 
         # --- Place marker with text in RVIZ
         caption = "Going to a preliminary pose"
-        self.place_marker_text(pos=[0, 0, 1.5], scale=0.1, text=caption, cframe=self.planning_frame)
+        self.place_marker_text(pos=[0, 0, 1.5], scale=0.1, text=caption)
 
         # --- Initiate object joint
         goal_pose = self.move_group.get_current_joint_values()
         print(goal_pose)
+        #
+        # goal_pose[0] = - 180 * pi / 180
+        # goal_pose[1] = -  80 * pi / 180
+        # goal_pose[2] = +  85 * pi / 180
+        # goal_pose[3] = +   0 * pi / 180
+        # goal_pose[4] = +  85 * pi / 180
+        # goal_pose[5] = +   0 * pi / 180
 
-        goal_pose[0] = - 180 * pi / 180
-        goal_pose[1] = -  80 * pi / 180
-        goal_pose[2] = +  85 * pi / 180
-        goal_pose[3] = +   0 * pi / 180
-        goal_pose[4] = +  85 * pi / 180
-        goal_pose[5] = +   0 * pi / 180
+        goal_pose[0] = + 0.2
+        goal_pose[1] = - 1.4
+        goal_pose[2] = - 1.5
+        goal_pose[3] = - 1.4
+        goal_pose[4] = + 1.2
+        goal_pose[5] = + 1.2
 
         # --- Move to the goal pose
         self.move_group.go(goal_pose, wait=True)
@@ -521,7 +628,7 @@ class RoboticGripper():
 
         # --- Place a marker with text in RVIZ
         text = "Moving in Z-Axis"
-        self.place_marker_text(pos=[0, 0, 1.5], scale=0.05, text=text, cframe=self.planning_frame)
+        self.place_marker_text(pos=[0, 0, 1.5], scale=0.05, text=text)
 
         # --- ROS tool for transformation across c-frames
         tf_buffer = tf2_ros.Buffer()
@@ -605,6 +712,150 @@ class RoboticGripper():
         # ----------------- Plot data to check vacuum levels --------------
         print("Vacuum Preview")
         plot_vacuum(filename)
+
+    def place_marker_text(self, pos=[0, 0, 0], scale=0.01, text='caption'):
+        """
+        Places text as marker in RVIZ
+        @param pos: x,y,z location
+        @param scale: scale of the text
+        @param text: text to display
+        @param cframe: cframe on which the coordinates are given
+        @return:
+        """
+        # Create a marker.  Markers of all shapes share a common type.
+        caption = Marker()
+
+        # Set the frame ID and type.  The frame ID is the frame in which the position of the marker
+        # is specified.  The type is the shape of the marker, detailed on the wiki page.
+        caption.header.frame_id = 'world'
+        caption.type = caption.TEXT_VIEW_FACING
+
+        # Each marker has a unique ID number.  If you have more than one marker that you want displayed at a
+        # given time, then each needs to have a unique ID number.  If you publish a new marker with the same
+        # ID number and an existing marker, it will replace the existing marker with that ID number.
+        caption.id = 0
+
+        # Set the action.  We can add, delete, or modify markers.
+        caption.action = caption.ADD
+
+        # These are the size parameters for the marker.  The effect of these on the marker will vary by shape,
+        # but, basically, they specify how big the marker along each of the axes of the coordinate frame named
+        # in frame_id.
+        caption.scale.x = scale
+        caption.scale.y = scale
+        caption.scale.z = scale
+
+        # Color, as an RGB triple, from 0 to 1.
+        caption.color.r = 0
+        caption.color.g = 0
+        caption.color.b = 0
+        caption.color.a = 1
+
+        caption.text = text
+
+        # Specify the pose of the marker.  Since spheres are rotationally invarient, we're only going to specify
+        # the positional elements.  As usual, these are in the coordinate frame named in frame_id.  Every time the
+        # marker is displayed in rviz, ROS will use tf to determine where the marker should appear in the scene.
+        # in this case, the position will always be directly above the robot, and will move with it.
+        caption.pose.position.x = pos[0]
+        caption.pose.position.y = pos[1]
+        caption.pose.position.z = pos[2]
+
+        # Set up a publisher.  We're going to publish on a topic called balloon.
+        self.marker_text_publisher.publish(caption)
+
+        # Set a rate.  10 Hz is a good default rate for a marker moving with the Fetch robot.
+        rate = rospy.Rate(10)
+
+    def place_marker_sphere(self, color=[0, 0, 1, 1], pos=[0, 0, 0], scale=0.01):
+        """
+        Creates a Sphere as Marker, and appends it into an array of markers
+        @param color: [r,g,b,a] where rgb are color i RGB format, and 'a' is visibility
+        @param pos: [x,y,z] coordinates of the center of the marker
+        @param scale:
+        @param cframe: coordinate frame
+        @return:
+        """
+        # Create a marker.  Markers of all shapes share a common type.
+        sphere = Marker()
+
+        # Set the frame ID and type.  The frame ID is the frame in which the position of the marker
+        # is specified.  The type is the shape of the marker, detailed on the wiki page.
+        sphere.header.frame_id = 'world'
+        sphere.type = sphere.SPHERE
+
+        # Each marker has a unique ID number.  If you have more than one marker that you want displayed at a
+        # given time, then each needs to have a unique ID number.  If you publish a new marker with the same
+        # ID number and an existing marker, it will replace the existing marker with that ID number.
+        sphere.id = self.marker_id + 1
+        self.marker_id = sphere.id
+
+        # Set the action.  We can add, delete, or modify markers.
+        sphere.action = sphere.ADD
+
+        # These are the size parameters for the marker.  The effect of these on the marker will vary by shape,
+        # but, basically, they specify how big the marker along each of the axes of the coordinate frame named
+        # in frame_id.
+        sphere.scale.x = scale
+        sphere.scale.y = scale
+        sphere.scale.z = scale
+
+        # Color, as an RGB triple, from 0 to 1.
+        sphere.color.r = color[0]
+        sphere.color.g = color[1]
+        sphere.color.b = color[2]
+        sphere.color.a = color[3]
+
+        # Specify the pose of the marker.  Since spheres are rotationally invarient, we're only going to specify
+        # the positional elements.  As usual, these are in the coordinate frame named in frame_id.  Every time the
+        # marker is displayed in rviz, ROS will use tf to determine where the marker should appear in the scene.
+        # in this case, the position will always be directly above the robot, and will move with it.
+        sphere.pose.position.x = pos[0]
+        sphere.pose.position.y = pos[1]
+        sphere.pose.position.z = pos[2]
+        sphere.pose.orientation.x = 0.0
+        sphere.pose.orientation.y = 0.0
+        sphere.pose.orientation.z = 0.0
+        sphere.pose.orientation.w = 1.0
+
+        self.proxy_markers.markers.append(sphere)
+        # Set up a publisher.  We're going to publish on a topic called balloon.
+        self.marker_balls_publisher.publish(self.proxy_markers)
+
+        # Set a rate.  10 Hz is a good default rate for a marker moving with the Fetch robot.
+        rate = rospy.Rate(10)
+
+    def point_sampling(self, n_points=240):
+        """
+        This function samples points evenly distributed from the surface of a sphere
+        Source: https://stackoverflow.com/questions/9600801/evenly-distributing-n-points-on-a-sphere
+        """
+        indices = arange(0, n_points, dtype=float) + 0.5
+
+        phi = arccos(1 - 2 * indices / n_points)
+        theta = pi * (1 + 5 ** 0.5) * indices
+
+        x, y, z = cos(theta) * sin(phi), sin(theta) * sin(phi), cos(phi)
+        # Adjustment due to the distance between World and Base_Link frame
+
+        # Further selection of points for only one quarter of the sphere
+        for i in range(len(x)):
+            if y[i] < (0.1 * self.sphere_diam/2):  # To get only half sphere
+                # if z[i] > 0:  # To get only one quarter of the sphere
+                #     if y[i] > 0:  # To get only one eight of the sphere
+                        self.x_coord.append(x[i] * self.sphere_diam/2)
+                        self.y_coord.append(y[i] * self.sphere_diam/2)
+                        self.z_coord.append(z[i] * self.sphere_diam/2)
+
+        x = self.x_coord
+        y = self.y_coord
+        z = self.z_coord
+        # Sort the points in a way that is easier for the robot to go from one point to the other
+        # self.x_coord.sort()
+
+        pp.figure().add_subplot(111, projection='3d').scatter(x, y, z)
+        pp.show()
+
 
 
 if __name__ == '__main__':

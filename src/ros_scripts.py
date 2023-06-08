@@ -4,6 +4,7 @@
 # --- Standard Library Imports
 import subprocess, shlex, psutil
 import os
+from bagpy import bagreader
 
 
 # --- 3rd party imports
@@ -156,6 +157,7 @@ def place_marker(color=[0, 0, 1, 1], pos=[0, 0, 0], scale=0.01, cframe='world'):
 
     # Set a rate.  10 Hz is a good default rate for a marker moving with the Fetch robot.
     rate = rospy.Rate(10)
+
 
 # ---------------- ROSBAG FUNCTIONS AND METHODS --------------------- #
 def start_rosbag(name='trial', topics=""):
