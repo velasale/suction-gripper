@@ -67,7 +67,7 @@ sudo apt install ros-noetic-moveit
 # Running
 1. Upload code into **arduino board**.
 2. Check the port name, and make sure it matches the one written at line 50 of **serial_node.py**.
-3. Launch the lab setup in 1st terminal (modify **with_robot** depending on whether you are working or not not with real ur5e).
+3. Launch the lab setup in 1st terminal (modify the parameter **with_robot** depending on whether you are working or not (i.e. yes, no) with real ur5e.
 ```console
 roslaunch suction-gripper suction_gripper_experiment.launch with_robot:=no
 ```
