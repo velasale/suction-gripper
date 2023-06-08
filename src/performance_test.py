@@ -99,11 +99,18 @@ def proxy_picks(gripper):
     cart_noises = [0, 5/1000, 10/1000, 15/1000, 20/1000]
     ang_noises = [0, 5, 10, 15, 20]
 
+    # Provide location of Apple and Stem
+    # Measure Apple Position (simply add a fiducial marker)
+    gripper.place
+
+
+    # --- Sample points on a sphere around the apple
     for sample in range(n_samples):
+
 
         for rep in range(n_reps):
 
-            # Measure Apple Position (simply add a fiducial marker)
+
 
             # Move to Ideal Starting Position
 
@@ -228,6 +235,11 @@ class RoboticGripper():
         self.LATERAL_SPRING_STIFFNESS = 200
 
         # ---- Noise variables
+        # x,y,z and r,p,y
+        self.NOISE_RANGES = [15/1000, 15/1000, 15/1000, 15 * pi() / 180, 15 * pi() / 180, 15 * pi() / 180]
+        self.noise_commands = []    #todo
+        self.noise_reals = []       #todo
+
         self.noise_z_command = 0
         self.noise_z_real = 0
         self.noise_y_command = 0
@@ -252,12 +264,17 @@ class RoboticGripper():
         self.cupC_engaged = "no"
         self.pick_result = ""
 
+        # --- Apple variables
+        self.apple_pose = [-0.50, -0.27, +1.30, 0.00, 0.00, 0.00]
+        self.stem_pose =  [-0.49, -0.30, +1.28, 0.00, 0.00, 0.00]
+
+
     def go_to_preliminary_position(self):
         """Reaches a desired joint position (Forward Kinematics)"""
 
         # --- Place marker with text in RVIZ
         caption = "Going to a preliminary pose"
-        self.place_marker_text(x=0, y=0, z=1.5, scale=0.1, text=caption)
+        self.place_marker_text(pos=[0, 0, 1.5], scale=0.1, text=caption, cframe=self.planning_frame)
 
         # --- Initiate object joint
         goal_pose = self.move_group.get_current_joint_values()
@@ -284,7 +301,7 @@ class RoboticGripper():
 
         # --- Place marker with text in RVIZ
         caption = "Going to an ideal starting End Effector pose (IK)"
-        self.place_marker_text(x=0, y=0, z=1.5, scale=0.1, text=caption)
+        self.place_marker_text(pos=[0, 0, 1.5], scale=0.1, text=caption, cframe=self.planning_frame)
 
         # --- ROS tool for transformation among c-frames
         tf_buffer = tf2_ros.Buffer()
@@ -335,7 +352,7 @@ class RoboticGripper():
 
         # --- Place marker with text in RVIZ
         caption = "Adding gaussian noise"
-        self.place_marker_text(x=0, y=0, z=1.5, scale=0.05, text=caption)
+        self.place_marker_text(pos=[0, 0, 1.5], scale=0.05, text=caption, cframe=self.planning_frame)
 
         # --- ROS tool for transformation across c-frames
         tf_buffer = tf2_ros.Buffer()
@@ -377,61 +394,6 @@ class RoboticGripper():
         self.check_real_noise()
 
         return success
-
-    def place_marker_text(self, x=0,y=0,z=0, scale=0.01, text='caption'):
-        """
-        Places text as a marker in RVIZ
-        @param x:
-        @param y:
-        @param z:
-        @param scale:
-        @param text:
-        @return:
-        """
-        # Create a marker.  Markers of all shapes share a common type.
-        caption = Marker()
-
-        # Set the frame ID and type.  The frame ID is the frame in which the position of the marker
-        # is specified.  The type is the shape of the marker, detailed on the wiki page.
-        caption.header.frame_id = "world"
-        caption.type = caption.TEXT_VIEW_FACING
-
-        # Each marker has a unique ID number.  If you have more than one marker that you want displayed at a
-        # given time, then each needs to have a unique ID number.  If you publish a new marker with the same
-        # ID number and an existing marker, it will replace the existing marker with that ID number.
-        caption.id = 0
-
-        # Set the action.  We can add, delete, or modify markers.
-        caption.action = caption.ADD
-
-        # These are the size parameters for the marker.  The effect of these on the marker will vary by shape,
-        # but, basically, they specify how big the marker along each of the axes of the coordinate frame named
-        # in frame_id.
-        caption.scale.x = scale
-        caption.scale.y = scale
-        caption.scale.z = scale
-
-        # Color, as an RGB triple, from 0 to 1.
-        caption.color.r = 0
-        caption.color.g = 0
-        caption.color.b = 0
-        caption.color.a = 1
-
-        caption.text = text
-
-        # Specify the pose of the marker.  Since spheres are rotationally invarient, we're only going to specify
-        # the positional elements.  As usual, these are in the coordinate frame named in frame_id.  Every time the
-        # marker is displayed in rviz, ROS will use tf to determine where the marker should appear in the scene.
-        # in this case, the position will always be directly above the robot, and will move with it.
-        caption.pose.position.x = x
-        caption.pose.position.y = y
-        caption.pose.position.z = z
-
-        # Set up a publisher.  We're going to publish on a topic called balloon.
-        self.marker_text_publisher.publish(caption)
-
-        # Set a rate.  10 Hz is a good default rate for a marker moving with the Fetch robot.
-        rate = rospy.Rate(10)
 
     def check_real_noise(self):
         """ Gets real noise"""
@@ -559,7 +521,7 @@ class RoboticGripper():
 
         # --- Place a marker with text in RVIZ
         text = "Moving in Z-Axis"
-        self.place_marker_text(0, 0, 1.5, 0.05, text)
+        self.place_marker_text(pos=[0, 0, 1.5], scale=0.05, text=text, cframe=self.planning_frame)
 
         # --- ROS tool for transformation across c-frames
         tf_buffer = tf2_ros.Buffer()
