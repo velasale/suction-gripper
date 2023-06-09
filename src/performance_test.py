@@ -81,7 +81,8 @@ def main():
 
     # --- Step 3: Check that the vacuum circuit is free of holes
     # TODO initial plot of pressures
-    suction_gripper.suction_cup_test()
+
+    # suction_gripper.suction_cup_test()
 
     # --- Step 4: Start the desired experiment
     if experiment == "proxy":
@@ -113,6 +114,12 @@ def proxy_picks(gripper):
 
     # --- Sample points on a sphere around the apple
     for sample in range(apples_to_pick):
+
+
+        input("\n ********* Press Enter to Continue *********")
+
+        # First go to a way-point
+        gripper.go_to_preliminary_position()
 
         move = gripper.go_to_starting_position_sphere(sample)
 
@@ -153,15 +160,15 @@ def proxy_picks(gripper):
             # todo: should we stop saving rosbag to avoid wasting space during labeling?
 
             # --- Label the cups that were engaged with apple
-            gripper.label_cups()
+            # gripper.label_cups()
 
             # Retrieve
             print("\n... Picking Apple")
             gripper.publish_event("Retrieving")
-            move = gripper.move_normal(-0.08)
+            move = gripper.move_normal(-0.10)
 
             # --- Label result
-            gripper.label_pick()
+            # gripper.label_pick()
             # todo: should we stop saving rosbag to avoid wasting space during labeling?
 
             # --- Close Valve (stop vacuum)
@@ -383,19 +390,19 @@ class RoboticGripper():
         goal_pose = self.move_group.get_current_joint_values()
         print(goal_pose)
         #
-        # goal_pose[0] = - 180 * pi / 180
-        # goal_pose[1] = -  80 * pi / 180
-        # goal_pose[2] = +  85 * pi / 180
-        # goal_pose[3] = +   0 * pi / 180
-        # goal_pose[4] = +  85 * pi / 180
-        # goal_pose[5] = +   0 * pi / 180
+        goal_pose[0] = + 32 * pi / 180
+        goal_pose[1] = -  100 * pi / 180
+        goal_pose[2] = -  85 * pi / 180
+        goal_pose[3] = -  50 * pi / 180
+        goal_pose[4] = +  70 * pi / 180
+        goal_pose[5] = +  70 * pi / 180
 
-        goal_pose[0] = + 0.2
-        goal_pose[1] = - 1.4
-        goal_pose[2] = - 1.5
-        goal_pose[3] = - 1.4
-        goal_pose[4] = + 1.2
-        goal_pose[5] = + 1.2
+        # goal_pose[0] = + 0.2
+        # goal_pose[1] = - 1.4
+        # goal_pose[2] = - 1.5
+        # goal_pose[3] = - 1.4
+        # goal_pose[4] = + 1.2
+        # goal_pose[5] = + 1.2
 
         # --- Move to the goal pose
         self.move_group.go(goal_pose, wait=True)
@@ -857,7 +864,7 @@ class RoboticGripper():
         # self.x_coord.sort()
 
         pp.figure().add_subplot(111, projection='3d').scatter(x, y, z)
-        pp.show()
+        # pp.show()
 
 
 
