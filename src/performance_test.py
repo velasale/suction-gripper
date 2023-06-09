@@ -114,7 +114,10 @@ def proxy_picks(gripper):
     # --- Sample points on a sphere around the apple
     for sample in range(apples_to_pick):
 
-        gripper.go_to_starting_position_sphere(sample)
+        move = gripper.go_to_starting_position_sphere(sample)
+
+        if not move:
+            continue
 
         for rep in range(n_reps):
 
@@ -146,7 +149,7 @@ def proxy_picks(gripper):
             # --- Approach Apple
             print("\n... Approaching apple")
             gripper.publish_event("Approach")
-            move = gripper.move_normal(0.02)
+            move = gripper.move_normal(0.04)
             # todo: should we stop saving rosbag to avoid wasting space during labeling?
 
             # --- Label the cups that were engaged with apple
@@ -155,7 +158,7 @@ def proxy_picks(gripper):
             # Retrieve
             print("\n... Picking Apple")
             gripper.publish_event("Retrieving")
-            move = gripper.move_normal(-0.05)
+            move = gripper.move_normal(-0.08)
 
             # --- Label result
             gripper.label_pick()
@@ -280,12 +283,12 @@ class RoboticGripper():
         self.pick_result = ""
 
         # --- Apple variables
-        self.apple_pose = [-0.50, -0.37, +1.30, 0.00, 0.00, 0.00]
+        self.apple_pose = [-0.69, -0.39, +1.11, 0.00, 0.00, 0.00]
         self.stem_pose =  [-0.49, -0.30, +1.28, 0.00, 0.00, 0.00]
         self.apple_diam = 75/1000   # in [m]
 
         # --- Variables for Spherical Sampling
-        self.sphere_diam = self.apple_diam * 1.5
+        self.sphere_diam = self.apple_diam * 2.0
         self.x_coord = []
         self.y_coord = []
         self.z_coord = []
