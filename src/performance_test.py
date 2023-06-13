@@ -109,44 +109,54 @@ def proxy_picks(gripper):
     gripper.place_marker_sphere([0, 1, 0, 0.5], gripper.apple_pose[:3], gripper.sphere_diam)
 
     # --- Sample points on Sphere
-    gripper.point_sampling(n_points=40)
+    gripper.point_sampling(n_points=50)
     apples_to_pick = len(gripper.x_coord)
 
     # --- Sample points on a sphere around the apple
     for sample in range(apples_to_pick):
 
-
-        input("\n ********* Press Enter to Continue *********")
-
-        # First go to a way-point
+        # --- First go to a way-point
         gripper.go_to_preliminary_position()
 
+        # --- Now move to the ideal starting position
+        input("\n ********* Press Enter to Continue with Sampling point %i *********" % sample)
         move = gripper.go_to_starting_position_sphere(sample)
-
         if not move:
             continue
 
         for rep in range(n_reps):
 
-            # Move to Ideal Starting Position
+            gripper.repetition = rep
 
-            # Start Recording Rosbag file
+            # --- Move to Ideal Starting Position
+            input("\n -- Press Enter to Continue with Rep %i *********" % rep)
+            move = gripper.go_to_starting_position_sphere(sample)
+
+            # --- Start Recording Rosbag file
             location = os.path.dirname(os.getcwd())
             folder = "/data/"
-            name = 'trial'  #todo
+            name = gripper.TYPE + "_sample_" + str(sample) + "_rep_" + str(rep)
             filename = location + folder + name
+
             # topics = ["wrench", "joint_states", "experiment_steps", "/gripper/distance",
             #           "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3",
             #           "/usb_cam/image_raw"]
+
             topics = ["wrench", "joint_states", "experiment_steps", "/gripper/distance",
                       "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3"]
+
             command, rosbag_process = start_rosbag(filename, topics)
             print("\n... Start recording Rosbag")
             time.sleep(0.1)
 
-            # Add noise
+            # --- Add Cartesian Noise
+            x_noise = gripper.NOISE_RANGES[0] * np.random.uniform(-1, 1)
+            y_noise = gripper.NOISE_RANGES[1] * np.random.uniform(-1, 1)
+            z_noise = gripper.NOISE_RANGES[2] * np.random.uniform(0, 1)
+            print(x_noise, y_noise, z_noise)
+            input("\n----- Enter to add noise ----")
 
-
+            move = gripper.add_cartesian_noise(x_noise, y_noise, z_noise)
 
             # --- Open Valve (apply vacuum)
             print("\n... Applying vacuum")
@@ -156,16 +166,16 @@ def proxy_picks(gripper):
             # --- Approach Apple
             print("\n... Approaching apple")
             gripper.publish_event("Approach")
-            move = gripper.move_normal(0.04)
+            move = gripper.move_normal(gripper.APPROACH)
             # todo: should we stop saving rosbag to avoid wasting space during labeling?
 
             # --- Label the cups that were engaged with apple
             # gripper.label_cups()
 
-            # Retrieve
+            # --- Retrieve
             print("\n... Picking Apple")
-            gripper.publish_event("Retrieving")
-            move = gripper.move_normal(-0.10)
+            gripper.publish_event("Retrieve")
+            move = gripper.move_normal(gripper.RETRIEVE)
 
             # --- Label result
             # gripper.label_pick()
@@ -261,7 +271,7 @@ class RoboticGripper():
         # ---- Noise variables
         # x,y,z and r,p,y
         # self.NOISE_RANGES = [15/1000, 15/1000, 15/1000, 15 * pi() / 180, 15 * pi() / 180, 15 * pi() / 180]
-        self.NOISE_RANGES = [15 / 1000, 15 / 1000, 15 / 1000, 15, 15, 15]
+        self.NOISE_RANGES = [15 / 1000, 15 / 1000, 12 / 1000, 15, 15, 15]
         self.noise_commands = []    #todo
         self.noise_reals = []       #todo
 
@@ -300,6 +310,8 @@ class RoboticGripper():
         self.y_coord = []
         self.z_coord = []
         self.pose_starts = []
+        self.APPROACH = self.SUCTION_CUP_GIVE + (self.sphere_diam - self.apple_diam)/2  # Distance to approach normal
+        self.RETRIEVE = - 80 / 1000  # Distance to retrieve and pick apple
 
     def go_to_starting_position_sphere(self, index):
         """
@@ -370,12 +382,15 @@ class RoboticGripper():
         # Save this pose in a global variable, to come back to it after picking the apple
         self.previous_pose = current_pose
 
-        # Places a blue dot in the sphere's surface to keep track of all the sampled points
-        self.place_marker_sphere(color=[0, 0, 1, 1], pos=[x, y, z], scale=0.01)
-
         success = all_close(pose_goal, current_pose, 0.01)
         self.pose_starts.append(success)
         print("Pose Starts history", self.pose_starts)
+
+        if success:
+            self.place_marker_sphere(color=[0, 1, 0, 1], pos=[x, y, z], scale=0.01)
+        else:
+            self.place_marker_sphere(color=[0, 0, 1, 1], pos=[x, y, z], scale=0.01)
+
 
         return success
 
@@ -469,7 +484,7 @@ class RoboticGripper():
 
         # --- Place marker with text in RVIZ
         caption = "Adding gaussian noise"
-        self.place_marker_text(pos=[0, 0, 1.5], scale=0.05, text=caption, cframe=self.planning_frame)
+        self.place_marker_text(pos=[0, 0, 1.5], scale=0.05, text=caption)
 
         # --- ROS tool for transformation across c-frames
         tf_buffer = tf2_ros.Buffer()
@@ -483,7 +498,7 @@ class RoboticGripper():
 
         # --- Step 2: Transform current pose into intuitive cframe and add noise
         try:
-            cur_pose_ezframe = tf_buffer.transform(cur_pose_pframe, "TODO_ezframe", rospy.Duration(1))
+            cur_pose_ezframe = tf_buffer.transform(cur_pose_pframe, 'eef', rospy.Duration(1))
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             raise
 
@@ -499,14 +514,14 @@ class RoboticGripper():
             raise
 
         # --- Step 4: Move to the new goal
-        self.move_group.set_pose_targets(goal_pose_pframe.pose)
+        self.move_group.set_pose_target(goal_pose_pframe.pose)
         self.move_group.go(wait=True)
         self.move_group.stop()
         self.move_group.clear_pose_targets()    # good practice
 
         # --- Step 5: Compare poses
         current_pose = self.move_group.get_current_pose().pose
-        success = all_close(goal_pose_pframe, current_pose, self.TOLERANCE)
+        success = all_close(goal_pose_pframe.pose, current_pose, self.TOLERANCE)
 
         self.check_real_noise()
 
@@ -526,7 +541,7 @@ class RoboticGripper():
 
         # --- Step 2: Transform current pose into easy c-frame
         try:
-            cur_pose_ezframe = tf_buffer.transform(current_pose_plframe, "EASYFRAME", rospy.Duration(1))
+            cur_pose_ezframe = tf_buffer.transform(current_pose_plframe, "eef", rospy.Duration(1))
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             raise
 
