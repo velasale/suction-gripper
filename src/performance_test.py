@@ -96,7 +96,7 @@ def proxy_picks(gripper):
 
     # --- Experiment Parameters ---
     n_samples = 10  # starting positions to start gripper's pose
-    n_reps = 1  # number of repetitions at each configuration
+    n_reps = 5  # number of repetitions at each configuration
 
     cart_noises = [0, 5/1000, 10/1000, 15/1000, 20/1000]
     ang_noises = [0, 5, 10, 15, 20]
@@ -113,7 +113,7 @@ def proxy_picks(gripper):
     apples_to_pick = len(gripper.x_coord)
 
     # --- Sample points on a sphere around the apple
-    for sample in range(apples_to_pick):
+    for sample in range(18, apples_to_pick):
 
         # --- First go to a way-point
         gripper.go_to_preliminary_position()
@@ -154,7 +154,7 @@ def proxy_picks(gripper):
             y_noise = gripper.NOISE_RANGES[1] * np.random.uniform(-1, 1)
             z_noise = gripper.NOISE_RANGES[2] * np.random.uniform(0, 1)
             print(x_noise, y_noise, z_noise)
-            input("\n----- Enter to add noise ----")
+            input("\n\n----- Enter to add noise ----")
 
             move = gripper.add_cartesian_noise(x_noise, y_noise, z_noise)
 
@@ -170,7 +170,7 @@ def proxy_picks(gripper):
             # todo: should we stop saving rosbag to avoid wasting space during labeling?
 
             # --- Label the cups that were engaged with apple
-            # gripper.label_cups()
+            gripper.label_cups()
 
             # --- Retrieve
             print("\n... Picking Apple")
@@ -178,7 +178,7 @@ def proxy_picks(gripper):
             move = gripper.move_normal(gripper.RETRIEVE)
 
             # --- Label result
-            # gripper.label_pick()
+            gripper.label_pick()
             # todo: should we stop saving rosbag to avoid wasting space during labeling?
 
             # --- Close Valve (stop vacuum)
@@ -310,8 +310,8 @@ class RoboticGripper():
         self.y_coord = []
         self.z_coord = []
         self.pose_starts = []
-        self.APPROACH = self.SUCTION_CUP_GIVE + (self.sphere_diam - self.apple_diam)/2  # Distance to approach normal
-        self.RETRIEVE = - 80 / 1000  # Distance to retrieve and pick apple
+        self.APPROACH = 2 * self.SUCTION_CUP_GIVE + (self.sphere_diam - self.apple_diam)/2  # Distance to approach normal
+        self.RETRIEVE = - 100 / 1000  # Distance to retrieve and pick apple
 
     def go_to_starting_position_sphere(self, index):
         """
@@ -389,8 +389,7 @@ class RoboticGripper():
         if success:
             self.place_marker_sphere(color=[0, 1, 0, 1], pos=[x, y, z], scale=0.01)
         else:
-            self.place_marker_sphere(color=[0, 0, 1, 1], pos=[x, y, z], scale=0.01)
-
+            self.place_marker_sphere(color=[1, 0, 0, 1], pos=[x, y, z], scale=0.01)
 
         return success
 
