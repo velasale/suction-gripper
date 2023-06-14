@@ -297,7 +297,7 @@ class RoboticGripper():
         self.cupA_engaged = "no"
         self.cupB_engaged = "no"
         self.cupC_engaged = "no"
-        self.pick_result = ""
+        self.pick_result =  ""
 
         # --- Apple variables
         self.apple_pose = [-0.69, -0.39, +1.11, 0.00, 0.00, 0.00]
