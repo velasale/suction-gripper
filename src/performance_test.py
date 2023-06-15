@@ -82,7 +82,7 @@ def main():
     # --- Step 3: Check that the vacuum circuit is free of holes
     # TODO initial plot of pressures
 
-    # suction_gripper.suction_cup_test()
+    suction_gripper.suction_cup_test()
 
     # --- Step 4: Start the desired experiment
     if experiment == "proxy":
@@ -96,7 +96,7 @@ def proxy_picks(gripper):
 
     # --- Experiment Parameters ---
     n_samples = 10  # starting positions to start gripper's pose
-    n_reps = 5  # number of repetitions at each configuration
+    n_reps = 1  # number of repetitions at each configuration
 
     cart_noises = [0, 5/1000, 10/1000, 15/1000, 20/1000]
     ang_noises = [0, 5, 10, 15, 20]
@@ -113,7 +113,7 @@ def proxy_picks(gripper):
     apples_to_pick = len(gripper.x_coord)
 
     # --- Sample points on a sphere around the apple
-    for sample in range(18, apples_to_pick):
+    for sample in range(1,apples_to_pick):
 
         # --- First go to a way-point
         gripper.go_to_preliminary_position()
