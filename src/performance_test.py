@@ -65,9 +65,16 @@ def main():
 
     # --- Step 2: Obtain info from user
     print("\n\n ***** Suction Gripper Experiments *****")
+
+    print("Type your name")
+    name = ''
+    while (name == ''):
+        name = input()
+    suction_gripper.PERSON = name
+
     print("a. Experiment Type: proxy, real")
     experiment = ''
-    while (experiment == ''):
+    while (experiment != 'proxy' and experiment != 'real'):
         experiment = input()
     suction_gripper.TYPE = experiment
 
@@ -76,6 +83,20 @@ def main():
     suction_gripper.pressure_at_valve = int(input())
 
     # Info about gripper: pressure
+
+    # --- Proxy parameters
+    print("c. Stiffness level:")
+    stiffness = ''
+    while (stiffness != 'low' and stiffness != 'medium' and stiffness != 'high'):
+        stiffness = input()
+    suction_gripper.MAIN_SPRING_STIFFNESS = stiffness
+
+    print("c. Magnet force level:")
+    magnet = ''
+    while (magnet != 'low' and magnet != 'medium' and magnet != 'high'):
+        magnet = input()
+    suction_gripper.MAGNET_FORCE_SCALE = magnet
+
     # Info about apple: stiffness -- type of springs, apples used
     # Pass these properties to the class
 
@@ -267,6 +288,7 @@ class RoboticGripper():
         # ---- Apple Proxy Parameters
         self.MAIN_SPRING_STIFFNESS = 540
         self.LATERAL_SPRING_STIFFNESS = 200
+        self.MAGNET_FORCE_SCALE = 'high'
 
         # ---- Noise variables
         # x,y,z and r,p,y
@@ -300,7 +322,7 @@ class RoboticGripper():
         self.pick_result =  ""
 
         # --- Apple variables
-        self.apple_pose = [-0.69, -0.39, +1.11, 0.00, 0.00, 0.00]
+        self.apple_pose = [-0.69, -0.34, +1.06, 0.00, 0.00, 0.00]
         self.stem_pose =  [-0.49, -0.30, +1.28, 0.00, 0.00, 0.00]
         self.apple_diam = 75/1000   # in [m]
 
@@ -578,8 +600,9 @@ class RoboticGripper():
                 "Pressure at Compressor": self.pressure_at_compressor,
                 "Pressure at valve": self.pressure_at_valve
             },
-            "target": {
-                "Stem Stiffness": "",   #TODO "Stiffnesses": self.STIFN
+            "proxy": {
+                "Stem Stiffness": self.MAIN_SPRING_STIFFNESS,
+                "Stem Force": self.MAGNET_FORCE_SCALE,
                 "Apple Diameter": "",   #TODO "Apple Diameter": self.OBJECTRADIUS
             },
             "labels": {
@@ -879,7 +902,6 @@ class RoboticGripper():
 
         pp.figure().add_subplot(111, projection='3d').scatter(x, y, z)
         # pp.show()
-
 
 
 if __name__ == '__main__':
