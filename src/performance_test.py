@@ -63,7 +63,7 @@ def main():
     # --- Step 1: Place robot at waypoint (preliminary position)
     suction_gripper.go_to_preliminary_position()
 
-    # --- Step 2: Obtain info from user
+    # --- Step 2: Gather info from user
     print("\n\n ***** Suction Gripper Experiments *****")
 
     print("Type your name")
@@ -82,23 +82,19 @@ def main():
     print("Tip: If the desired pressure is lower than the current one (at the pressure regulator),\n then first pass that pressure and the go up to the desired pressure")
     suction_gripper.pressure_at_valve = int(input())
 
-    # Info about gripper: pressure
-
     # --- Proxy parameters
     print("c. Stiffness level:")
     stiffness = ''
     while (stiffness != 'low' and stiffness != 'medium' and stiffness != 'high'):
         stiffness = input()
-    suction_gripper.MAIN_SPRING_STIFFNESS = stiffness
+    suction_gripper.SPRING_STIFFNESS_LEVEL = stiffness
 
     print("c. Magnet force level:")
     magnet = ''
     while (magnet != 'low' and magnet != 'medium' and magnet != 'high'):
         magnet = input()
-    suction_gripper.MAGNET_FORCE_SCALE = magnet
+    suction_gripper.MAGNET_FORCE_LEVEL = magnet
 
-    # Info about apple: stiffness -- type of springs, apples used
-    # Pass these properties to the class
 
     # --- Step 3: Check that the vacuum circuit is free of holes
     # TODO initial plot of pressures
@@ -286,9 +282,8 @@ class RoboticGripper():
         self.SUCTION_CUP_RADIUS = 0.021 / 2
 
         # ---- Apple Proxy Parameters
-        self.MAIN_SPRING_STIFFNESS = 540
-        self.LATERAL_SPRING_STIFFNESS = 200
-        self.MAGNET_FORCE_SCALE = 'high'
+        self.SPRING_STIFFNESS_LEVEL = 'high'
+        self.MAGNET_FORCE_LEVEL = 'high'
 
         # ---- Noise variables
         # x,y,z and r,p,y
@@ -601,8 +596,8 @@ class RoboticGripper():
                 "Pressure at valve": self.pressure_at_valve
             },
             "proxy": {
-                "Stem Stiffness": self.MAIN_SPRING_STIFFNESS,
-                "Stem Force": self.MAGNET_FORCE_SCALE,
+                "Stem Stiffness": self.SPRING_STIFFNESS_LEVEL,
+                "Stem Force": self.MAGNET_FORCE_LEVEL,
                 "Apple Diameter": "",   #TODO "Apple Diameter": self.OBJECTRADIUS
             },
             "labels": {
