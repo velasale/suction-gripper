@@ -130,7 +130,7 @@ def proxy_picks(gripper):
     apples_to_pick = len(gripper.x_coord)
 
     # --- Sample points on a sphere around the apple
-    for sample in range(1,apples_to_pick):
+    for sample in range(1, apples_to_pick):
 
         # --- First go to a way-point
         gripper.go_to_preliminary_position()
@@ -159,7 +159,9 @@ def proxy_picks(gripper):
             #           "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3",
             #           "/usb_cam/image_raw"]
 
-            topics = ["wrench", "joint_states", "experiment_steps", "/gripper/distance",
+            topics = ["wrench", "joint_states",
+                      "experiment_steps",
+                      "/gripper/distance",
                       "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3"]
 
             command, rosbag_process = start_rosbag(filename, topics)
@@ -699,8 +701,13 @@ class RoboticGripper():
 
         # --- Step 4: Move to the new pose
         self.move_group.set_pose_target(goal_pose_pframe.pose)
-        plan = self.move_group.go(wait=True)
-        self.move_group.stop()
+
+        #plan = self.move_group.go(wait=True)
+
+        plan = self.move_group.asyncExecute
+        if CONDITION (E.G. THREE SENSORS)
+            self.move_group.stop()
+
         self.move_group.clear_pose_targets()
 
         # --- Step 5: Compare poses
