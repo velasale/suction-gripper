@@ -56,7 +56,6 @@ def main():
     # TODO place camera on Apple Proxy
     # TODO organize electronics of apple proxy
 
-
     # Initialize Class
     suction_gripper = RoboticGripper()
 
@@ -64,41 +63,49 @@ def main():
     suction_gripper.go_to_preliminary_position()
 
     # --- Step 2: Gather info from user
-    print("\n\n ***** Suction Gripper Experiments *****")
+    print("\n\n****** Suction Gripper Experiments *****")
 
-    print("Type your name")
+    print("a. Type your name:")
     name = ''
     while (name == ''):
-        name = input()
+        name = input().lower()      # convert to lower case
     suction_gripper.PERSON = name
 
-    print("a. Experiment Type: proxy, real")
+    print("b. Experiment Type (proxy, real):")
     experiment = ''
     while (experiment != 'proxy' and experiment != 'real'):
         experiment = input()
     suction_gripper.TYPE = experiment
 
-    print("b. Pressure at the Valve [PSI]): ")
+    print("c. Feed-In Pressure at valve [PSI] (60, 65, 70): ")
     print("Tip: If the desired pressure is lower than the current one (at the pressure regulator),\n then first pass that pressure and the go up to the desired pressure")
-    suction_gripper.pressure_at_valve = int(input())
+    pressure = 0
+    while (pressure != 60 and pressure != 65 and pressure != 65):
+        pressure = int(input())
+    suction_gripper.pressure_at_valve = pressure
 
     # --- Proxy parameters
-    print("c. Stiffness level:")
+    print("d. Branch Stiffness level (low, medium, high):")
     stiffness = ''
     while (stiffness != 'low' and stiffness != 'medium' and stiffness != 'high'):
         stiffness = input()
     suction_gripper.SPRING_STIFFNESS_LEVEL = stiffness
 
-    print("c. Magnet force level:")
+    print("e. Magnet force level (low, medium, high):")
     magnet = ''
     while (magnet != 'low' and magnet != 'medium' and magnet != 'high'):
         magnet = input()
     suction_gripper.MAGNET_FORCE_LEVEL = magnet
 
+    print("f. Apple Pick Pattern: (a) Retreat (b) Rotate and Retreat (c) Flex and Retreat:")
+    pattern = ''
+    while (pattern != 'a' and pattern != 'b' and pattern != 'c'):
+        pattern = input()
+    suction_gripper.PICK_PATTERN = pattern
+
 
     # --- Step 3: Check that the vacuum circuit is free of holes
     # TODO initial plot of pressures
-
     suction_gripper.suction_cup_test()
 
     # --- Step 4: Start the desired experiment
@@ -140,6 +147,8 @@ def proxy_picks(gripper):
         move = gripper.go_to_starting_position_sphere(sample)
         if not move:
             continue
+
+        print(gripper.move_group.get_path_constraints())
 
         for rep in range(n_reps):
 
@@ -331,6 +340,7 @@ class RoboticGripper():
         self.pose_starts = []
         self.APPROACH = 2 * self.SUCTION_CUP_GIVE + (self.sphere_diam - self.apple_diam)/2  # Distance to approach normal
         self.RETRIEVE = - 100 / 1000  # Distance to retrieve and pick apple
+        self.PICK_PATTERN = 'a'
 
     def go_to_starting_position_sphere(self, index):
         """
@@ -575,6 +585,12 @@ class RoboticGripper():
         @param filename:
         @return:
         """
+        if self.PICK_PATTERN == 'a':
+            pick_pattern = 'retreat'
+        elif self.PICK_PATTERN == 'b':
+            pick_pattern = 'rotate and retreat'
+        elif self.PICK_PATTERN == 'c':
+            pick_pattern = 'flex and retreat'
 
         # --- Organize metatada
         experiment_info = {
@@ -582,7 +598,8 @@ class RoboticGripper():
                 "date": str(datetime.datetime.now()),
                 "person": self.PERSON,
                 "experiment type": self.TYPE,
-                "repetition": str(self.repetition)
+                "repetition": str(self.repetition),
+                "pick pattern": str(pick_pattern)
             },
             "robot": {
                 "robot": self.ROBOT_NAME,
@@ -704,9 +721,9 @@ class RoboticGripper():
 
         #plan = self.move_group.go(wait=True)
 
-        plan = self.move_group.asyncExecute
-        if CONDITION (E.G. THREE SENSORS)
-            self.move_group.stop()
+        # plan = self.move_group.asyncExecute
+        # if CONDITION (E.G. THREE SENSORS)
+        #     self.move_group.stop()
 
         self.move_group.clear_pose_targets()
 
