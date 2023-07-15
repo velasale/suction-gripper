@@ -26,7 +26,7 @@ import geometry_msgs.msg
 from geometry_msgs.msg import Pose, Point, Quaternion, Vector3, Polygon
 import moveit_commander
 import moveit_msgs.msg
-from std_msgs.msg import String, Int32
+from std_msgs.msg import String, Int32, UInt16
 import tf
 from tf.transformations import euler_from_quaternion, quaternion_about_axis, quaternion_from_euler
 import tf2_ros
@@ -80,7 +80,7 @@ def main():
     print("c. Feed-In Pressure at valve [PSI] (60, 65, 70): ")
     print("Tip: If the desired pressure is lower than the current one (at the pressure regulator),\n then first pass that pressure and the go up to the desired pressure")
     pressure = 0
-    while (pressure != 60 and pressure != 65 and pressure != 65):
+    while (pressure != 60 and pressure != 65 and pressure != 70):
         pressure = int(input())
     suction_gripper.pressure_at_valve = pressure
 
@@ -161,7 +161,7 @@ def proxy_picks(gripper):
             # --- Start Recording Rosbag file
             location = os.path.dirname(os.getcwd())
             folder = "/data/"
-            name = gripper.TYPE + "_sample_" + str(sample) + "_rep_" + str(rep)
+            name = "__" + str(datetime.datetime.now()) + "__" + gripper.TYPE + "_sample_" + str(sample) + "_rep_" + str(rep)
             filename = location + folder + name
 
             # topics = ["wrench", "joint_states", "experiment_steps", "/gripper/distance",
@@ -194,7 +194,7 @@ def proxy_picks(gripper):
             # --- Approach Apple
             print("\n... Approaching apple")
             gripper.publish_event("Approach")
-            move = gripper.move_normal(gripper.APPROACH)
+            move = gripper.move_normal(gripper.APPROACH, True)
             # todo: should we stop saving rosbag to avoid wasting space during labeling?
 
             # --- Label the cups that were engaged with apple
@@ -251,6 +251,13 @@ class RoboticGripper():
         event_publisher = rospy.Publisher('/experiment_steps', String, queue_size=20)
         marker_text_publisher = rospy.Publisher('captions', Marker, queue_size=1000, latch=True)
         marker_balls_publisher = rospy.Publisher('balloons', MarkerArray, queue_size=100)
+
+        # ---- Subscribers
+        self.ps2_sub = rospy.Subscriber('/gripper/pressure/sc2', UInt16, self.read_pressure2, queue_size=1)
+        self.ps2 = 1000.00
+        self.ps3_sub = rospy.Subscriber('/gripper/pressure/sc3', UInt16, self.read_pressure3, queue_size=1)
+        self.ps3 = 1000.00
+
 
         planning_frame = move_group.get_planning_frame()
         print("=========== Planning frame: %s" % planning_frame)
@@ -342,6 +349,14 @@ class RoboticGripper():
         self.RETRIEVE = - 100 / 1000  # Distance to retrieve and pick apple
         self.PICK_PATTERN = 'a'
 
+
+    def read_pressure2(self, msg):
+        self.ps2 = msg.data
+
+    def read_pressure3(self, msg):
+        self.ps3 = msg.data
+
+
     def go_to_starting_position_sphere(self, index):
         """
         Places the end effector tangent to a sphere, and at the indexed point
@@ -401,9 +416,11 @@ class RoboticGripper():
         pose_goal.position.y = y
         pose_goal.position.z = z
 
+        # Move the Arm
         self.move_group.set_pose_target(pose_goal)
         plan = self.move_group.go(wait=True)
         self.move_group.stop()
+
 
         # Get the current pose to compare it
         current_pose = self.move_group.get_current_pose().pose
@@ -683,9 +700,15 @@ class RoboticGripper():
         result = ''
         while (result != 'a' and result != 'b' and result != 'c' and result != 'd'):
             result = input()
-        self.apple_pick_result = result
+        self.pick_result = result
 
-    def move_normal(self, z):
+    def move_normal(self, z, condition=False):
+        """
+
+        @param z:
+        @param condition: This is meant to stop the movement if the suction cups engage
+        @return:
+        """
 
         # --- Place a marker with text in RVIZ
         text = "Moving in Z-Axis"
@@ -719,11 +742,22 @@ class RoboticGripper():
         # --- Step 4: Move to the new pose
         self.move_group.set_pose_target(goal_pose_pframe.pose)
 
-        #plan = self.move_group.go(wait=True)
-
-        # plan = self.move_group.asyncExecute
-        # if CONDITION (E.G. THREE SENSORS)
-        #     self.move_group.stop()
+        if condition == True:
+            # Condition to stop if it senses the three sensors engaged
+            plan = self.move_group.go(wait=False)
+            close = False
+            cnt = 0
+            while close is False:
+                rospy.sleep(.1)  # Sleep .1 second
+                if cnt == 50 or (self.ps2 < 300 and self.ps3 < 300):
+                    self.move_group.stop()
+                    close = True
+                print(cnt, self.ps2)
+                cnt += 1
+            print('finished moving')
+        else:
+            self.move_group.go(wait=True)
+            self.move_group.stop()
 
         self.move_group.clear_pose_targets()
 
@@ -768,15 +802,15 @@ class RoboticGripper():
 
         # --- Stop recording Rosbag
         stop_rosbag(command, rosbag_process)
-        print("Stop recording Rosbag")
+        print("\n... Stop recording Rosbag")
         time.sleep(1)
 
         # --- Finally save the metadata
         self.save_metadata(filename)
-        print("Saving Metadata")
+        print("\n... Saving Metadata")
 
         # ----------------- Plot data to check vacuum levels --------------
-        print("Vacuum Preview")
+        print("\n... Vacuum Preview")
         plot_vacuum(filename)
 
     def place_marker_text(self, pos=[0, 0, 0], scale=0.01, text='caption'):
