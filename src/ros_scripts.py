@@ -5,7 +5,7 @@
 import subprocess, shlex, psutil
 import os
 from bagpy import bagreader
-
+import datetime
 
 # --- 3rd party imports
 import rospy
@@ -203,3 +203,18 @@ def bag_to_csvs(file):
                 data = bag.message_by_topic(topic)
             else:
                 pass
+
+
+# ---------------- FILE NAMING CONVENTION ---------------------------- #
+def datetime_simplified():
+    """Convenient method to adapt datetime """
+    year = datetime.datetime.now().year
+    month = datetime.datetime.now().month
+    day = datetime.datetime.now().day
+    hour = datetime.datetime.now().hour
+    minute = datetime.datetime.now().minute
+
+    day = str(year) + str(month//10) + str(month%10) + str(day)
+    time = str(hour//10) + str(hour%10) + str(minute//10) + str(minute%10)
+
+    return(day)

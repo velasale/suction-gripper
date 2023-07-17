@@ -128,7 +128,7 @@ def proxy_picks(gripper):
     # --- Provide location of Apple and Stem ---
     # Measure Apple Position (simply add a fiducial marker)
     # Place Apple in Rviz
-    gripper.place_marker_sphere([1, 0, 0, 0.5], gripper.apple_pose[:3], gripper.apple_diam)
+    gripper.place_marker_sphere([1, 0, 0, 0.5], gripper.apple_pose[:3], gripper.APPLE_DIAMETER)
     # Place Sphere in Rviz
     gripper.place_marker_sphere([0, 1, 0, 0.5], gripper.apple_pose[:3], gripper.sphere_diam)
 
@@ -139,12 +139,14 @@ def proxy_picks(gripper):
     # --- Sample points on a sphere around the apple
     for sample in range(1, apples_to_pick):
 
+        gripper.sample = sample
+
         # --- First go to a way-point
         gripper.go_to_preliminary_position()
 
         # --- Now move to the ideal starting position
         input("\n ********* Press Enter to Continue with Sampling point %i *********" % sample)
-        move = gripper.go_to_starting_position_sphere(sample)
+        pose, move = gripper.go_to_starting_position_sphere(sample)
         if not move:
             continue
 
@@ -156,12 +158,14 @@ def proxy_picks(gripper):
 
             # --- Move to Ideal Starting Position
             input("\n -- Press Enter to Continue with Rep %i *********" % rep)
-            move = gripper.go_to_starting_position_sphere(sample)
+            pose, move = gripper.go_to_starting_position_sphere(sample)
+            gripper.gripper_pose = pose
 
             # --- Start Recording Rosbag file
             location = os.path.dirname(os.getcwd())
             folder = "/data/"
-            name = "__" + str(datetime.datetime.now()) + "__" + gripper.TYPE + "_sample_" + str(sample) + "_rep_" + str(rep)
+            name = datetime_simplified() + "_" + gripper.TYPE + "_sample_" + str(sample) + "_rep_" + str(rep) \
+                   + "_stiff_" + str(gripper.SPRING_STIFFNESS_LEVEL) + "_force_" + str(gripper.MAGNET_FORCE_LEVEL)
             filename = location + folder + name
 
             # topics = ["wrench", "joint_states", "experiment_steps", "/gripper/distance",
@@ -291,6 +295,7 @@ class RoboticGripper():
         self.pressure_at_valve = 60
         self.PERSON = "Alejo"
         self.TYPE = "Proxy"
+        self.sample = 0
         self.repetition = 0
 
         # ---- Gripper Parameters
@@ -300,6 +305,10 @@ class RoboticGripper():
         self.SUCTION_CUP_RADIUS = 0.021 / 2
 
         # ---- Apple Proxy Parameters
+        self.apple_pose = [-0.69, -0.34, +1.06, 0.00, 0.00, 0.00]
+        self.stem_pose = [-0.49, -0.30, +1.28, 0.00, 0.00, 0.00]
+        self.APPLE_DIAMETER = 80 / 1000  # units [m]
+        self.APPLE_HEIGHT = 70 / 1000  # units [m]
         self.SPRING_STIFFNESS_LEVEL = 'high'
         self.MAGNET_FORCE_LEVEL = 'high'
 
@@ -307,15 +316,9 @@ class RoboticGripper():
         # x,y,z and r,p,y
         # self.NOISE_RANGES = [15/1000, 15/1000, 15/1000, 15 * pi() / 180, 15 * pi() / 180, 15 * pi() / 180]
         self.NOISE_RANGES = [15 / 1000, 15 / 1000, 12 / 1000, 15, 15, 15]
-        self.noise_commands = []    #todo
+        self.position_noise_commands = [0.0, 0.0, 0.0]
         self.noise_reals = []       #todo
 
-        self.noise_z_command = 0
-        self.noise_z_real = 0
-        self.noise_y_command = 0
-        self.noise_y_real = 0
-        self.noise_x_command = 0
-        self.noise_x_real = 0
         self.noise_roll_command = 0
         self.noise_roll_real = 0
         self.noise_pitch_command = 0
@@ -327,6 +330,7 @@ class RoboticGripper():
         self.start_pose = tf2_geometry_msgs.PoseStamped()
         self.goal_pose = tf2_geometry_msgs.PoseStamped()
         self.previous_pose = tf2_geometry_msgs.PoseStamped()
+        self.gripper_pose = tf2_geometry_msgs.PoseStamped().pose
 
         # --- Experiment Labels
         self.cupA_engaged = "no"
@@ -334,18 +338,13 @@ class RoboticGripper():
         self.cupC_engaged = "no"
         self.pick_result =  ""
 
-        # --- Apple variables
-        self.apple_pose = [-0.69, -0.34, +1.06, 0.00, 0.00, 0.00]
-        self.stem_pose =  [-0.49, -0.30, +1.28, 0.00, 0.00, 0.00]
-        self.apple_diam = 75/1000   # in [m]
-
         # --- Variables for Spherical Sampling
-        self.sphere_diam = self.apple_diam * 2.0
+        self.sphere_diam = self.APPLE_DIAMETER * 2.0
         self.x_coord = []
         self.y_coord = []
         self.z_coord = []
         self.pose_starts = []
-        self.APPROACH = 2 * self.SUCTION_CUP_GIVE + (self.sphere_diam - self.apple_diam)/2  # Distance to approach normal
+        self.APPROACH = 2 * self.SUCTION_CUP_GIVE + (self.sphere_diam - self.APPLE_DIAMETER) / 2  # Distance to approach normal
         self.RETRIEVE = - 100 / 1000  # Distance to retrieve and pick apple
         self.PICK_PATTERN = 'a'
 
@@ -355,7 +354,6 @@ class RoboticGripper():
 
     def read_pressure3(self, msg):
         self.ps3 = msg.data
-
 
     def go_to_starting_position_sphere(self, index):
         """
@@ -437,7 +435,7 @@ class RoboticGripper():
         else:
             self.place_marker_sphere(color=[1, 0, 0, 1], pos=[x, y, z], scale=0.01)
 
-        return success
+        return current_pose, success
 
     def go_to_preliminary_position(self):
         """Reaches a desired joint position (Forward Kinematics)"""
@@ -527,6 +525,9 @@ class RoboticGripper():
 
     def add_cartesian_noise(self, x_noise, y_noise, z_noise):
 
+        # Save the noise commands
+        self.position_noise_commands = [x_noise, y_noise, z_noise]
+
         # --- Place marker with text in RVIZ
         caption = "Adding gaussian noise"
         self.place_marker_text(pos=[0, 0, 1.5], scale=0.05, text=caption)
@@ -615,32 +616,33 @@ class RoboticGripper():
                 "date": str(datetime.datetime.now()),
                 "person": self.PERSON,
                 "experiment type": self.TYPE,
+                "sampling point": self.sample,
                 "repetition": str(self.repetition),
-                "pick pattern": str(pick_pattern)
+                "pick pattern": str(pick_pattern),
             },
             "robot": {
                 "robot": self.ROBOT_NAME,
-                "z noise command [m]": self.noise_z_command,
-                "z noise real[m]": self.noise_z_real,
-                "x noise command [m]": self.noise_x_command,
-                "x noise real [m]": self.noise_x_real,
-                # TODO"roll noise command [rad]":
-            },
-            "gripper": {
-                "Suction Cup": self.SUCTION_CUP_NAME,
-                "Pressure at Compressor": self.pressure_at_compressor,
-                "Pressure at valve": self.pressure_at_valve
+                "suction cup": self.SUCTION_CUP_NAME,
+                "pressure at compressor": self.pressure_at_compressor,
+                "pressure at valve": self.pressure_at_valve,
+                "gripper's ideal position": str(self.gripper_pose.position),
+                "gripper's ideal orientation": str(self.gripper_pose.orientation),
+                "position noise command [m]": self.position_noise_commands,
+                "orientation noise commmand ": "" # todo,
             },
             "proxy": {
-                "Stem Stiffness": self.SPRING_STIFFNESS_LEVEL,
-                "Stem Force": self.MAGNET_FORCE_LEVEL,
-                "Apple Diameter": "",   #TODO "Apple Diameter": self.OBJECTRADIUS
+                "branch stiffness": self.SPRING_STIFFNESS_LEVEL,
+                "stem force": self.MAGNET_FORCE_LEVEL,
+                "apple diameter": self.APPLE_DIAMETER,
+                "apple height": self.APPLE_HEIGHT,
+                "apple pose": self.apple_pose,
+                "stem pose": self.stem_pose,
             },
             "labels": {
-                "Suction Cup A": self.cupA_engaged,
-                "Suction Cup B": self.cupB_engaged,
-                "Suction Cup C": self.cupC_engaged,
-                "Apple pick result": self.pick_result
+                "suction cup a": self.cupA_engaged,
+                "suction cup b": self.cupB_engaged,
+                "suction cup c": self.cupC_engaged,
+                "apple pick result": self.pick_result
             }
         }
 
