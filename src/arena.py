@@ -38,7 +38,7 @@ from plot_scripts import *
 
 gripper = RoboticGripper()
 
-gripper.point_sampling()
+gripper.point_sampling_2d()
 
 
 

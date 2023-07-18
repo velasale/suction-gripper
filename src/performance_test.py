@@ -133,7 +133,7 @@ def proxy_picks(gripper):
     gripper.place_marker_sphere([0, 1, 0, 0.5], gripper.apple_pose[:3], gripper.sphere_diam)
 
     # --- Sample points on Sphere
-    gripper.point_sampling(n_points=50)
+    gripper.point_sampling_2d(n_points=20)
     apples_to_pick = len(gripper.x_coord)
 
     # --- Sample points on a sphere around the apple
@@ -305,7 +305,7 @@ class RoboticGripper():
         self.SUCTION_CUP_RADIUS = 0.021 / 2
 
         # ---- Apple Proxy Parameters
-        self.apple_pose = [-0.69, -0.43, +1.22, 0.00, 0.00, 0.00]
+        self.apple_pose = [-0.69, -0.275, +1.055, 0.00, 0.00, 0.00]
         self.stem_pose = [-0.49, -0.30, +1.28, 0.00, 0.00, 0.00]
         self.APPLE_DIAMETER = 80 / 1000  # units [m]
         self.APPLE_HEIGHT = 70 / 1000  # units [m]
@@ -921,7 +921,7 @@ class RoboticGripper():
         # Set a rate.  10 Hz is a good default rate for a marker moving with the Fetch robot.
         rate = rospy.Rate(10)
 
-    def point_sampling(self, n_points=1250):
+    def point_sampling_3d(self, n_points=1250):
         """
         This function samples points evenly distributed from the surface of a sphere
         Source: https://stackoverflow.com/questions/9600801/evenly-distributing-n-points-on-a-sphere
@@ -935,7 +935,7 @@ class RoboticGripper():
         # Adjustment due to the distance between World and Base_Link frame
 
         # --- Step 2: Further selection of points for only one quarter of the sphere
-        zoffset_from_center = + 0.0
+        zoffset_from_center = + 0.8
         yoffset_from_center = - 0.2
         for i in range(len(x)):
             if z[i] < (zoffset_from_center):
@@ -970,6 +970,35 @@ class RoboticGripper():
         pp.ylabel('y-axis')
 
         pp.show()
+
+    def point_sampling_2d(self, n_points=20):
+        angular_range = 135
+        angular_range = math.radians(angular_range)
+
+        angle = 0
+        angle_step = angular_range / n_points
+
+        for i in range(n_points):
+            angle = i * angle_step
+            y = - (self.sphere_diam / 2) * math.sin(angle)
+            z = - (self.sphere_diam / 2) * math.cos(angle)
+            self.x_coord.append(0)
+            self.y_coord.append(y)
+            self.z_coord.append(z)
+
+        x = self.x_coord
+        y = self.y_coord
+        z = self.z_coord
+
+        # --- Step 4: Plot to see the points distributed along the surface
+        pp.figure().add_subplot(111, projection='3d').scatter(x, y, z)
+        pp.xlabel('x-axis')
+        pp.ylabel('y-axis')
+
+        pp.show()
+
+
+
 
 
 if __name__ == '__main__':
