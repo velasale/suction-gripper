@@ -316,15 +316,9 @@ class RoboticGripper():
         # x,y,z and r,p,y
         # self.NOISE_RANGES = [15/1000, 15/1000, 15/1000, 15 * pi() / 180, 15 * pi() / 180, 15 * pi() / 180]
         self.NOISE_RANGES = [15 / 1000, 15 / 1000, 12 / 1000, 15, 15, 15]
-        self.position_noise_commands = [0.0, 0.0, 0.0]
+        self.position_noise = [0.0, 0.0, 0.0]
+        self.orientation_noise = [0.0, 0.0, 0.0]
         self.noise_reals = []       #todo
-
-        self.noise_roll_command = 0
-        self.noise_roll_real = 0
-        self.noise_pitch_command = 0
-        self.noise_pitch_real = 0
-        self.noise_yaw_command = 0
-        self.noise_yaw_real = 0
 
         # ---- Gripper Pose variables
         self.start_pose = tf2_geometry_msgs.PoseStamped()
@@ -526,7 +520,7 @@ class RoboticGripper():
     def add_cartesian_noise(self, x_noise, y_noise, z_noise):
 
         # Save the noise commands
-        self.position_noise_commands = [x_noise, y_noise, z_noise]
+        self.position_noise = [x_noise, y_noise, z_noise]
 
         # --- Place marker with text in RVIZ
         caption = "Adding gaussian noise"
@@ -626,9 +620,9 @@ class RoboticGripper():
                 "pressure at compressor": self.pressure_at_compressor,
                 "pressure at valve": self.pressure_at_valve,
                 "gripper's ideal position": str(self.gripper_pose.position),
-                "gripper's ideal orientation": str(self.gripper_pose.orientation),
-                "position noise command [m]": self.position_noise_commands,
-                "orientation noise commmand ": "" # todo,
+                "gripper's ideal orientation [quaternian]": str(self.gripper_pose.orientation),
+                "position noise command [m]": self.position_noise,
+                "orientation noise commmand ": self.orientation_noise,
             },
             "proxy": {
                 "branch stiffness": self.SPRING_STIFFNESS_LEVEL,
