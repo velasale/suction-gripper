@@ -305,7 +305,7 @@ class RoboticGripper():
         self.SUCTION_CUP_RADIUS = 0.021 / 2
 
         # ---- Apple Proxy Parameters
-        self.apple_pose = [-0.69, -0.34, +1.06, 0.00, 0.00, 0.00]
+        self.apple_pose = [-0.69, -0.43, +1.22, 0.00, 0.00, 0.00]
         self.stem_pose = [-0.49, -0.30, +1.28, 0.00, 0.00, 0.00]
         self.APPLE_DIAMETER = 80 / 1000  # units [m]
         self.APPLE_HEIGHT = 70 / 1000  # units [m]
@@ -921,36 +921,55 @@ class RoboticGripper():
         # Set a rate.  10 Hz is a good default rate for a marker moving with the Fetch robot.
         rate = rospy.Rate(10)
 
-    def point_sampling(self, n_points=240):
+    def point_sampling(self, n_points=1250):
         """
         This function samples points evenly distributed from the surface of a sphere
         Source: https://stackoverflow.com/questions/9600801/evenly-distributing-n-points-on-a-sphere
         """
+        # --- Step 1: Evenly distributed sampling
         indices = arange(0, n_points, dtype=float) + 0.5
-
         phi = arccos(1 - 2 * indices / n_points)
         theta = pi * (1 + 5 ** 0.5) * indices
 
         x, y, z = cos(theta) * sin(phi), sin(theta) * sin(phi), cos(phi)
         # Adjustment due to the distance between World and Base_Link frame
 
-        # Further selection of points for only one quarter of the sphere
+        # --- Step 2: Further selection of points for only one quarter of the sphere
+        zoffset_from_center = + 0.0
+        yoffset_from_center = - 0.2
         for i in range(len(x)):
-            if y[i] < (0.1 * self.sphere_diam/2):  # To get only half sphere
-                # if z[i] > 0:  # To get only one quarter of the sphere
-                #     if y[i] > 0:  # To get only one eight of the sphere
+            if z[i] < (zoffset_from_center):
+                if y[i] < (yoffset_from_center):
                         self.x_coord.append(x[i] * self.sphere_diam/2)
                         self.y_coord.append(y[i] * self.sphere_diam/2)
                         self.z_coord.append(z[i] * self.sphere_diam/2)
 
-        x = self.x_coord
-        y = self.y_coord
-        z = self.z_coord
+        # --- Step 3: Apply Rotation matrix if needed
+        stem_angle = -0
+        rot_angle = math.radians(stem_angle)
+        r_matrix = [[1,                 0,                      0                   ],
+                    [0,                 +math.cos(rot_angle),   -math.sin(rot_angle)],
+                    [0,                 +math.sin(rot_angle),   +math.cos(rot_angle)]]
+
+        points = np.array([self.x_coord, self.y_coord, self.z_coord])
+        new_points = np.dot(r_matrix, points)
+
+        self.x_coord = new_points[0]
+        self.y_coord = new_points[1]
+        self.z_coord = new_points[2]
+
+        x = new_points[0]
+        y = new_points[1]
+        z = new_points[2]
         # Sort the points in a way that is easier for the robot to go from one point to the other
         # self.x_coord.sort()
 
+        # --- Step 4: Plot to see the points distributed along the surface
         pp.figure().add_subplot(111, projection='3d').scatter(x, y, z)
-        # pp.show()
+        pp.xlabel('x-axis')
+        pp.ylabel('y-axis')
+
+        pp.show()
 
 
 if __name__ == '__main__':
