@@ -705,13 +705,10 @@ class RoboticGripper():
     def label_pick(self):
         """Method to label the result of the apple pick"""
 
-        print("\n**** Label the result of the apple pick ****")
-
-
-        print("How did the apple pick end up?")
+        print("\n How was the apple pick?:")
         print("(a) Successful pick")
-        print("(b) Successful pick but apple fell afterwards")
-        print("(c) Un-successful pick")
+        print("(b) Un-successful: Apple picked but apple it fell afterwards")
+        print("(c) Un-successful: Apple not picked")
         print("(d) Unsure and would like to repeat the trial")
 
         result = ''
