@@ -120,6 +120,7 @@ def proxy_picks(gripper):
 
     # --- Experiment Parameters ---
     n_samples = 10  # starting positions to start gripper's pose
+    yaws = [0, 60]
     n_reps = 1  # number of repetitions at each configuration
 
     cart_noises = [0, 5/1000, 10/1000, 15/1000, 20/1000]
@@ -133,102 +134,101 @@ def proxy_picks(gripper):
     gripper.place_marker_sphere([0, 1, 0, 0.5], gripper.apple_pose[:3], gripper.sphere_diam)
 
     # --- Sample points on Sphere
-    gripper.point_sampling_2d(n_points=20)
+    gripper.point_sampling_2d(n_points=n_samples)
     apples_to_pick = len(gripper.x_coord)
 
     # --- Sample points on a sphere around the apple
-    for sample in range(1, apples_to_pick):
+    for sample in range(apples_to_pick):
 
+        input("\n ** Press Enter to Start Sample Point %i **" % sample)
         gripper.sample = sample
 
         # --- First go to a way-point
-        gripper.go_to_preliminary_position()
+        # gripper.go_to_preliminary_position()
 
-        # --- Now move to the ideal starting position
-        input("\n ********* Press Enter to Continue with Sampling point %i *********" % sample)
-        pose, move = gripper.go_to_starting_position_sphere(sample)
-        if not move:
-            continue
+        for yaw in yaws:
 
-        print(gripper.move_group.get_path_constraints())
+            input("\n **** Press Enter to Start with yam %i ****" % yaw)
+            gripper.yaw = yaw
 
-        for rep in range(n_reps):
+            for rep in range(n_reps):
 
-            gripper.repetition = rep
+                # --- Move to Ideal Starting Position
+                input("\n ****** Press Enter to Continue with Rep %i *******" % rep)
+                gripper.repetition = rep
+                pose, move = gripper.go_to_starting_position_sphere(sample)
+                gripper.apply_offset(0, 0, 0, yaw)
+                gripper.gripper_pose = pose
 
-            # --- Move to Ideal Starting Position
-            input("\n -- Press Enter to Continue with Rep %i *********" % rep)
-            pose, move = gripper.go_to_starting_position_sphere(sample)
-            gripper.gripper_pose = pose
+                # --- Start Recording Rosbag file
+                location = os.path.dirname(os.getcwd())
+                folder = "/data/"
+                name = datetime_simplified() + "_" + gripper.TYPE + \
+                       "_sample_" + str(sample) + "_yaw_" + str(gripper.yaw) + "_rep_" + str(rep) + \
+                       "_stiff_" + str(gripper.SPRING_STIFFNESS_LEVEL) + "_force_" + str(gripper.MAGNET_FORCE_LEVEL)
+                filename = location + folder + name
 
-            # --- Start Recording Rosbag file
-            location = os.path.dirname(os.getcwd())
-            folder = "/data/"
-            name = datetime_simplified() + "_" + gripper.TYPE + "_sample_" + str(sample) + "_rep_" + str(rep) \
-                   + "_stiff_" + str(gripper.SPRING_STIFFNESS_LEVEL) + "_force_" + str(gripper.MAGNET_FORCE_LEVEL)
-            filename = location + folder + name
+                # topics = ["wrench", "joint_states", "experiment_steps", "/gripper/distance",
+                #           "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3",
+                #           "/usb_cam/image_raw"]
 
-            # topics = ["wrench", "joint_states", "experiment_steps", "/gripper/distance",
-            #           "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3",
-            #           "/usb_cam/image_raw"]
+                topics = ["wrench", "joint_states",
+                          "experiment_steps",
+                          "/gripper/distance",
+                          "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3"]
 
-            topics = ["wrench", "joint_states",
-                      "experiment_steps",
-                      "/gripper/distance",
-                      "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3"]
+                command, rosbag_process = start_rosbag(filename, topics)
+                print("\n... Start recording Rosbag")
+                time.sleep(0.1)
 
-            command, rosbag_process = start_rosbag(filename, topics)
-            print("\n... Start recording Rosbag")
-            time.sleep(0.1)
+                # --- Add Cartesian Noise
+                x_noise = gripper.NOISE_RANGES[0] * np.random.uniform(-1, 1)
+                y_noise = gripper.NOISE_RANGES[1] * np.random.uniform(-1, 1)
+                z_noise = gripper.NOISE_RANGES[2] * np.random.uniform(0, 1)
+                print(x_noise, y_noise, z_noise)
+                input("\n\n----- Enter to add noise ----")
 
-            # --- Add Cartesian Noise
-            x_noise = gripper.NOISE_RANGES[0] * np.random.uniform(-1, 1)
-            y_noise = gripper.NOISE_RANGES[1] * np.random.uniform(-1, 1)
-            z_noise = gripper.NOISE_RANGES[2] * np.random.uniform(0, 1)
-            print(x_noise, y_noise, z_noise)
-            input("\n\n----- Enter to add noise ----")
+                # move = gripper.apply_offset(x_noise, y_noise, z_noise, 0)
 
-            move = gripper.add_cartesian_noise(x_noise, y_noise, z_noise)
+                # --- Open Valve (apply vacuum)
+                print("\n... Applying vacuum")
+                gripper.publish_event("Vacuum On")
+                service_call("openValve")
 
-            # --- Open Valve (apply vacuum)
-            print("\n... Applying vacuum")
-            gripper.publish_event("Vacuum On")
-            service_call("openValve")
+                # --- Approach Apple
+                print("\n... Approaching apple")
+                gripper.publish_event("Approach")
+                move = gripper.move_normal(gripper.APPROACH, True)
+                # todo: should we stop saving rosbag to avoid wasting space during labeling?
 
-            # --- Approach Apple
-            print("\n... Approaching apple")
-            gripper.publish_event("Approach")
-            move = gripper.move_normal(gripper.APPROACH, True)
-            # todo: should we stop saving rosbag to avoid wasting space during labeling?
+                # --- Label the cups that were engaged with apple
+                # gripper.label_cups()
 
-            # --- Label the cups that were engaged with apple
-            gripper.label_cups()
+                # --- Retrieve
+                print("\n... Picking Apple")
+                gripper.publish_event("Retrieve")
+                move = gripper.move_normal(gripper.RETRIEVE)
 
-            # --- Retrieve
-            print("\n... Picking Apple")
-            gripper.publish_event("Retrieve")
-            move = gripper.move_normal(gripper.RETRIEVE)
+                # --- Label result
+                # gripper.label_pick()
+                # todo: should we stop saving rosbag to avoid wasting space during labeling?
 
-            # --- Label result
-            gripper.label_pick()
-            # todo: should we stop saving rosbag to avoid wasting space during labeling?
+                # --- Close Valve (stop vacuum)
+                print("\n... Stop vacuum")
+                gripper.publish_event("Vacuum Off")
+                service_call("closeValve")
+                time.sleep(0.05)
 
-            # --- Close Valve (stop vacuum)
-            print("\n... Stop vacuum")
-            gripper.publish_event("Vacuum Off")
-            service_call("closeValve")
-            time.sleep(0.05)
+                # Stop Recording Rosbag file
+                stop_rosbag(command, rosbag_process)
+                print("\n... Stop recording Rosbag")
+                time.sleep(1)
 
-            # Stop Recording Rosbag file
-            stop_rosbag(command, rosbag_process)
-            print("\n... Stop recording Rosbag")
-            time.sleep(1)
+                # Save metadata in yaml file
+                gripper.save_metadata(filename)
+                print("\n... Saving metadata in *yaml file")
 
-            # Save metadata in yaml file
-            gripper.save_metadata(filename)
-            print("\n... Saving metadata in *yaml file")
-
-            # Plot results, and decide to toss experiment away or not
+                # Plot results, and decide to toss experiment away or not
 
 
 def real_picks(gripper):
@@ -325,6 +325,7 @@ class RoboticGripper():
         self.goal_pose = tf2_geometry_msgs.PoseStamped()
         self.previous_pose = tf2_geometry_msgs.PoseStamped()
         self.gripper_pose = tf2_geometry_msgs.PoseStamped().pose
+        self.yaw = 0
 
         # --- Experiment Labels
         self.cupA_engaged = "no"
@@ -465,7 +466,7 @@ class RoboticGripper():
 
         return all_close(goal_pose, current_pose, self.TOLERANCE)
 
-    def go_to_starting_position(self):
+    def go_to_starting_position(self, yaw=0):
         """Reaches a desired End Effector pose (Inverse Kinematics)"""
 
         # --- Place marker with text in RVIZ
@@ -488,7 +489,7 @@ class RoboticGripper():
         # Euler angles
         roll =      0 * pi / 180
         pitch =     0 * pi / 180
-        yaw =       0 * pi / 180
+        yaw = yaw * pi / 180
         q = quaternion_from_euler(roll, pitch, yaw)
         goal_pose.pose.orientation.x = q[0]
         goal_pose.pose.orientation.y = q[1]
@@ -517,10 +518,10 @@ class RoboticGripper():
 
         return success
 
-    def add_cartesian_noise(self, x_noise, y_noise, z_noise):
+    def apply_offset(self, x_offset, y_offset, z_offset, Y_offset):
 
         # Save the noise commands
-        self.position_noise = [x_noise, y_noise, z_noise]
+        self.position_noise = [x_offset, y_offset, z_offset]
 
         # --- Place marker with text in RVIZ
         caption = "Adding gaussian noise"
@@ -542,9 +543,25 @@ class RoboticGripper():
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             raise
 
-        cur_pose_ezframe.pose.position.x += x_noise
-        cur_pose_ezframe.pose.position.y += y_noise
-        cur_pose_ezframe.pose.position.z += z_noise
+        cur_pose_ezframe.pose.position.x += x_offset
+        cur_pose_ezframe.pose.position.y += y_offset
+        cur_pose_ezframe.pose.position.z += z_offset
+
+        q = [0, 0, 0, 0]
+        q[0] = cur_pose_ezframe.pose.orientation.x
+        q[1] = cur_pose_ezframe.pose.orientation.y
+        q[2] = cur_pose_ezframe.pose.orientation.z
+        q[3] = cur_pose_ezframe.pose.orientation.w
+
+        e = euler_from_quaternion(q)
+        new_yaw = e[2] - math.radians(Y_offset)
+
+        q = quaternion_from_euler(e[0], e[1], new_yaw)
+        cur_pose_ezframe.pose.orientation.x = q[0]
+        cur_pose_ezframe.pose.orientation.y = q[1]
+        cur_pose_ezframe.pose.orientation.z = q[2]
+        cur_pose_ezframe.pose.orientation.w = q[3]
+
         cur_pose_ezframe.header.stamp = rospy.Time(0)
 
         # --- Step 3: Transform goal pose back to planning frame
@@ -971,15 +988,16 @@ class RoboticGripper():
 
         pp.show()
 
-    def point_sampling_2d(self, n_points=20):
+    def point_sampling_2d(self, n_points=10):
         angular_range = 135
         angular_range = math.radians(angular_range)
 
         angle = 0
-        angle_step = angular_range / n_points
+        angle_step = angular_range / (n_points-1)
 
         for i in range(n_points):
             angle = i * angle_step
+            print(i, math.degrees(angle))
             y = - (self.sphere_diam / 2) * math.sin(angle)
             z = - (self.sphere_diam / 2) * math.cos(angle)
             self.x_coord.append(0)
