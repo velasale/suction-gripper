@@ -202,6 +202,8 @@ def proxy_picks(gripper):
                 # todo: should we stop saving rosbag to avoid wasting space during labeling?
 
                 # --- Label the cups that were engaged with apple
+                print("\n... Label how did the suction cups engaged")
+                gripper.publish_event("Labeling cups")
                 # gripper.label_cups()
 
                 # --- Retrieve
@@ -210,6 +212,8 @@ def proxy_picks(gripper):
                 move = gripper.move_normal(gripper.RETRIEVE)
 
                 # --- Label result
+                print("\n... Label the pick result")
+                gripper.publish_event("Labeling apple pick")
                 # gripper.label_pick()
                 # todo: should we stop saving rosbag to avoid wasting space during labeling?
 
