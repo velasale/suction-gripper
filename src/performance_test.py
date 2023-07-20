@@ -118,6 +118,11 @@ def main():
 
 def proxy_picks(gripper):
 
+    # --- Colors for command line
+    CRED = '\033[91m'
+    CGREEN = '\033[92m'
+    CEND = '\033[0m'
+
     # --- Experiment Parameters ---
     n_samples = 10  # starting positions to start gripper's pose
     yaws = [0, 60]
@@ -140,7 +145,6 @@ def proxy_picks(gripper):
     # --- Sample points on a sphere around the apple
     for sample in range(apples_to_pick):
 
-        input("\n ** Press Enter to Start Sample Point %i **" % sample)
         gripper.sample = sample
 
         # --- First go to a way-point
@@ -148,7 +152,7 @@ def proxy_picks(gripper):
 
         for yaw in yaws:
 
-            input("\n **** Press Enter to Start with yam %i ****" % yaw)
+            print("\n ** Sample Point %i with yam %i ****" % (sample,yaw))
             gripper.yaw = yaw
 
             for rep in range(n_reps):
@@ -619,7 +623,7 @@ class RoboticGripper():
         @return:
         """
         if self.PICK_PATTERN == 'a':
-            pick_pattern = 'retreat'
+            pick_pattern = 'straight retreat'
         elif self.PICK_PATTERN == 'b':
             pick_pattern = 'rotate and retreat'
         elif self.PICK_PATTERN == 'c':
@@ -633,6 +637,7 @@ class RoboticGripper():
                 "experiment type": self.TYPE,
                 "sampling point": self.sample,
                 "repetition": str(self.repetition),
+                "yaw": self.yaw,
                 "pick pattern": str(pick_pattern),
             },
             "robot": {
@@ -753,12 +758,14 @@ class RoboticGripper():
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             raise
 
-        # --- Step 4: Move to the new pose
-        self.move_group.set_pose_target(goal_pose_pframe.pose)
+        # --- Step 4: Move to the new pose in a straight line
+        waypoints = []
+        waypoints.append(copy.deepcopy(goal_pose_pframe.pose))
+        (plan, fraction) = self.move_group.compute_cartesian_path(waypoints, 0.01, 0.0)
 
         if condition == True:
             # Condition to stop if it senses the three sensors engaged
-            plan = self.move_group.go(wait=False)
+            self.move_group.execute(plan, wait=False)
             close = False
             cnt = 0
             while close is False:
@@ -770,7 +777,7 @@ class RoboticGripper():
                 cnt += 1
             print('finished moving')
         else:
-            self.move_group.go(wait=True)
+            self.move_group.execute(plan, wait=True)
             self.move_group.stop()
 
         self.move_group.clear_pose_targets()
