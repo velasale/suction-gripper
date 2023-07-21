@@ -891,11 +891,12 @@ class Experiment:
 
         pressure_times = [self.pressure_sc1_elapsed_time, self.pressure_sc2_elapsed_time, self.pressure_sc3_elapsed_time]
         pressure_values = [self.pressure_sc1_values, self.pressure_sc2_values, self.pressure_sc3_values]
+        pressure_labels = ["side_A", "side_B", "side_C"]
 
         event_x = self.event_elapsed_time
         event_y = self.event_values
 
-        for pressure_time, pressure_value in zip(pressure_times, pressure_values):
+        for pressure_time, pressure_value, pressure_label in zip(pressure_times, pressure_values, pressure_labels):
             plt.figure(figsize=FIGURESIZE)
             plt.plot(pressure_time, pressure_value, linewidth=2)
 
@@ -924,8 +925,9 @@ class Experiment:
             plt.grid()
             plt.xticks(size=TICKSIZE)
             plt.yticks(size=TICKSIZE)
-            plt.title(self.filename + "\n" + error_type, fontsize=8)
-            plt.suptitle(title_text)
+            plt.title(pressure_label)
+            # plt.title(self.filename + "\n" + error_type, fontsize=8)
+            # plt.suptitle(title_text)
 
     def plot_only_total_force(self):
         """Plots wrench (forces and moments) and pressure readings"""

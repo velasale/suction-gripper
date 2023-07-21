@@ -60,7 +60,7 @@ def main():
     suction_gripper = RoboticGripper()
 
     # --- Step 1: Place robot at waypoint (preliminary position)
-    suction_gripper.go_to_preliminary_position()
+    # suction_gripper.go_to_preliminary_position()
 
     # --- Step 2: Gather info from user
     print("\n\n****** Suction Gripper Experiments *****")
@@ -172,14 +172,16 @@ def proxy_picks(gripper):
                        "_stiff_" + str(gripper.SPRING_STIFFNESS_LEVEL) + "_force_" + str(gripper.MAGNET_FORCE_LEVEL)
                 filename = location + folder + name
 
-                # topics = ["wrench", "joint_states", "experiment_steps", "/gripper/distance",
-                #           "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3",
-                #           "/usb_cam/image_raw"]
-
                 topics = ["wrench", "joint_states",
                           "experiment_steps",
                           "/gripper/distance",
-                          "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3"]
+                          "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3",
+                          "/usb_cam/image_raw"]
+
+                # topics = ["wrench", "joint_states",
+                #           "experiment_steps",
+                #           "/gripper/distance",
+                #           "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3"]
 
                 command, rosbag_process = start_rosbag(filename, topics)
                 print("\n... Start recording Rosbag")
@@ -202,23 +204,23 @@ def proxy_picks(gripper):
                 # --- Approach Apple
                 print("\n... Approaching apple")
                 gripper.publish_event("Approach")
-                move = gripper.move_normal(gripper.APPROACH, True)
+                move = gripper.move_normal(gripper.APPROACH, speed_factor=0.1, condition=True)
                 # todo: should we stop saving rosbag to avoid wasting space during labeling?
 
                 # --- Label the cups that were engaged with apple
                 print("\n... Label how did the suction cups engaged")
                 gripper.publish_event("Labeling cups")
-                # gripper.label_cups()
+                gripper.label_cups()
 
                 # --- Retrieve
                 print("\n... Picking Apple")
                 gripper.publish_event("Retrieve")
-                move = gripper.move_normal(gripper.RETRIEVE)
+                move = gripper.move_normal(gripper.RETRIEVE, speed_factor=0.1)
 
                 # --- Label result
                 print("\n... Label the pick result")
                 gripper.publish_event("Labeling apple pick")
-                # gripper.label_pick()
+                gripper.label_pick()
                 # todo: should we stop saving rosbag to avoid wasting space during labeling?
 
                 # --- Close Valve (stop vacuum)
@@ -265,10 +267,13 @@ class RoboticGripper():
         marker_balls_publisher = rospy.Publisher('balloons', MarkerArray, queue_size=100)
 
         # ---- Subscribers
+        self.ps1_sub = rospy.Subscriber('/gripper/pressure/sc1', UInt16, self.read_pressure1, queue_size=1)
+        self.ps1 = 1000.00
         self.ps2_sub = rospy.Subscriber('/gripper/pressure/sc2', UInt16, self.read_pressure2, queue_size=1)
         self.ps2 = 1000.00
         self.ps3_sub = rospy.Subscriber('/gripper/pressure/sc3', UInt16, self.read_pressure3, queue_size=1)
         self.ps3 = 1000.00
+
 
 
         planning_frame = move_group.get_planning_frame()
@@ -313,7 +318,7 @@ class RoboticGripper():
         self.SUCTION_CUP_RADIUS = 0.021 / 2
 
         # ---- Apple Proxy Parameters
-        self.apple_pose = [-0.69, -0.275, +1.055, 0.00, 0.00, 0.00]
+        self.apple_pose = [-0.69, -0.275, +1.06, 0.00, 0.00, 0.00]
         self.stem_pose = [-0.49, -0.30, +1.28, 0.00, 0.00, 0.00]
         self.APPLE_DIAMETER = 80 / 1000  # units [m]
         self.APPLE_HEIGHT = 70 / 1000  # units [m]
@@ -351,6 +356,8 @@ class RoboticGripper():
         self.RETRIEVE = - 100 / 1000  # Distance to retrieve and pick apple
         self.PICK_PATTERN = 'a'
 
+    def read_pressure1(self, msg):
+        self.ps1 = msg.data
 
     def read_pressure2(self, msg):
         self.ps2 = msg.data
@@ -451,12 +458,12 @@ class RoboticGripper():
         goal_pose = self.move_group.get_current_joint_values()
         print(goal_pose)
         #
-        goal_pose[0] = + 32 * pi / 180
-        goal_pose[1] = -  100 * pi / 180
-        goal_pose[2] = -  85 * pi / 180
-        goal_pose[3] = -  50 * pi / 180
-        goal_pose[4] = +  70 * pi / 180
-        goal_pose[5] = +  70 * pi / 180
+        goal_pose[0] = - 180 * pi / 180
+        goal_pose[1] = -  60 * pi / 180
+        goal_pose[2] = + 120 * pi / 180
+        goal_pose[3] = + 240 * pi / 180
+        goal_pose[4] = +  90 * pi / 180
+        goal_pose[5] = + 150 * pi / 180
 
         # goal_pose[0] = + 0.2
         # goal_pose[1] = - 1.4
@@ -711,17 +718,17 @@ class RoboticGripper():
         """Method to label the result of the apple pick"""
 
         print("\n How was the apple pick?:")
-        print("(a) Successful pick")
+        print("(a) Successful pick: after pick pattern")
         print("(b) Un-successful: Apple picked but apple it fell afterwards")
         print("(c) Un-successful: Apple not picked")
-        print("(d) Unsure and would like to repeat the trial")
+        print("(d) Successful pick: before pick pattern ")
 
         result = ''
         while (result != 'a' and result != 'b' and result != 'c' and result != 'd'):
             result = input()
         self.pick_result = result
 
-    def move_normal(self, z, condition=False):
+    def move_normal(self, z, speed_factor=1.0, condition=False):
         """
 
         @param z:
@@ -765,18 +772,22 @@ class RoboticGripper():
 
         if condition == True:
             # Condition to stop if it senses the three sensors engaged
+            self.move_group.set_max_acceleration_scaling_factor(speed_factor)
+            self.move_group.set_max_velocity_scaling_factor(speed_factor)
             self.move_group.execute(plan, wait=False)
             close = False
             cnt = 0
             while close is False:
                 rospy.sleep(.1)  # Sleep .1 second
-                if cnt == 50 or (self.ps2 < 300 and self.ps3 < 300):
+                if cnt == 50 or (self.ps2 < 500 and self.ps3 < 500):
                     self.move_group.stop()
                     close = True
-                print(cnt, self.ps2)
+                print(cnt, self.ps1, self.ps2, self.ps3)
                 cnt += 1
             print('finished moving')
         else:
+            self.move_group.set_max_acceleration_scaling_factor(speed_factor)
+            self.move_group.set_max_velocity_scaling_factor(speed_factor)
             self.move_group.execute(plan, wait=True)
             self.move_group.stop()
 
