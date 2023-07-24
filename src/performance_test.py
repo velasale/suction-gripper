@@ -143,7 +143,7 @@ def proxy_picks(gripper):
     apples_to_pick = len(gripper.x_coord)
 
     # --- Sample points on a sphere around the apple
-    for sample in range(apples_to_pick):
+    for sample in range(0, apples_to_pick):
 
         gripper.sample = sample
 
@@ -318,7 +318,8 @@ class RoboticGripper():
         self.SUCTION_CUP_RADIUS = 0.021 / 2
 
         # ---- Apple Proxy Parameters
-        self.apple_pose = [-0.69, -0.275, +1.06, 0.00, 0.00, 0.00]
+        # self.apple_pose = [-0.69, -0.275, +1.06, 0.00, 0.00, 0.00]
+        self.apple_pose = [-0.49, -0.275, +1.06, 0.00, 0.00, 0.00]
         self.stem_pose = [-0.49, -0.30, +1.28, 0.00, 0.00, 0.00]
         self.APPLE_DIAMETER = 80 / 1000  # units [m]
         self.APPLE_HEIGHT = 70 / 1000  # units [m]
