@@ -1,5 +1,6 @@
 # Suction Gripper Experiment
-Experiment to test the performance of the suction gripper when cartesian and angular noise is added to its position w.r.t. the center of an apple.
+Experiments to test the performance of the suction gripper to pick apples in an physical apple proxy. 
+Both cartesian and angular offsets are added to the position of the gripper w.r.t. the center of an apple.
 
 
 # Basic Installation
