@@ -1,4 +1,4 @@
-# Suction Experiment
+# Suction Gripper Experiment
 Experiment to test the performance of the suction gripper when cartesian and angular noise is added to its position w.r.t. the center of an apple.
 
 
