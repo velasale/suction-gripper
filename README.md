@@ -77,13 +77,13 @@ roslaunch suction-gripper suction_gripper_experiment.launch with_robot:=no
 
 4. Run experiment code in 2nd terminal:
 ```console
-python3 suction_experiment.py
+python3 performance_test.py
  ```
 
 ## Tips  
 If you want to read a certain sensor/topic from command line:
 ```console
-rostopic echo /gripper/pressure
+rostopic echo /gripper/pressure/sc1
 ```
 Also, if you want to send a control command from command line:
 ```console
