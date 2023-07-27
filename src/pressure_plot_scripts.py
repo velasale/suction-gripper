@@ -880,11 +880,9 @@ class Experiment:
     def plot_only_pressure(self):
         """Plots wrench (forces and moments) and pressure readings"""
 
-        FONTSIZE = 24
+        FONTSIZE = 16   # Use 24 for papers
         TICKSIZE = 22
         FIGURESIZE = (8.7, 6.8)
-
-
 
         # pressure_time = self.pressure_elapsed_time
         # pressure_values = self.pressure_values
@@ -896,23 +894,25 @@ class Experiment:
         event_x = self.event_elapsed_time
         event_y = self.event_values
 
+        fig, axes = plt.subplots(1, 3, figsize=FIGURESIZE)
+        cnt = 0
         for pressure_time, pressure_value, pressure_label in zip(pressure_times, pressure_values, pressure_labels):
-            plt.figure(figsize=FIGURESIZE)
-            plt.plot(pressure_time, pressure_value, linewidth=2)
+
+            axes[cnt].plot(pressure_time, pressure_value, linewidth=2)
 
             for event, label in zip(event_x, event_y):
-                plt.axvline(x=event, color='black', linestyle='dotted', linewidth=2)
-                plt.text(event, 50, label, rotation=90, color='black', fontsize=FONTSIZE)
-                plt.xlabel("Elapsed Time [sec]", fontsize=FONTSIZE)
-                plt.ylabel("Pressure [kPa]", fontsize=FONTSIZE)
-                plt.ylim([0, 110])
+                # axes[cnt].axvline(x=event, color='black', linestyle='dotted', linewidth=2)
+                # axes[cnt].text(event, 50, label, rotation=90, color='black', fontsize=FONTSIZE)
+                axes[cnt].set_xlabel("Elapsed Time [sec]", fontsize=FONTSIZE)
+                axes[cnt].set_ylabel("Pressure [kPa]", fontsize=FONTSIZE)
+                axes[cnt].set_ylim([0, 110])
 
             # --- Add error in the title if there was any ---
             try:
                 error_type = self.errors[0]
             except IndexError:
                 error_type = "data looks good"
-            plt.suptitle(self.filename + "\n\n" + error_type)
+            # axes[cnt].suptitle(self.filename + "\n\n" + error_type)
             print(self.filename)
 
             title_text = "Experiment Type: " + str(self.exp_type) + \
@@ -922,12 +922,13 @@ class Experiment:
                          ", xNoise Command: " + str(round(self.x_noise_command * 1000, 2)) + "mm" \
                          ", Repetition No: " + str(self.repetition)
 
-            plt.grid()
-            plt.xticks(size=TICKSIZE)
-            plt.yticks(size=TICKSIZE)
-            plt.title(pressure_label)
+            axes[cnt].grid()
+            # axes[cnt].set_xticks(size=TICKSIZE)
+            # axes[cnt].set_yticks(size=TICKSIZE)
+            axes[cnt].set_title(pressure_label)
             # plt.title(self.filename + "\n" + error_type, fontsize=8)
             # plt.suptitle(title_text)
+            cnt+=1
 
     def plot_only_total_force(self):
         """Plots wrench (forces and moments) and pressure readings"""
