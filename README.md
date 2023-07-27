@@ -1,5 +1,6 @@
-# Suction Experiment
-Experiment to test the performance of the suction gripper when cartesian and angular noise is added to its position w.r.t. the center of an apple.
+# Suction Gripper Experiment
+Experiments to test the performance of the suction gripper to pick apples in an physical apple proxy. 
+Both cartesian and angular offsets are added to the position of the gripper w.r.t. the center of an apple.
 
 
 # Basic Installation
@@ -14,10 +15,10 @@ The following steps were performed under Ubuntu 20.04.5 LTS (Focal Fossa)(https:
     * **adafruit VL53L0X** (Time Of Flight Sensor)
 3. Warning:
     * If after compiling you encounter issues with *cstring*, try:  
-        - open **msg.h**  
+        - open **msg.h** file
         - replace `#include <cstring>` with `#include<string.h>`  
         - replace `std::memcpy()` with `memcpy()` 
-    * If you are using a SAMD21 based Arduino board (e.g. Arduino Zero) then you will need a SAMD21 Compatible ros_lib for rosserial which can be found [here](https://github.com/MWahbahCC/ros_lib/tree/main) as suggested [here](https://answers.ros.org/question/328712/rosserial_python-on-samd21/):
+    * If you are using a SAMD21 based Arduino board (e.g. Arduino Zero) then you will need a SAMD21 Compatible **ros_lib** for rosserial which can be found [here](https://github.com/MWahbahCC/ros_lib/tree/main) as suggested [here](https://answers.ros.org/question/328712/rosserial_python-on-samd21/):
         - Simply copy the files **ArduinoHardware.h** and **ros.h** into your host pc *Arduino/libraries/ros_lib* subfolder
         - These upgraded files are found in this repo at *arduino/ros_lib*
      
@@ -76,13 +77,13 @@ roslaunch suction-gripper suction_gripper_experiment.launch with_robot:=no
 
 4. Run experiment code in 2nd terminal:
 ```console
-python3 suction_experiment.py
+python3 performance_test.py
  ```
 
 ## Tips  
 If you want to read a certain sensor/topic from command line:
 ```console
-rostopic echo /gripper/pressure
+rostopic echo /gripper/pressure/sc1
 ```
 Also, if you want to send a control command from command line:
 ```console
