@@ -95,7 +95,6 @@ def main():
     # suction_gripper.info_from_user()
 
     # --- Step 3: Check that the vacuum circuit is free of holes
-    # TODO initial plot of pressures
     suction_gripper.suction_cup_test()
 
     # --- Step 4: Start the desired experiment
@@ -106,11 +105,6 @@ def main():
 
 
 def proxy_picks(gripper):
-
-    # --- Colors for command line
-    CRED = '\033[91m'
-    CGREEN = '\033[92m'
-    CEND = '\033[0m'
 
     # --- Experiment Parameters ---
     n_samples = 10  # starting positions to start gripper's pose
