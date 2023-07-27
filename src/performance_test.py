@@ -92,7 +92,7 @@ def main():
 
     # --- Step 2: Gather info from user
     print("\n\n****** Suction Gripper Experiments *****")
-    suction_gripper.info_from_user()
+    # suction_gripper.info_from_user()
 
     # --- Step 3: Check that the vacuum circuit is free of holes
     # TODO initial plot of pressures
@@ -299,7 +299,7 @@ class RoboticGripper():
         self.pressure_at_compressor = 100
         self.pressure_at_valve = 60
         self.PERSON = "Alejo"
-        self.TYPE = "Proxy"
+        self.TYPE = "proxy"
         self.sample = 0
         self.repetition = 0
 
@@ -801,7 +801,10 @@ class RoboticGripper():
         foldername = "/data/"
         name = "vacuum_test"
         filename = location + foldername + name
-        topics = ["experiment_steps", "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3"]
+        topics = ["experiment_steps",
+                  "/gripper/pressure/sc1",
+                  "/gripper/pressure/sc2",
+                  "/gripper/pressure/sc3"]
         command, rosbag_process = start_rosbag(filename, topics)
 
         print("Start recording Rosbag")
@@ -1066,7 +1069,6 @@ class RoboticGripper():
         while (pattern != 'a' and pattern != 'b' and pattern != 'c'):
             pattern = input()
         self.PICK_PATTERN = pattern
-
 
 
 if __name__ == '__main__':
