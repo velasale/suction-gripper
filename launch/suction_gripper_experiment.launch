@@ -25,29 +25,31 @@
 
       <!-- Step 3:Launch Camera -->
 
-      <!-- <include file="$(find video_stream_opencv)/launch/camera.launch">
-        <arg name="video_stream_provider" value="/dev/video2"/>
-        <arg name="visualize" value="true" />
-      </include> -->
+          <!-- In-Hand Camera -->
+          <include file="$(find video_stream_opencv)/launch/camera.launch">
+            <arg name="video_stream_provider" value="/dev/video4"/>
+            <arg name="visualize" value="true" />
+          </include>
 
-      <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="screen" >
-        <param name="video_device" value="/dev/video0" />
-        <param name="image_width" value="640" />
-        <param name="image_height" value="480" />
-        <param name="pixel_format" value="yuyv" />
-        <param name="color_format" value="yuv422p" />
-        <param name="camera_frame_id" value="usb_cam" />
-        <param name="io_method" value="mmap"/>
-        <param name="saturation" value="128" />
-        <param name="contrast" value="128" />
-        <param name="brightness" value="128" />   
-        <param name="autofocus" value="true" />
+          <!-- Fixed USB Camera -->
+          <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="screen" >
+            <param name="video_device" value="/dev/video0" />
+            <param name="image_width" value="640" />
+            <param name="image_height" value="480" />
+            <param name="pixel_format" value="yuyv" />
+            <param name="color_format" value="yuv422p" />
+            <param name="camera_frame_id" value="usb_cam" />
+            <param name="io_method" value="mmap"/>
+            <param name="saturation" value="128" />
+            <param name="contrast" value="128" />
+            <param name="brightness" value="128" />
+            <param name="autofocus" value="true" />
+          </node>
 
-      </node>
-      <node name="image_view" pkg="image_view" type="image_view" respawn="false" output="screen">
-        <remap from="image" to="/usb_cam/image_raw"/>
-        <param name="autosize" value="true" />
-      </node>
+          <node name="image_view" pkg="image_view" type="image_view" respawn="false" output="screen">
+            <remap from="image" to="/usb_cam/image_raw"/>
+            <param name="autosize" value="true" />
+          </node>
 
 
       <!--       Step 4: Launch ROS Serial -->
