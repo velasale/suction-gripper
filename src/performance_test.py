@@ -32,11 +32,40 @@ from tf.transformations import euler_from_quaternion, quaternion_about_axis, qua
 import tf2_ros
 import tf2_geometry_msgs  # **Do not use geometry_msgs. Use this instead for PoseStamped
 from visualization_msgs.msg import Marker, MarkerArray
+import cv2
 
 ## --- Self developed imports
 from pressure_plot_scripts import *
 from ros_scripts import *
 from plot_scripts import *
+
+
+def draw_cross_hair():
+    while True:
+        # capturing Video from Webcam
+        cap = cv2.VideoCapture(-1)
+
+        # set Width and Height of output Screen
+        frameWidth = 640
+        frameHeight = 480
+        success, img = cap.read()
+        imgResult = img.copy()
+
+        # Draw Vertical and Horizontal Line
+        color = (0, 0, 0)
+        x1 = int(frameWidth * 0.25)
+        x2 = int(frameWidth * 0.50)
+        x3 = int(frameWidth * 0.75)
+        y1 = int(frameHeight * 0.25)
+        y2 = int(frameHeight * 0.5)
+        y3 = int(frameHeight * 0.75)
+        cv2.line(imgResult, (x2, y1), (x2, y3), color, 2)
+        cv2.line(imgResult, (x1, y2), (x3, y2), color, 2)
+
+        # condition to break programs execution
+        key = cv2.waitKey(1)
+        if key == 27:
+            break
 
 
 def plot_vacuum(filename):
@@ -53,7 +82,6 @@ def plot_vacuum(filename):
 
 def main():
 
-    # TODO place camera on Apple Proxy
     # TODO organize electronics of apple proxy
 
     # Initialize Class
@@ -64,55 +92,16 @@ def main():
 
     # --- Step 2: Gather info from user
     print("\n\n****** Suction Gripper Experiments *****")
-
-    print("a. Type your name:")
-    name = ''
-    while (name == ''):
-        name = input().lower()      # convert to lower case
-    suction_gripper.PERSON = name
-
-    print("b. Experiment Type (proxy, real):")
-    experiment = ''
-    while (experiment != 'proxy' and experiment != 'real'):
-        experiment = input()
-    suction_gripper.TYPE = experiment
-
-    print("c. Feed-In Pressure at valve [PSI] (60, 65, 70): ")
-    print("Tip: If the desired pressure is lower than the current one (at the pressure regulator),\n then first pass that pressure and the go up to the desired pressure")
-    pressure = 0
-    while (pressure != 60 and pressure != 65 and pressure != 70):
-        pressure = int(input())
-    suction_gripper.pressure_at_valve = pressure
-
-    # --- Proxy parameters
-    print("d. Branch Stiffness level (low, medium, high):")
-    stiffness = ''
-    while (stiffness != 'low' and stiffness != 'medium' and stiffness != 'high'):
-        stiffness = input()
-    suction_gripper.SPRING_STIFFNESS_LEVEL = stiffness
-
-    print("e. Magnet force level (low, medium, high):")
-    magnet = ''
-    while (magnet != 'low' and magnet != 'medium' and magnet != 'high'):
-        magnet = input()
-    suction_gripper.MAGNET_FORCE_LEVEL = magnet
-
-    print("f. Apple Pick Pattern: (a) Retreat (b) Rotate and Retreat (c) Flex and Retreat:")
-    pattern = ''
-    while (pattern != 'a' and pattern != 'b' and pattern != 'c'):
-        pattern = input()
-    suction_gripper.PICK_PATTERN = pattern
-
+    suction_gripper.info_from_user()
 
     # --- Step 3: Check that the vacuum circuit is free of holes
     # TODO initial plot of pressures
     suction_gripper.suction_cup_test()
 
     # --- Step 4: Start the desired experiment
-    if experiment == "proxy":
+    if suction_gripper.TYPE == "proxy":
         proxy_picks(suction_gripper)
-
-    elif experiment == "real":
+    elif suction_gripper.TYPE == "real":
         real_picks(suction_gripper)
 
 
@@ -164,6 +153,8 @@ def proxy_picks(gripper):
                 gripper.apply_offset(0, 0, 0, yaw)
                 gripper.gripper_pose = pose
 
+                draw_cross_hair()
+
                 # --- Start Recording Rosbag file
                 location = os.path.dirname(os.getcwd())
                 folder = "/data/"
@@ -176,7 +167,8 @@ def proxy_picks(gripper):
                           "experiment_steps",
                           "/gripper/distance",
                           "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3",
-                          "/usb_cam/image_raw"]
+                          "/usb_cam/image_raw",
+                          "/camera/image_raw"]
 
                 # topics = ["wrench", "joint_states",
                 #           "experiment_steps",
@@ -1035,7 +1027,45 @@ class RoboticGripper():
 
         pp.show()
 
+    def info_from_user(self):
+        print("a. Type your name:")
+        name = ''
+        while (name == ''):
+            name = input().lower()  # convert to lower case
+        self.PERSON = name
 
+        print("b. Experiment Type (proxy, real):")
+        experiment = ''
+        while (experiment != 'proxy' and experiment != 'real'):
+            experiment = input()
+        self.TYPE = experiment
+
+        print("c. Feed-In Pressure at valve [PSI] (60, 65, 70): ")
+        print(
+            "Tip: If the desired pressure is lower than the current one (at the pressure regulator),\n then first pass that pressure and the go up to the desired pressure")
+        pressure = 0
+        while (pressure != 60 and pressure != 65 and pressure != 70):
+            pressure = int(input())
+        self.pressure_at_valve = pressure
+
+        # --- Proxy parameters
+        print("d. Branch Stiffness level (low, medium, high):")
+        stiffness = ''
+        while (stiffness != 'low' and stiffness != 'medium' and stiffness != 'high'):
+            stiffness = input()
+        self.SPRING_STIFFNESS_LEVEL = stiffness
+
+        print("e. Magnet force level (low, medium, high):")
+        magnet = ''
+        while (magnet != 'low' and magnet != 'medium' and magnet != 'high'):
+            magnet = input()
+        self.MAGNET_FORCE_LEVEL = magnet
+
+        print("f. Apple Pick Pattern: (a) Retreat (b) Rotate and Retreat (c) Flex and Retreat:")
+        pattern = ''
+        while (pattern != 'a' and pattern != 'b' and pattern != 'c'):
+            pattern = input()
+        self.PICK_PATTERN = pattern
 
 
 
