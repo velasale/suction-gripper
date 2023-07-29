@@ -92,7 +92,7 @@ def main():
 
     # --- Step 2: Gather info from user
     print("\n\n****** Suction Gripper Experiments *****")
-    # suction_gripper.info_from_user()
+    suction_gripper.info_from_user()
 
     # --- Step 3: Check that the vacuum circuit is free of holes
     suction_gripper.suction_cup_test()
@@ -147,7 +147,7 @@ def proxy_picks(gripper):
                 gripper.apply_offset(0, 0, 0, yaw)
                 gripper.gripper_pose = pose
 
-                draw_cross_hair()
+                # draw_cross_hair() #TODO
 
                 # --- Start Recording Rosbag file
                 location = os.path.dirname(os.getcwd())

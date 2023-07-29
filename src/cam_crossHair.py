@@ -4,10 +4,10 @@ import numpy as np
 
 # set Width and Height of output Screen
 frameWidth = 640
-frameHeight = 480
+frameHeight = 360
 
 # capturing Video from Webcam
-cap = cv2.VideoCapture(2)
+cap = cv2.VideoCapture(4)
 
 def drawSomething(img, width, height):
     color = (0, 0, 0) 

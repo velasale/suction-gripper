@@ -10,8 +10,8 @@ import datetime
 # --- 3rd party imports
 import rospy
 import geometry_msgs.msg
-# from moveit_commander.conversions import pose_to_list
-# from visualization_msgs.msg import Marker, MarkerArray
+from moveit_commander.conversions import pose_to_list
+from visualization_msgs.msg import Marker, MarkerArray
 
 import cv2
 import rosbag
