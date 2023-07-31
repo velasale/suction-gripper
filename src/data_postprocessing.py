@@ -6,9 +6,16 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 # Step 1 - Collect Statistics from metadata json files
-folder = "/home/alejo/Documents/data/SUCTION_GRIPPER_EXPERIMENTS/"
+folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"
 # dataset = "5th run - HIGH STIFFNESS - HIGH FORCE/"
-dataset = "all_jsons_together/"
+dataset = "LOW_STIFFNESS/"
+dataset = "MEDIUM_STIFFNESS/"
+
+
+# https://stackoverflow.com/questions/287871/how-do-i-print-colored-text-to-the-terminal
+CRED = '\033[91m'
+CGREEN = '\033[92m'
+CEND = '\033[0m'
 
 
 # Step 2 - Things to plot
@@ -62,8 +69,8 @@ pick_result     = {'low_stiffness': {'low_force':       {'Successful pick: after
 # Step 3 - Gather info
 for filename in os.listdir(folder + dataset):
 
-    if filename.endswith(".json"):
-        print('\n', filename)
+    if filename.endswith(".json") and not filename.startswith("vacuum_test"):
+        print('\n' + CGREEN, filename, CEND)
 
         with open(folder + dataset + filename, 'r') as json_file:
             json_dict = json.load(json_file)
@@ -84,6 +91,7 @@ for filename in os.listdir(folder + dataset):
 
             # Pick result
             pick_label = labels['apple pick result']
+            print("Before:", pick_label)
             if pick_label == 'a':
                  pick_label = "Successful pick: after pick pattern"
             elif pick_label == 'b':
@@ -95,7 +103,7 @@ for filename in os.listdir(folder + dataset):
 
             stiffness = proxy_info['branch stiffness'] + "_stiffness"
             force = proxy_info['stem force'] + "_force"
-            print(stiffness, force)
+            print("After: ", stiffness, force, pick_label)
 
             cups_engagement[stiffness][force][str(cnt)] += 1
             pick_result[stiffness][force][pick_label] += 1
