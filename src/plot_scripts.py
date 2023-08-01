@@ -12,7 +12,7 @@ def running_plot_and_video(location, filename, time_list, values_list, xlabel='E
     """
     Plots a graph with a vertical line running while playing a video given images
     @param location: Folder
-    @param filename: Subfolder with the jpeg files
+    @param filename: Subfolder with the jpeg/png files
     @param time_list: data for plot's x-axis
     @param values_list: data for plot's y-axis
     @return:
@@ -83,5 +83,11 @@ def running_plot_and_video(location, filename, time_list, values_list, xlabel='E
     # out.release()
 
 
+# def main():
+
+
+
+if __name__ == '__main__':
+    main()
 
 # todo: same function but saving video

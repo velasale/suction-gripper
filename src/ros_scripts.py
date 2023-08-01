@@ -206,7 +206,7 @@ def bag_to_csvs(file):
 
         # --- Read the desired topic ---
         for topic in topics["Topics"]:
-            if topic not in ['/usb_cam/image_raw','/camera/image_raw']:
+            if topic not in ['/usb_cam/image_raw', '/camera/image_raw']:
                 # Once opened, data is saved automatically into a csv file.
                 data = bag.message_by_topic(topic)
             else:
@@ -317,6 +317,11 @@ def main():
     bag_to_video(folder, file, topic)
     # -------------------------------------
 
+
+    # --- Tutorial to use bag_to_csvs -----
+
+
+    # -------------------------------------
 
 if __name__ == '__main__':
     main()
