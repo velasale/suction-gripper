@@ -114,6 +114,12 @@ def proxy_picks(gripper):
     cart_noises = [0, 5/1000, 10/1000, 15/1000, 20/1000]
     ang_noises = [0, 5, 10, 15, 20]
 
+    # --- Adjust amount of retrieve depending on the type of stiffness
+    if gripper.SPRING_STIFFNESS_LEVEL == 'low':
+        gripper.RETRIEVE = - 140 / 1000  # Distance to retrieve and pick apple
+    else:
+        gripper.RETRIEVE = -100 / 1000
+
     # --- Provide location of Apple and Stem ---
     # Measure Apple Position (simply add a fiducial marker)
     # Place Apple in Rviz
@@ -135,6 +141,8 @@ def proxy_picks(gripper):
 
         for yaw in yaws:
 
+            yaw -= 15   # Adjustment to have Suction Cup A facing down first
+
             print("\n ** Sample Point %i with yam %i ****" % (sample,yaw))
             gripper.yaw = yaw
 
@@ -146,6 +154,7 @@ def proxy_picks(gripper):
                 pose, move = gripper.go_to_starting_position_sphere(sample)
                 gripper.apply_offset(0, 0, 0, yaw)
                 gripper.gripper_pose = pose
+
 
                 # draw_cross_hair() #TODO
 
@@ -302,10 +311,12 @@ class RoboticGripper():
         self.SUCTION_CUP_NAME = "F-BX20 Silicone"
         self.SUCTION_CUP_GIVE = 0.010
         self.SUCTION_CUP_RADIUS = 0.021 / 2
+        self.YAW_OFFSET = math.radians(15)      #In order for the x-axis to be aligned with suction cup B and C
 
         # ---- Apple Proxy Parameters
-        # self.apple_pose = [-0.69, -0.275, +1.06, 0.00, 0.00, 0.00]
-        self.apple_pose = [-0.49, -0.275, +1.06, 0.00, 0.00, 0.00]
+        # Medium Force z = 1.05
+        # 1st Bushing y = -0.49    2nd Bushing y = -0.69
+        self.apple_pose = [-0.69, -0.275, +1.05, 0.00, 0.00, 0.00]
         self.stem_pose = [-0.49, -0.30, +1.28, 0.00, 0.00, 0.00]
         self.APPLE_DIAMETER = 80 / 1000  # units [m]
         self.APPLE_HEIGHT = 70 / 1000  # units [m]
@@ -334,13 +345,15 @@ class RoboticGripper():
         self.pick_result =  ""
 
         # --- Variables for Spherical Sampling
-        self.sphere_diam = self.APPLE_DIAMETER * 2.0
+        self.sphere_diam = self.APPLE_DIAMETER * 1.5
         self.x_coord = []
         self.y_coord = []
         self.z_coord = []
         self.pose_starts = []
         self.APPROACH = 2 * self.SUCTION_CUP_GIVE + (self.sphere_diam - self.APPLE_DIAMETER) / 2  # Distance to approach normal
-        self.RETRIEVE = - 100 / 1000  # Distance to retrieve and pick apple
+        self.RETRIEVE = -100 / 1000
+
+
         self.PICK_PATTERN = 'a'
 
     def read_pressure1(self, msg):
@@ -415,6 +428,25 @@ class RoboticGripper():
         self.move_group.set_pose_target(pose_goal)
         plan = self.move_group.go(wait=True)
         self.move_group.stop()
+
+        # See pose in the EEF c-frame
+        current_pose = self.move_group.get_current_pose()
+        current_pose.header.frame_id = "world"
+        current_pose.header.stamp = rospy.Time(0)
+        tf_buffer = tf2_ros.Buffer()
+        listener = tf2_ros.TransformListener(tf_buffer)
+        try:
+            goal_pose_gripper = tf_buffer.transform(current_pose, 'eef', rospy.Duration(1))
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            raise
+        q = [0, 0, 0, 0]
+        q[0] = goal_pose_gripper.pose.orientation.x
+        q[1] = goal_pose_gripper.pose.orientation.y
+        q[2] = goal_pose_gripper.pose.orientation.z
+        q[3] = goal_pose_gripper.pose.orientation.w
+
+        e = euler_from_quaternion(q)
+        print(e)
 
 
         # Get the current pose to compare it
@@ -793,7 +825,7 @@ class RoboticGripper():
         # --- Start Rosbag
         location = os.path.dirname(os.getcwd())
         foldername = "/data/"
-        name = "vacuum_test"
+        name = "vacuum_test_" + "stiffness_" + self.SPRING_STIFFNESS_LEVEL + "_force_" + self.MAGNET_FORCE_LEVEL
         filename = location + foldername + name
         topics = ["experiment_steps",
                   "/gripper/pressure/sc1",
