@@ -301,3 +301,24 @@ def datetime_simplified():
     time = str(hour//10) + str(hour%10) + str(minute//10) + str(minute%10)
 
     return(day)
+
+
+def main():
+
+    # --- Tutorial to use bag_to_video ----
+    # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/HIGH STIFFNESS/4th run - HIGH STIFFNESS - LOW FORCE/"
+    folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/LOW_STIFFNESS/"
+    file = "20230731_proxy_sample_6_yaw_-15_rep_0_stiff_low_force_medium.bag"
+    topic = "/usb_cam/image_raw"
+    # topic = "/camera/image_raw"
+
+    # bag_to_pngs(folder, file, topic)
+    # bag_to_csvs(folder + file)
+    bag_to_video(folder, file, topic)
+    # -------------------------------------
+
+
+if __name__ == '__main__':
+    main()
+
+
