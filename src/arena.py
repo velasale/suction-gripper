@@ -25,9 +25,11 @@ import datetime
 from ros_scripts import *
 
 
-folder = "/home/alejo/Documents/data/SUCTION_GRIPPER_EXPERIMENTS/5th run - HIGH STIFFNESS - HIGH FORCE/"
-file = "20230724_proxy_sample_0_yaw_0_rep_0_stiff_high_force_high.bag"
+# folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/HIGH STIFFNESS/4th run - HIGH STIFFNESS - LOW FORCE/"
+folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/LOW_STIFFNESS/"
+file = "20230731_proxy_sample_5_yaw_-15_rep_0_stiff_low_force_low.bag"
 topic = "/usb_cam/image_raw"
+# topic = "/camera/image_raw"
 
 # bag_to_pngs(folder, file, topic)
 # bag_to_csvs(folder + file)

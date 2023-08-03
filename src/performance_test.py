@@ -109,6 +109,7 @@ def proxy_picks(gripper):
     # --- Experiment Parameters ---
     n_samples = 10  # starting positions to start gripper's pose
     yaws = [0, 60]
+    # yaws = [60]
     n_reps = 1  # number of repetitions at each configuration
 
     cart_noises = [0, 5/1000, 10/1000, 15/1000, 20/1000]
@@ -132,7 +133,7 @@ def proxy_picks(gripper):
     apples_to_pick = len(gripper.x_coord)
 
     # --- Sample points on a sphere around the apple
-    for sample in range(0, apples_to_pick):
+    for sample in range(3, apples_to_pick):
 
         gripper.sample = sample
 
@@ -1054,7 +1055,7 @@ class RoboticGripper():
         pp.xlabel('x-axis')
         pp.ylabel('y-axis')
 
-        pp.show()
+        # pp.show()
 
     def info_from_user(self):
         print("a. Type your name:")
