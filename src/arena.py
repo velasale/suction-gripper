@@ -18,19 +18,49 @@ import json
 import datetime
 
 ## --- 3rd party related imports
+## --- 3rd party related imports
+import geometry_msgs.msg
+from geometry_msgs.msg import Pose, Point, Quaternion, Vector3, Polygon
+import moveit_commander
+import moveit_msgs.msg
+from std_msgs.msg import String, Int32, UInt16
+import tf
+from tf.transformations import euler_from_quaternion, quaternion_about_axis, quaternion_from_euler
+import tf2_ros
+import tf2_geometry_msgs  # **Do not use geometry_msgs. Use this instead for PoseStamped
+from visualization_msgs.msg import Marker, MarkerArray
+import cv2
 
 
 ## --- Self developed imports
 
 from ros_scripts import *
+## --- Self developed imports
+from pressure_plot_scripts import *
+from ros_scripts import *
+from plot_scripts import *
 
 
-# folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/HIGH STIFFNESS/4th run - HIGH STIFFNESS - LOW FORCE/"
-folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/LOW_STIFFNESS/"
-file = "20230731_proxy_sample_5_yaw_-15_rep_0_stiff_low_force_low.bag"
-topic = "/usb_cam/image_raw"
-# topic = "/camera/image_raw"
+def plot_vacuum(filename):
+    """Simply plots vacuum using methods and functions from pressure_plot_scripts.py"""
 
-# bag_to_pngs(folder, file, topic)
-# bag_to_csvs(folder + file)
-bag_to_video(folder, file, topic)
+    bag_to_csvs(filename + ".bag")
+    metadata = read_json(filename + ".json")
+    experim = read_csvs(metadata, filename)
+    experim.elapsed_times()
+    # experim.get_steady_vacuum('Steady', 'Vacuum Off')
+    experim.plot_only_pressure()
+    plt.show()
+
+
+def main():
+
+    folder = '/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/HIGH_STIFFNESS_GOOD_YAW/'
+    file = '2023083_proxy_sample_9_yaw_-15_rep_1_stiff_high_force_medium'
+
+    plot_vacuum(folder+file)
+
+
+
+if __name__ == '__main__':
+        main()
