@@ -8,8 +8,8 @@ import pandas as pd
 
 
 # Collect info from metadata json files
-
-class stats_from_json():
+#
+# class stats_from_json():
 
 
 
@@ -17,17 +17,31 @@ class stats_from_json():
 
 
 # Step 1 - Collect Statistics from metadata json files
-folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"
+# folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"
+folder = '/home/alejo/Documents/data/suction_gripper/'
+
 # dataset = "5th run - HIGH STIFFNESS - HIGH FORCE/"
-dataset = "LOW_STIFFNESS/"
-dataset = "MEDIUM_STIFFNESS/"
-dataset = 'all_jsons_together/'
+# dataset = "LOW_STIFFNESS/"
+# dataset = "MEDIUM_STIFFNESS/"
+# dataset = 'all_jsons_together/'
+dataset = ''
 
 
 # https://stackoverflow.com/questions/287871/how-do-i-print-colored-text-to-the-terminal
 CRED = '\033[91m'
 CGREEN = '\033[92m'
 CEND = '\033[0m'
+
+
+experiment_counter = {'low_stiffness': {'low_force': {0: 0, 0.005: 0, 0.01: 0, 0.015: 0, 0.02: 0},
+                                     'medium_force': {0: 0, 0.005: 0, 0.01: 0, 0.015: 0, 0.02: 0},
+                                     'high_force': {0: 0, 0.005: 0, 0.01: 0, 0.015: 0, 0.02: 0}},
+                   'medium_stiffness': {'low_force': {0: 0, 0.005: 0, 0.01: 0, 0.015: 0, 0.02: 0},
+                                     'medium_force': {0: 0, 0.005: 0, 0.01: 0, 0.015: 0, 0.02: 0},
+                                     'high_force': {0: 0, 0.005: 0, 0.01: 0, 0.015: 0, 0.02: 0}},
+                   'high_stiffness': {'low_force': {0: 0, 0.005: 0, 0.01: 0, 0.015: 0, 0.02: 0},
+                                     'medium_force': {0: 0, 0.005: 0, 0.01: 0, 0.015: 0, 0.02: 0},
+                                     'high_force': {0: 0, 0.005: 0, 0.01: 0, 0.015: 0, 0.02: 0}}}
 
 cups_engagement_pose =    {0: {'low_stiffness': 0,
                                'medium_stiffness': 0,
@@ -110,10 +124,13 @@ pick_result     = {'low_stiffness': {'low_force':       {'Successful pick: after
                                                          "Un-successful: apple not picked": 0}}}
 
 # Step 3 - Gather info
+exp = 1
 for filename in os.listdir(folder + dataset):
 
     if filename.endswith(".json") and not filename.startswith("vacuum_test"):
-        print('\n' + CGREEN, filename, CEND)
+        print('\n' + CGREEN + "Experiment # %i" %exp)
+        print(filename, CEND)
+        exp += 1
 
         with open(folder + dataset + filename, 'r') as json_file:
             json_dict = json.load(json_file)
@@ -130,7 +147,7 @@ for filename in os.listdir(folder + dataset):
             for cup in cups_engaged:
                 if cup == 'yes':
                     cnt += 1
-            print(cnt)
+            print('Cups engaged: ', cnt)
 
             # Pick result
             pick_label = labels['apple pick result']
@@ -153,10 +170,13 @@ for filename in os.listdir(folder + dataset):
             pose = general_info['sampling point']
             stiffness = proxy_info['branch stiffness'] + "_stiffness"
             force = proxy_info['stem force'] + "_force"
-            print("Pose, Stiffness, Force and Pick_Label: ", pose, stiffness, force, pick_label)
+            x_noise = robot_info['position noise command [m]'][0]
+            print("x_noise = %f, Pose = %i, Stiffness = %s, Force = %s and Pick_Label = %s" % (x_noise, pose, stiffness, force, pick_label))
 
             cups_engagement[stiffness][force][str(cnt)] += 1
             pick_result[stiffness][force][pick_label] += 1
+
+            experiment_counter[stiffness][force][x_noise] += 1
 
             # if general_info['yaw'] == 0 or general_info['yaw'] == -15:
             # if general_info['yaw'] == 60 or general_info['yaw'] == 45:
@@ -164,8 +184,10 @@ for filename in os.listdir(folder + dataset):
 
             cups_engagement_pose[pose][stiffness] += success
 
-            print(cups_engagement[stiffness])
-            print(pick_result[stiffness])
+            # print(cups_engagement[stiffness])
+            # print(pick_result[stiffness])
+            print(experiment_counter[stiffness])
+
 
 # Step 4 - Plot results
 pd.DataFrame(cups_engagement[stiffness]).T.plot(kind='bar')
@@ -190,5 +212,15 @@ plt.ylim([0, 8])
 plt.title("Succesful picks at each pose (0: underneath, 9: 135 deg ")
 # plt.title("Cups Engagement at each pose (0: underneath, 9: 135 deg ")
 plt.axhline(y=6, color='black', linestyle='--')
-plt.show()
+
+pd.DataFrame(experiment_counter['high_stiffness']).T.plot(kind='bar')
+plt.xticks(rotation=0)
+plt.xlabel("Pose")
+plt.ylabel("Count")
+plt.ylim([0, 80])
+plt.title("Number of experiments ")
+# plt.title("Cups Engagement at each pose (0: underneath, 9: 135 deg ")
+plt.axhline(y=18, color='black', linestyle='--')
+
+# plt.show()
 
