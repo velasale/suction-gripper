@@ -236,6 +236,7 @@ def bag_to_pngs(input_dir, bag_file, cam_topic):
     initial_time_stamp = 0.0
     for topic, msg, t in bag.read_messages(topics=[cam_topic]):
 
+        # print(t)
         cv_img = bridge.imgmsg_to_cv2(msg, "bgr8")
 
         # Add elapsed time as text at the bottom of the image
@@ -275,14 +276,31 @@ def bag_to_video(input_dir, bag_file, cam_topic):
     bridge = CvBridge()
 
     out = None
+    count = 0
+    initial_time_stamp = 0.0
     for topic, msg, t in bag.read_messages(topics=[cam_topic]):
         img = bridge.imgmsg_to_cv2(msg, "bgr8")
         h, w, _ = img.shape
 
+        # Add elapsed time as text at the bottom of the image
+        if count == 0:
+            initial_time_stamp = t
+
+        elapsed_time = round((t.to_sec() - initial_time_stamp.to_sec()), 3)
+        print(elapsed_time)
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_color = (67, 211, 255)  # BGR
+        cv2.putText(img, 'time: ' + str(elapsed_time) + ' sec',
+                    (int(img.shape[0] * 0.05), int(img.shape[1] * 0.73)), font, 0.5, font_color, 1,
+                    cv2.LINE_AA)
+
         if out is None:
             fps = bag.get_type_and_topic_info()[1][cam_topic][3]
+
             out = cv2.VideoWriter(output_dir + only_filename + '.avi', cv2.VideoWriter_fourcc(*'MP4V'), fps, (w, h))
         out.write(img)
+
+        count += 1
 
     bag.close()
     out.release()
@@ -307,8 +325,8 @@ def main():
 
     # --- Tutorial to use bag_to_video ----
     # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/HIGH STIFFNESS/4th run - HIGH STIFFNESS - LOW FORCE/"
-    folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/LOW_STIFFNESS/"
-    file = "20230731_proxy_sample_6_yaw_-15_rep_0_stiff_low_force_medium.bag"
+    folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/HIGH_STIFFNESS/"
+    file = "2023082_proxy_sample_4_yaw_-15_rep_0_stiff_high_force_high.bag"
     topic = "/usb_cam/image_raw"
     # topic = "/camera/image_raw"
 
