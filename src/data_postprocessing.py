@@ -7,7 +7,7 @@ import pandas as pd
 import seaborn as sns
 
 
-def dict_approach(folder, dataset):
+def dict_from_jsons(folder, dataset):
 
     # https://stackoverflow.com/questions/287871/how-do-i-print-colored-text-to-the-terminal
     CRED = '\033[91m'
@@ -240,12 +240,22 @@ def df_from_jsons(folder, dataset):
                 sampling_point = general_info['sampling point']
                 x_offset = robot_info['position noise command [m]'][0]
                 yaw = general_info['yaw']
-                stiffness = proxy_info['branch stiffness']
-                strength = proxy_info['stem force']
+                stiffness = proxy_info['branch stiffness'] + '_stiffness'
+                strength = proxy_info['stem force'] + '_strength'
                 cup_a = labels['suction cup a']
                 cup_b = labels['suction cup b']
                 cup_c = labels['suction cup c']
                 result = labels['apple pick result']
+
+                # Rename result
+                if result == 'a':
+                     result = "Good Pick"
+                elif result == 'b':
+                    result = "Bad Pick"
+                elif result == 'c':
+                    result = "Bad Pick"
+                elif result == 'd':
+                    result = "Good Pick"
 
                 # Count number of cups engaged
                 cnt = 0
