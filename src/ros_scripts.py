@@ -213,7 +213,7 @@ def bag_to_csvs(file):
                 pass
 
 
-def bag_to_pngs(input_dir, bag_file, cam_topic):
+def bag_to_pngs(input_dir, bag_file, cam_topic, output_folder='/pngs'):
     """
     Method to extract images from a bagfile and save them in a folder named PNGS
     @param input_dir: file location
@@ -224,7 +224,7 @@ def bag_to_pngs(input_dir, bag_file, cam_topic):
 
     # Create folder to save pngs
     only_filename = bag_file.split(".bag")[0]
-    output_dir = input_dir + only_filename + "/pngs"
+    output_dir = input_dir + only_filename + output_folder
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
@@ -243,9 +243,9 @@ def bag_to_pngs(input_dir, bag_file, cam_topic):
         if count == 0:
             initial_time_stamp = t
         elapsed_time = round((t.to_sec() - initial_time_stamp.to_sec()), 3)
-        font = cv2.FONT_HERSHEY_SIMPLEX
+        font = cv2.FONT_HERSHEY_COMPLEX
         font_color = (67, 211, 255)     # BGR
-        cv2.putText(cv_img, 'time: ' + str(elapsed_time) + ' sec', (int(cv_img.shape[0] * 0.05), int(cv_img.shape[1] * 0.73)), font, 0.5, font_color, 1, cv2.LINE_AA)
+        cv2.putText(cv_img, 'time: ' + str(elapsed_time) + ' sec', (int(cv_img.shape[0] * 0.05), int(cv_img.shape[1] * 0.73)), font, 1.0, font_color, 1, cv2.LINE_AA)
 
         # Save file
         cv2.imwrite(os.path.join(output_dir, str(int(elapsed_time*1000)) + ".png"), cv_img)
@@ -325,21 +325,23 @@ def main():
 
     # --- Tutorial to use bag_to_video ----
     # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/HIGH STIFFNESS/4th run - HIGH STIFFNESS - LOW FORCE/"
-    folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/HIGH_STIFFNESS/"
-    file = "2023082_proxy_sample_4_yaw_-15_rep_0_stiff_high_force_high.bag"
+    folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"
+    subfolder = "LOW_STIFFNESS/"
+    file = "2023083_proxy_sample_4_yaw_45_rep_1_stiff_low_force_low.bag"
+
     topic = "/usb_cam/image_raw"
-    # topic = "/camera/image_raw"
+    bag_to_pngs(folder + subfolder, file, topic, '/pngs_fixed_cam')
 
-    # bag_to_pngs(folder, file, topic)
+    topic = "/camera/image_raw"
+    bag_to_pngs(folder + subfolder, file, topic,'/pngs_inhand_cam')
+
     # bag_to_csvs(folder + file)
-    bag_to_video(folder, file, topic)
-    # -------------------------------------
+    # bag_to_video(folder, file, topic)
 
+    # -------------------------------------
 
     # --- Tutorial to use bag_to_csvs -----
 
-
-    # -------------------------------------
 
 if __name__ == '__main__':
     main()
