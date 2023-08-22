@@ -216,15 +216,15 @@ def df_from_jsons(folder, dataset):
 
     # --- Create DataFrame ---
     COLUMN_NAMES = ['file', 'sampling point', 'stiffness', 'strength', 'yaw', 'x_offset', 'cup_a', 'cup_b', 'cup_c',
-                    'cups engaged', 'result']
+                    'cups engaged', 'result', 'cup engagement']
     df = pd.DataFrame(columns=COLUMN_NAMES)
 
     exp = 0
     for filename in os.listdir(folder + dataset):
 
         if filename.endswith(".json") and not filename.startswith("vacuum_test"):
-            # print('\n' + CGREEN + "Experiment # %i" %exp)
-            # print(filename, CEND)
+            print('\n' + CGREEN + "Experiment # %i" %exp)
+            print(filename, CEND)
             exp += 1
 
             with open(folder + dataset + filename, 'r') as json_file:
@@ -266,6 +266,13 @@ def df_from_jsons(folder, dataset):
                 if cup_c == 'yes':
                     cnt += 1
 
+                # 0 or 1 --> bad engagement,  2 or 3 --> good engagement
+                cup_engagement = ''
+                if cnt < 2:
+                    cup_engagement = '0 or 1'
+                else:
+                    cup_engagement = '2 or 3'
+
                 # Build row and add it to DataFrame
                 new_row = {'file': filename,
                            'stiffness': stiffness,
@@ -277,7 +284,8 @@ def df_from_jsons(folder, dataset):
                            'cup_c': cup_c,
                            'result': result,
                            'sampling point': sampling_point,
-                           'cups engaged': cnt}
+                           'cups engaged': cnt,
+                           'cup engagement': cup_engagement}
                 df.loc[len(df)] = new_row
 
     return(df)
@@ -286,8 +294,9 @@ def df_from_jsons(folder, dataset):
 def main():
 
     # ------ Dataset Location ------
+    folder = 'C:/Users/avela/Dropbox/03 Temporal/data/suction_gripper/'
     # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"
-    folder = '/home/alejo/Documents/data/suction_gripper/'
+    # folder = '/home/alejo/Documents/data/suction_gripper/'
     # dataset = "MEDIUM_STIFFNESS/"
     # dataset = 'all_jsons_together/'
     dataset = ''
@@ -310,10 +319,10 @@ def main():
 
 
     # df.value_counts(normalize=True)
-    sns.barplot(x='sampling point', y='percentage', hue='cups engaged', data=cup_counts)
+    # sns.barplot(x='sampling point', y='percentage', hue='cups engaged', data=cup_counts)
     # sns.boxplot(x='sampling point', y='cups engaged', data=df)
 
-    plt.show()
+    # plt.show()
 
 
 if __name__ == '__main__':
