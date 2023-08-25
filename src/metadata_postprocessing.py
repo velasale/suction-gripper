@@ -244,6 +244,7 @@ def df_categorical_stats(df, cat_name, cat_value, x_filter_name, x_filter_values
         # plt.legend(bbox_to_anchor = (1, 1), loc = "upper left")
         plt.legend()
 
+
 def main():
 
     # ------ Dataset Location ------
@@ -325,7 +326,6 @@ def main():
                          ['Low', 'Medium', 'High'])
                         # 'none', [''], [''])
     plt.show()
-
 
 
 if __name__ == '__main__':
