@@ -171,7 +171,7 @@ def df_numerical_stats(df, num_value, x_filter_name, x_filter_values, series_nam
         plt.plot(x_filter_values, means, 'o-', linestyle='dashed')
 
 
-def df_categorical_stats(df, cat_name, cat_value, x_filter_name, x_filter_values, series_name, series_values):
+def df_categorical_stats(df, cat_name, cat_value, x_filter_name, x_filter_values, x_filter_ticks, series_name, series_values, series_labels):
     """
 
     @param df: Dataframe
@@ -187,8 +187,7 @@ def df_categorical_stats(df, cat_name, cat_value, x_filter_name, x_filter_values
     plt.grid()
     plt.ylim([0, 105])
 
-
-    for serie in series_values:
+    for serie, label in zip(series_values, series_labels):
         values = []
 
         for x_filter in x_filter_values:
@@ -208,10 +207,10 @@ def df_categorical_stats(df, cat_name, cat_value, x_filter_name, x_filter_values
 
             values.append(value)
 
-        plt.plot(x_filter_values, values, 'o-', linestyle='dashed', label=series_name + " = " + str(serie))
+        plt.plot(x_filter_values, values, 'o-', linestyle='dashed', label=series_name + " = " + str(label))
         plt.gca().yaxis.set_major_formatter(mtick.PercentFormatter(xmax=100.0))
         plt.ylabel('% of Experiments with 2 or 3 cups engaged')
-        plt.xticks(x_filter_values)
+        plt.xticks(x_filter_values, x_filter_ticks)
         plt.xlabel(x_filter_name)
         plt.legend()
 
@@ -243,21 +242,26 @@ def main():
     #                    'yaw', [-15, 45])
 
     df_categorical_stats(df, 'cup engagement', '2 or 3',
-                         'x_offset', [0.00, 0.005, 0.010, 0.015, 0.02],
-                         'yaw', [-15, 45])
+                         'x_offset', [0.00, 0.005, 0.010, 0.015, 0.02], [0, 5, 10, 15, 20],
+                         'yaw', [-15, 45], ['0deg', '60deg'])
+
+    filt = df['yaw'] == -15
+    df_categorical_stats(df[filt], 'cup engagement', '2 or 3',
+                         'x_offset', [0.00, 0.005, 0.010, 0.015, 0.02], [0, 5, 10, 15, 20],
+                         'stiffness', ['low_stiffness', 'medium_stiffness', 'high_stiffness'], ['Low', 'Medium', 'High'])
 
     df_categorical_stats(df, 'cup engagement', '2 or 3',
-                       'sampling point', [0, 1, 2, 3, 4, 5, 6, 7, 8],
-                       'yaw', [-15, 45])
+                       'sampling point', [0, 1, 2, 3, 4, 5, 6, 7, 8], [0, 15, 30, 45, 60, 75, 90, 105, 120],
+                       'yaw', [-15, 45], ['0deg', '60deg'])
 
     df_categorical_stats(df, 'cup engagement', '2 or 3',
-                         'stiffness', ['low_stiffness', 'medium_stiffness', 'high_stiffness'],
-                         'yaw', [-15, 45])
+                         'stiffness', ['low_stiffness', 'medium_stiffness', 'high_stiffness'], ['Low Stiffness', 'Medium Stiffness', 'High Stiffness'],
+                         'yaw', [-15, 45], ['0deg', '60deg'])
 
     filt = df['yaw'] == 45
     df_categorical_stats(df[filt], 'cup engagement', '2 or 3',
-                         'sampling point', [0, 1, 2, 3, 4, 5, 6, 7, 8],
-                         'x_offset', [0.00, 0.005, 0.010, 0.015, 0.02])
+                         'sampling point', [0, 1, 2, 3, 4, 5, 6, 7, 8], [0, 15, 30, 45, 60, 75, 90, 105, 120],
+                         'x_offset', [0.00, 0.005, 0.010, 0.015, 0.02], ['0mm', '5mm', '10mm', '15mm', '20mm'])
 
 
     plt.show()
