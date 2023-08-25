@@ -7,6 +7,7 @@ import matplotlib.ticker as mtick
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import itertools
 
 
 def rename_level(level):
@@ -175,18 +176,21 @@ def df_categorical_stats(df, cat_name, cat_value, x_filter_name, x_filter_values
     """
 
     @param df: Dataframe
-    @param num_value: numerical value of which statistics are obtained
+    @param cat_name: Name of the categorical variable
+    @param cat_value: Desired value of categorical value
     @param x_filter_name:
     @param x_filter_values:
+    @param x_filter_ticks:
     @param series_name:
     @param series_values:
+    @param series_labels:
     @return:
     """
 
     plt.figure()
-    plt.grid()
+    # plt.grid()
     plt.ylim([0, 105])
-
+    marker = itertools.cycle(('x', '+', '.', 'o', '*'))
 
     for serie, label in zip(series_values, series_labels):
         values = []
@@ -208,7 +212,7 @@ def df_categorical_stats(df, cat_name, cat_value, x_filter_name, x_filter_values
 
             values.append(value)
 
-        plt.plot(x_filter_values, values, 'o-', linestyle='dashed', label=series_name + " = " + str(label))
+        plt.plot(x_filter_values, values, marker=next(marker), linestyle='dashed', label=series_name + " = " + str(label))
         plt.gca().yaxis.set_major_formatter(mtick.PercentFormatter(xmax=100.0))
         plt.ylabel('% of Experiments with 2 or 3 cups engaged')
         plt.xticks(x_filter_values, x_filter_ticks)
