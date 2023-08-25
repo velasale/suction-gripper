@@ -3,6 +3,7 @@
 import os
 import json
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mtick
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -138,6 +139,84 @@ def bubble_chart(df):
     plt.show()
 
 
+def df_numerical_stats(df, num_value, x_filter_name, x_filter_values, series_name, series_values):
+    """
+
+    @param df: Dataframe
+    @param num_value: numerical value of which statistics are obtained
+    @param x_filter_name:
+    @param x_filter_values:
+    @param series_name:
+    @param series_values:
+    @return:
+    """
+
+    plt.figure()
+    plt.grid()
+
+    for serie in series_values:
+        means = []
+        stds = []
+        for x_filter in x_filter_values:
+            filter = (df[series_name] == serie) & (df[x_filter_name] == x_filter)
+            filtered_df = df[filter]
+            mean = filtered_df[num_value].mean()
+            std = filtered_df[num_value].std()
+            means.append(mean)
+            stds.append(std)
+
+        print(means, stds)
+        # plt.errorbar(x_filter_values, means, stds)
+        plt.grid()
+        plt.plot(x_filter_values, means, 'o-', linestyle='dashed')
+
+
+def df_categorical_stats(df, cat_name, cat_value, x_filter_name, x_filter_values, series_name, series_values):
+    """
+
+    @param df: Dataframe
+    @param num_value: numerical value of which statistics are obtained
+    @param x_filter_name:
+    @param x_filter_values:
+    @param series_name:
+    @param series_values:
+    @return:
+    """
+
+    plt.figure()
+    plt.grid()
+    plt.ylim([0, 105])
+
+
+    for serie in series_values:
+        values = []
+
+        for x_filter in x_filter_values:
+            filter = (df[series_name] == serie) & (df[x_filter_name] == x_filter)
+            filtered_df = df[filter]
+
+            # --- Count ---
+            cnt = 0
+            for j in filtered_df[cat_name]:
+                if j == cat_value:
+                    cnt += 1
+
+            try:
+                value = cnt / len(filtered_df) * 100
+            except ZeroDivisionError:
+                value = 0
+
+            values.append(value)
+
+        plt.plot(x_filter_values, values, 'o-', linestyle='dashed', label=series_name + " = " + str(serie))
+        plt.gca().yaxis.set_major_formatter(mtick.PercentFormatter(xmax=100.0))
+        plt.ylabel('% of Experiments with 2 or 3 cups engaged')
+        plt.xticks(x_filter_values)
+        plt.xlabel(x_filter_name)
+        plt.legend()
+
+
+
 def main():
 
     # ------ Dataset Location ------
@@ -154,64 +233,36 @@ def main():
     # df.to_csv('suction_gripper_df.csv')
     df = pd.read_csv('suction_gripper_df.csv', index_col=0)
 
-    # # ---- Apply Filters
-    # variable = 'cups engaged'
-    # x_offsets = [0.00, 0.005, 0.010, 0.015, 0.02]
-    # x_offsets_mm = [0, 5, 10, 15, 20]
+    # ------ Plot results
+    # df_numerical_stats(df, 'cups engaged',
+    #                    'x_offset', [0.00, 0.005, 0.010, 0.015, 0.02],
+    #                    'yaw', [-15, 45])
     #
-    # yaws = [-15, 45]
-    #
-    # for yaw in yaws:
-    #     means = []
-    #     stds = []
-    #     for i in x_offsets:
-    #         filter = (df['yaw'] == yaw) & (df['x_offset'] == i)
-    #         filtered_df = df[filter]
-    #         mean = filtered_df[variable].mean()
-    #         std = filtered_df[variable].std()
-    #         means.append(mean)
-    #         stds.append(std)
-    #
-    #     print(means, stds)
-    #     # plt.errorbar(x_offsets_mm, means, stds, linestyle='None', marker='^')
-    #     plt.plot(x_offsets_mm, means, 'o-', linestyle='dashed')
-    # plt.show()
+    # df_numerical_stats(df, 'cups engaged',
+    #                    'sampling point', [0, 1, 2, 3, 4, 5, 6, 7, 8],
+    #                    'yaw', [-15, 45])
 
-    # ---- Apply Filters
-    variable = 'cup engagement'
-    series_name = 'x_offset'
-    series = [0.00, 0.005, 0.010, 0.015, 0.02]
-    series_x_ticks = [0, 5, 10, 15, 20]
+    df_categorical_stats(df, 'cup engagement', '2 or 3',
+                         'x_offset', [0.00, 0.005, 0.010, 0.015, 0.02],
+                         'yaw', [-15, 45])
 
-    series_name = 'sampling point'
-    series = [0, 1, 2, 3, 4, 5, 6, 7, 8]
-    series_x_ticks = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+    df_categorical_stats(df, 'cup engagement', '2 or 3',
+                       'sampling point', [0, 1, 2, 3, 4, 5, 6, 7, 8],
+                       'yaw', [-15, 45])
 
-    yaws = [-15, 45]
+    df_categorical_stats(df, 'cup engagement', '2 or 3',
+                         'stiffness', ['low_stiffness', 'medium_stiffness', 'high_stiffness'],
+                         'yaw', [-15, 45])
 
-    for yaw in yaws:
-        values = []
+    filt = df['yaw'] == 45
+    df_categorical_stats(df[filt], 'cup engagement', '2 or 3',
+                         'sampling point', [0, 1, 2, 3, 4, 5, 6, 7, 8],
+                         'x_offset', [0.00, 0.005, 0.010, 0.015, 0.02])
 
-        for i in series:
-            filter = (df['yaw'] == yaw) & (df[series_name] == i)
-            filtered_df = df[filter]
-            # --- Count
-            cnt = 0
-            for j in filtered_df[variable]:
-                if j == '2 or 3':
-                    cnt += 1
 
-            try:
-                value = cnt / len(filtered_df) * 100
-            except ZeroDivisionError:
-                value = 0
-
-            values.append(value)
-
-        print(values)
-        # plt.errorbar(x_offsets_mm, means, stds, linestyle='None', marker='^')
-        plt.plot(series_x_ticks, values, 'o-', linestyle='dashed')
     plt.show()
+
+
 
 
 
