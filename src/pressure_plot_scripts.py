@@ -356,6 +356,8 @@ class Experiment:
 
         self.id = id
         self.vacuum_type = vacuum_type
+        self.metadata = dict()
+
 
         # Data from jsons
         self.exp_type = exp_type
@@ -1505,6 +1507,35 @@ def plot_and_video():
     plt.show()
 
 
+def proxy_experiments():
+
+    # 1. Find file
+    location = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/SUCTION_GRIPPER/MEDIUM_STIFFNESS/'
+    file = '2023087_proxy_sample_1_yaw_45_offset_0.02_rep_0_stiff_medium_force_medium'
+
+    # 2. Turn bag into csvs if needed
+    if os.path.isdir(location + file):
+        # print("csvs already created")
+        pass
+    else:
+        bag_to_csvs(location + file + ".bag")
+
+    # 3. Create Experiment Object
+    experiment = Experiment()
+
+    # 4. Assign json dictionary as property
+    json_file = open(location + file + '.json')
+    json_data = json.load(json_file)
+    experiment.metadata = json_data
+
+    print(experiment.metadata['general'])
+
+    # 4. Read values from 'csv'
+
+
+    # 5.
+
+
 def main():
         
     # TODO Interpret moments (lever = height of the rig)
@@ -1519,7 +1550,8 @@ def main():
     # noise_experiments('vertical')
     # noise_experiments_pitch(exp_type='horizontal', radius=radius, variable=variable)
     # simple_suction_experiment()
-    plot_and_video()
+    proxy_experiments()
+    # plot_and_video()
 
 
 if __name__ == '__main__':
