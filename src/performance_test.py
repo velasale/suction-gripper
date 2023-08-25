@@ -114,9 +114,9 @@ def proxy_picks(gripper):
     offsets = [5 / 1000, 10 / 1000, 15 / 1000, 20 / 1000]
     n_reps = 1  # number of repetitions at each configuration
 
-    # yaws = [0]
+    yaws = [0]
     # offsets = [5/1000, 10/1000]
-    # offsets = [20 / 1000]
+    offsets = [0 / 1000]
 
     cart_noises = [0, 5/1000, 10/1000, 15/1000, 20/1000]
     ang_noises = [0, 5, 10, 15, 20]
@@ -139,7 +139,7 @@ def proxy_picks(gripper):
     apples_to_pick = len(gripper.x_coord)
 
     # --- Sample points on a sphere around the apple
-    for sample in range(6, apples_to_pick):
+    for sample in range(0, apples_to_pick):
 
         gripper.sample = sample
 
