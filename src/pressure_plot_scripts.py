@@ -12,6 +12,7 @@ import time
 from operator import sub, add
 # from cv_bridge import CvBridge
 import cv2
+import itertools
 
 import bagpy
 from matplotlib import pyplot as plt
@@ -24,7 +25,7 @@ from sklearn.metrics import r2_score
 from scipy.ndimage import gaussian_filter, median_filter
 import pyautogui
 
-## --- Self developed imports
+######## Self developed imports ########
 from ros_scripts import *
 from plot_scripts import *
 
@@ -134,7 +135,6 @@ def read_csvs(experiment, folder):
                 # Convert to kPa (1000 Pa) which is more standard than hPa (100 Pa)
                 experiment.pressure_sc3_values = np.divide(experiment.pressure_sc3_values, 10)
 
-
             if file == "rench.csv":
                 experiment.wrench_time_stamp = data_list.iloc[:, 0].tolist()
                 experiment.wrench_xforce_values = data_list.iloc[:, 5].tolist()
@@ -147,6 +147,15 @@ def read_csvs(experiment, folder):
             if file == "xperiment_steps.csv":
                 experiment.event_time_stamp = data_list.iloc[:, 0].tolist()
                 experiment.event_values = data_list.iloc[:, 1].tolist()
+
+            if file == "oint_states.csv":
+                experiment.joint_time_stamp = data_list.iloc[:, 0].tolist()
+
+            if file == "gripper-distance.csv":
+                experiment.tof_time_stamp = data_list.iloc[:, 0].tolist()
+                experiment.tof_values = data_list.iloc[:, 1].tolist()
+
+
 
     return experiment
 
@@ -357,7 +366,7 @@ class Experiment:
         self.id = id
         self.vacuum_type = vacuum_type
 
-        # Data from jsons
+        # ------------------------- Data from jsons ---------------------------
         self.exp_type = exp_type
         self.pressure = pressure
         self.surface = surface
@@ -373,7 +382,10 @@ class Experiment:
         self.pitch = 0
         self.repetition = 0
 
-        # Data from csvs
+        self.metadata = dict()
+
+        # ------------------------ Data from csvs -----------------------------
+        # Topic: Gripper's Pressure Sensors
         self.pressure_time_stamp = []
         self.pressure_elapsed_time = []
         self.pressure_values = []
@@ -390,6 +402,12 @@ class Experiment:
         self.pressure_sc3_elapsed_time = []
         self.pressure_sc3_values = []
 
+        # Topic: Gripper's ToF Sensor
+        self.tof_time_stamp = []
+        self.tof_elapsed_time = []
+        self.tof_values = []
+
+        # Topic: UR5e's Wrench
         self.wrench_time_stamp = []
         self.wrench_elapsed_time = []
 
@@ -408,6 +426,10 @@ class Experiment:
         self.wrench_ztorque_values = []
         self.wrench_ztorque_relative_values = []
 
+        # Topic: UR5e's Joint States
+        self.joint_time_stamp = []
+
+        # Topic: Experiment Steps
         self.event_time_stamp = []
         self.event_elapsed_time = []
         self.event_values = []
@@ -416,7 +438,7 @@ class Experiment:
         self.atmospheric_pressure = 0
         self.errors = []
 
-        # Features from Data (Statistical and Math)
+        # ---------------- Features from Data (Statistical and Math) ----------------
         self.steady_pressure_values = []
         self.steady_vacuum_mean = 0
         self.steady_vacuum_std = 0
@@ -444,20 +466,21 @@ class Experiment:
 
     # --- Functions and methods to use in different experiments ---
     def initial_stamp(self):
-        """Takes the initial stamp from all the topics. This is useful to subtract from all Time stamps and get a readable time"""
+        """ Takes the initial stamp from all the topics. This is useful to subtract from all Time stamps and get a readable time"""
         try:
             # self.first_time_stamp = min(min(self.pressure_time_stamp), min(self.wrench_time_stamp),
             #                             min(self.event_time_stamp))
 
-            self.first_time_stamp = min(min(self.pressure_time_stamp),
-                                        min(self.wrench_time_stamp),
+            self.first_time_stamp = min(min(self.wrench_time_stamp),
                                         min(self.event_time_stamp),
                                         min(self.pressure_sc1_time_stamp),
                                         min(self.pressure_sc2_time_stamp),
-                                        min(self.pressure_sc3_time_stamp)
+                                        min(self.pressure_sc3_time_stamp),
+                                        min(self.tof_time_stamp)
                                         )
 
         except ValueError:
+            print('Value Error')
             self.first_time_stamp = 0
 
     def elapsed_times(self):
@@ -491,6 +514,10 @@ class Experiment:
         for i in range(len(self.pressure_sc3_time_stamp)):
             self.pressure_sc3_elapsed_time[i] = self.pressure_sc3_time_stamp[i] - self.first_time_stamp
 
+        self.tof_elapsed_time = [None] * len(self.tof_time_stamp)
+        for i in range(len(self.tof_time_stamp)):
+            self.tof_elapsed_time[i] = self.tof_time_stamp[i] - self.first_time_stamp
+
     def filter_wrench(self, filter_param):
         self.wrench_xforce_values = median_filter(self.wrench_xforce_values, filter_param)
         self.wrench_yforce_values = median_filter(self.wrench_yforce_values, filter_param)
@@ -505,15 +532,18 @@ class Experiment:
             relative_zforce = self.wrench_zforce_values[i] - self.wrench_zforce_values[0]
             relative_yforce = self.wrench_yforce_values[i] - self.wrench_yforce_values[0]
             relative_xforce = self.wrench_xforce_values[i] - self.wrench_xforce_values[0]
-            relative_sumforce = math.sqrt(relative_zforce ** 2 + relative_xforce ** 2)
             relative_ztorque = self.wrench_ztorque_values[i] - self.wrench_ztorque_values[0]
             relative_ytorque = self.wrench_ytorque_values[i] - self.wrench_ytorque_values[0]
             relative_xtorque = self.wrench_xtorque_values[i] - self.wrench_xtorque_values[0]
 
+            relative_sumforce = math.sqrt(relative_zforce ** 2 + relative_xforce ** 2 + relative_yforce ** 2)
+
             self.wrench_zforce_relative_values.append(relative_zforce)
             self.wrench_yforce_relative_values.append(relative_yforce)
             self.wrench_xforce_relative_values.append(relative_xforce)
+
             self.wrench_sumforce_relative_values.append(relative_sumforce)
+
             self.wrench_ztorque_relative_values.append(relative_ztorque)
             self.wrench_ytorque_relative_values.append(relative_ytorque)
             self.wrench_xtorque_relative_values.append(relative_xtorque)
@@ -521,20 +551,21 @@ class Experiment:
     def get_features(self):
         """Basically run all the methods"""
         self.elapsed_times()
-        self.get_atmospheric_pressure()
-        self.get_steady_vacuum()
+        # -------- Pressure Features ----------
+        # self.get_atmospheric_pressure()
+        # self.get_steady_vacuum()
 
+        # -------- Wrench Features ------------
         # filter wrench signals
         self.filter_wrench(40)
         self.get_relative_values()
 
         # Normal and Tangential Forces
-        self.get_normal_angle()
+        # self.get_normal_angle()
         self.normal_and_tangent_forces()
 
         self.get_detach_values()
-        self.check_errors()
-
+        # self.check_errors()
 
     # --- Functions specifically for pressure related stuff ---
     def get_atmospheric_pressure(self):
@@ -656,9 +687,10 @@ class Experiment:
         return self.max_detach_zforce, self.max_detach_xforce
 
     def check_errors(self):
-        """Method to check possible errors that may invalidate the data. For instance:
+        """ Method to check possible errors that may invalidate the data. For instance:
         - arm didn't move and remain touching the surface after retrieve, hence no force is present.
         - suction cup collapsed in the air, and therefore showed some vacuum
+        @note: This is meant for the SUCTION CUP CHARACTERIZATION experiments
         """
 
         # 1. Cases due to the arm movement solver:
@@ -877,92 +909,195 @@ class Experiment:
                     axis[i, 2].text(event, 0, label, rotation=90, color='black')
                     axis[i, 2].set_xlabel("Elapsed Time [sec]")
 
-    def plot_only_pressure(self):
-        """Plots wrench (forces and moments) and pressure readings"""
+    def plot_only_pressure(self, type='single'):
+        """
+        Plots only pressure readings
+        @param type: 'single' to have the three suction cup plots in a single figure
+                     'many' to have a figure per plot
+        @return:
+        """
 
         FONTSIZE = 16   # Use 24 for papers
-        TICKSIZE = 22
-        FIGURESIZE = (8.7, 6.8)
+        TICKSIZE = 16
+        FIGURESIZE = (10, 4)
+        lines = itertools.cycle(('dotted', 'dashed', 'dashdot'))
+        colors = itertools.cycle(('orange', 'blue', 'green'))
+        # text_locations = itertools.cycle((0, 6, 12, 0, 6, 12))
+        text_locations = itertools.cycle((105, 95, 85, 105, 95, 85))
 
         # pressure_time = self.pressure_elapsed_time
         # pressure_values = self.pressure_values
 
-        pressure_times = [self.pressure_sc1_elapsed_time, self.pressure_sc2_elapsed_time, self.pressure_sc3_elapsed_time]
-        pressure_values = [self.pressure_sc1_values, self.pressure_sc2_values, self.pressure_sc3_values]
+        # ------- Zoom In the a-xis if needed -------
+        threshold = 0
+        suctionCup1_times = []
+        suctionCup2_times = []
+        suctionCup3_times = []
+        suctionCup1_values = []
+        suctionCup2_values = []
+        suctionCup3_values = []
+
+        for i, j in zip(self.pressure_sc1_elapsed_time, self.pressure_sc1_values):
+            if i > threshold:
+                suctionCup1_times.append(i)
+                suctionCup1_values.append(j)
+        for i, j in zip(self.pressure_sc2_elapsed_time, self.pressure_sc2_values):
+            if i > threshold:
+                suctionCup2_times.append(i)
+                suctionCup2_values.append(j)
+        for i, j in zip(self.pressure_sc3_elapsed_time, self.pressure_sc3_values):
+            if i > threshold:
+                suctionCup3_times.append(i)
+                suctionCup3_values.append(j)
+
+        pressure_times = [suctionCup1_times, suctionCup2_times, suctionCup3_times]
+        pressure_values = [suctionCup1_values, suctionCup2_values, suctionCup3_values]
         pressure_labels = ["side_A", "side_B", "side_C"]
 
         event_x = self.event_elapsed_time
         event_y = self.event_values
 
-        fig, axes = plt.subplots(1, 3, figsize=FIGURESIZE)
+        # --- Condition the Event's labels a bit for the paper paper purposes
+        picking_time = 10.597
         cnt = 0
-        for pressure_time, pressure_value, pressure_label in zip(pressure_times, pressure_values, pressure_labels):
+        flag = 0
+        for i, j in zip(event_x, event_y):
+            if j == 'Labeling cups':       # Replace this label in the paper
+                event_y[cnt] = 'Cup engagement'
+            if j == 'Labeling apple pick':
+                event_x.pop(cnt)
+                event_y.pop(cnt)
+            if (i > picking_time) and (flag == 0):
+                event_y.insert(cnt, 'Apple Picked')
+                event_x.insert(cnt, picking_time)
+                flag = 1
+            cnt += 1
 
-            axes[cnt].plot(pressure_time, pressure_value, linewidth=2)
+        if type == 'many':
 
+            fig, axes = plt.subplots(3, 1, figsize=FIGURESIZE)
+            cnt = 0
+            for pressure_time, pressure_value, pressure_label in zip(pressure_times, pressure_values, pressure_labels):
+
+                axes[cnt].plot(pressure_time, pressure_value, linewidth=2)
+
+                for event, label in zip(event_x, event_y):
+                    axes[cnt].axvline(x=event, color='black', linestyle='dotted', linewidth=2)
+                    axes[cnt].text(event, 50, label, rotation=90, color='black', fontsize=FONTSIZE)
+                    axes[cnt].set_xlabel("Elapsed Time [sec]", fontsize=FONTSIZE)
+                    axes[cnt].set_ylabel("Pressure [kPa]", fontsize=FONTSIZE)
+                    axes[cnt].set_ylim([0, 110])
+
+                # --- Add error in the title if there was any ---
+                try:
+                    error_type = self.errors[0]
+                except IndexError:
+                    error_type = "data looks good"
+                # axes[cnt].suptitle(self.filename + "\n\n" + error_type)
+                print(self.filename)
+
+                title_text = "Experiment Type: " + str(self.exp_type) + \
+                             ", F.P.: " + str(self.pressure) + "PSI" \
+                             ", Diameter: " + str(self.surface_radius * 2000) + "mm" \
+                             "\n,Pitch: " + str(int(round(math.degrees(self.pitch), 0))) + "deg" \
+                             ", xNoise Command: " + str(round(self.x_noise_command * 1000, 2)) + "mm" \
+                             ", Repetition No: " + str(self.repetition)
+
+                axes[cnt].grid()
+                # axes[cnt].set_xticks(size=TICKSIZE)
+                # axes[cnt].set_yticks(size=TICKSIZE)
+
+                axes[cnt].set_title(pressure_label)
+
+                plt.title(self.filename + "\n" + error_type, fontsize=8)
+                plt.suptitle(title_text)
+                cnt += 1
+
+        elif type == 'single':
+
+            plt.figure(figsize=FIGURESIZE)
+            plt.rc('font', family='serif')
+            cnt = 0
+
+            # Plot pressure signals
+            for pressure_time, pressure_value, pressure_label in zip(pressure_times, pressure_values, pressure_labels):
+                plt.plot(pressure_time, pressure_value, linewidth=2, label=pressure_label, linestyle=next(lines), color=next(colors))
+                cnt += 1
+
+            # Plot experiment events for reference
             for event, label in zip(event_x, event_y):
-                # axes[cnt].axvline(x=event, color='black', linestyle='dotted', linewidth=2)
-                # axes[cnt].text(event, 50, label, rotation=90, color='black', fontsize=FONTSIZE)
-                axes[cnt].set_xlabel("Elapsed Time [sec]", fontsize=FONTSIZE)
-                axes[cnt].set_ylabel("Pressure [kPa]", fontsize=FONTSIZE)
-                axes[cnt].set_ylim([0, 110])
+                plt.axvline(x=event, color='black', linestyle='dotted', linewidth=1.5)
+                plt.text(event, 60, label, rotation=40, color='black', fontsize=14)
 
-            # --- Add error in the title if there was any ---
-            try:
-                error_type = self.errors[0]
-            except IndexError:
-                error_type = "data looks good"
-            # axes[cnt].suptitle(self.filename + "\n\n" + error_type)
-            print(self.filename)
-
-            title_text = "Experiment Type: " + str(self.exp_type) + \
-                         ", F.P.: " + str(self.pressure) + "PSI" \
-                         ", Diameter: " + str(self.surface_radius * 2000) + "mm" \
-                         "\n,Pitch: " + str(int(round(math.degrees(self.pitch), 0))) + "deg" \
-                         ", xNoise Command: " + str(round(self.x_noise_command * 1000, 2)) + "mm" \
-                         ", Repetition No: " + str(self.repetition)
-
-            axes[cnt].grid()
-            # axes[cnt].set_xticks(size=TICKSIZE)
-            # axes[cnt].set_yticks(size=TICKSIZE)
-            axes[cnt].set_title(pressure_label)
-            # plt.title(self.filename + "\n" + error_type, fontsize=8)
-            # plt.suptitle(title_text)
-            cnt+=1
+            plt.xlabel("Elapsed Time [sec]", fontsize=FONTSIZE)
+            plt.ylabel("Pressure [kPa]", fontsize=FONTSIZE)
+            plt.ylim([0, 110])
+            plt.yticks(fontsize=TICKSIZE)
+            plt.xticks(fontsize=TICKSIZE)
+            plt.grid()
+            plt.legend()
+            plt.tight_layout()
 
     def plot_only_total_force(self):
-        """Plots wrench (forces and moments) and pressure readings"""
+        """Plots only force readings (forces and moments)"""
 
-        FONTSIZE = 24
-        TICKSIZE = 22
-        FIGURESIZE = (8.7, 6.8)
+        FONTSIZE = 16  # Use 24 for papers
+        TICKSIZE = 16
+        FIGURESIZE = (10, 4)
 
         plt.figure(figsize=FIGURESIZE)
 
-        force_time = self.wrench_elapsed_time
-        sumforce_values = self.wrench_sumforce_relative_values
+        # ------- Zoom In the a-xis if needed -------
+        threshold = 0
+        force_time = []
+        sumforce_values = []
+
+        for i, j in zip(self.wrench_elapsed_time, self.wrench_sumforce_relative_values):
+            if i > threshold:
+                force_time.append(i)
+                sumforce_values.append(j)
+        # --------------------------------------------
 
         event_x = self.event_elapsed_time
         event_y = self.event_values
+
+        # --- Condition the Event's labels a bit for the paper paper purposes
+        picking_time = 10.597
+        cnt = 0
+        flag = 0
+        for i, j in zip(event_x, event_y):
+            if j == 'Labeling cups':  # Replace this label in the paper
+                event_y[cnt] = 'Cup engagement'
+            if j == 'Labeling apple pick':
+                event_x.pop(cnt)
+                event_y.pop(cnt)
+            if (i > picking_time) and (flag == 0):
+                event_y.insert(cnt, 'Apple Picked')
+                event_x.insert(cnt, picking_time)
+                flag = 1
+            cnt += 1
 
         max_sumforce_val = self.max_detach_sumforce
         max_sumforce_time = self.max_detach_sumforce_time
 
         plt.plot(force_time, sumforce_values, linewidth=2, color='red')
+        plt.annotate('Max Force: ' + str(round(max_sumforce_val, 3)), xy=(max_sumforce_time, max_sumforce_val),
+                            xycoords='data', xytext=(max_sumforce_time + 0, max_sumforce_val + 1.5),
+                            va='top', ha='right', arrowprops=dict(facecolor='orange', shrink=0), fontsize=14)
 
         for event, label in zip(event_x, event_y):
-            plt.axvline(x=event, color='black', linestyle='dotted', linewidth=2)
-            plt.text(event, 2, label, rotation=90, color='black', fontsize=FONTSIZE)
+            plt.axvline(x=event, color='black', linestyle='dotted', linewidth=1.5)
+            plt.text(event, 6, label, rotation=40, color='black', fontsize=14)
             plt.xlabel("Elapsed Time [sec]", fontsize=FONTSIZE)
             plt.ylabel("Force [N]", fontsize=FONTSIZE)
-            plt.ylim([0, 6.5])
+            plt.ylim([0, 10])
 
         # --- Add error in the title if there was any ---
         try:
             error_type = self.errors[0]
         except IndexError:
             error_type = "data looks good"
-        plt.suptitle(self.filename + "\n\n" + error_type)
+        # plt.suptitle(self.filename + "\n\n" + error_type)
         print(self.filename)
 
         title_text = "Experiment Type: " + str(self.exp_type) + \
@@ -975,8 +1110,9 @@ class Experiment:
         plt.grid()
         plt.xticks(size=TICKSIZE)
         plt.yticks(size=TICKSIZE)
-        plt.title(self.filename + "\n" + error_type, fontsize=8)
-        plt.suptitle(title_text)
+        # plt.title(self.filename + "\n" + error_type, fontsize=8)
+        # plt.suptitle(title_text)
+        plt.tight_layout()
 
     def plot_only_pressure_animated(self, location, filename):
         """Plots wrench (forces and moments) and pressure readings
@@ -1505,21 +1641,66 @@ def plot_and_video():
     plt.show()
 
 
+def proxy_experiments():
+
+    # 1. Find file
+    # location = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/SUCTION_GRIPPER/MEDIUM_STIFFNESS/'
+    location = '/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/'
+
+    folder = 'MEDIUM_STIFFNESS/'
+    folder = 'HIGH_STIFFNESS/'
+
+    location = location + folder
+
+    # file = '2023083_proxy_sample_6_yaw_45_rep_0_stiff_medium_force_low'
+    # file ='2023083_proxy_sample_0_yaw_-15_rep_1_stiff_medium_force_medium'
+    # file = '2023083_proxy_sample_5_yaw_45_rep_0_stiff_medium_force_low'
+    # file = '2023082_proxy_sample_5_yaw_45_rep_0_stiff_high_force_low'
+    file = '2023083_proxy_sample_5_yaw_45_rep_1_stiff_high_force_low'
+
+    # 2. Turn bag into csvs if needed
+    if os.path.isdir(location + file):
+        # print("csvs already created")
+        pass
+    else:
+        bag_to_csvs(location + file + ".bag")
+
+    # 3. Create Experiment Object
+    experiment = Experiment()
+
+    # 4. Assign json dictionary as property of the experiment
+    json_file = open(location + file + '.json')
+    json_data = json.load(json_file)
+    experiment.metadata = json_data
+
+    print(experiment.metadata['general'])
+
+    # 4. Read values from 'csv'
+    read_csvs(experiment, location + file)
+
+    # 5. Get different features for the experiment
+    experiment.get_features()
+
+    # 6. Plot
+    experiment.plot_only_pressure()
+    experiment.plot_only_total_force()
+    plt.show()
+
+
 def main():
         
     # TODO Interpret moments (lever = height of the rig)
-    
-    # --- Parameters of the required experiments
-    radius = 85/2000        # in meters! swith between 75mm and 85mm
-    variable = 'pressure'   # switch between force, pressure and zforce
 
     # --- Uncomment the desired experiment
     # circle_plots(1,1,1)
     # noise_experiments('horizontal')
     # noise_experiments('vertical')
+    radius = 85 / 2000  # in meters! swith between 75mm and 85mm
+    variable = 'pressure'  # switch between force, pressure and zforce
     # noise_experiments_pitch(exp_type='horizontal', radius=radius, variable=variable)
     # simple_suction_experiment()
-    plot_and_video()
+    proxy_experiments()
+    # plot_and_video()
 
 
 if __name__ == '__main__':

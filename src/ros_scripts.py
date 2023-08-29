@@ -327,13 +327,13 @@ def main():
     # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/HIGH STIFFNESS/4th run - HIGH STIFFNESS - LOW FORCE/"
     folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"
     subfolder = "LOW_STIFFNESS/"
-    file = "2023083_proxy_sample_4_yaw_45_rep_1_stiff_low_force_low.bag"
+    file = "2023087_proxy_sample_7_yaw_-15_offset_0.005_rep_0_stiff_low_force_low.bag"
 
     topic = "/usb_cam/image_raw"
     bag_to_pngs(folder + subfolder, file, topic, '/pngs_fixed_cam')
 
-    topic = "/camera/image_raw"
-    bag_to_pngs(folder + subfolder, file, topic,'/pngs_inhand_cam')
+    # topic = "/camera/image_raw"
+    # bag_to_pngs(folder + subfolder, file, topic,'/pngs_inhand_cam')
 
     # bag_to_csvs(folder + file)
     # bag_to_video(folder, file, topic)
