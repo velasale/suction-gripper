@@ -239,12 +239,16 @@ def bag_to_pngs(input_dir, bag_file, cam_topic, output_folder='/pngs'):
         # print(t)
         cv_img = bridge.imgmsg_to_cv2(msg, "bgr8")
 
+        # Add white background for the text
+        img_height, img_width, __ = cv_img.shape
+        cv2.rectangle(cv_img, (0, img_height), (320, img_height - 40), (255, 255, 255), -1)
+
         # Add elapsed time as text at the bottom of the image
         if count == 0:
             initial_time_stamp = t
         elapsed_time = round((t.to_sec() - initial_time_stamp.to_sec()), 3)
         font = cv2.FONT_HERSHEY_COMPLEX
-        font_color = (67, 211, 255)     # BGR
+        font_color = (0,0,0)     # BGR
         cv2.putText(cv_img, 'time: ' + str(elapsed_time) + ' sec', (int(cv_img.shape[0] * 0.05), int(cv_img.shape[1] * 0.73)), font, 1.0, font_color, 1, cv2.LINE_AA)
 
         # Save file
@@ -326,8 +330,12 @@ def main():
     # --- Tutorial to use bag_to_video ----
     # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/HIGH STIFFNESS/4th run - HIGH STIFFNESS - LOW FORCE/"
     folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"
-    subfolder = "LOW_STIFFNESS/"
-    file = "2023087_proxy_sample_7_yaw_-15_offset_0.005_rep_0_stiff_low_force_low.bag"
+
+    # subfolder = "LOW_STIFFNESS/"
+    # subfolder = "MEDIUM_STIFFNESS/"
+    subfolder = "HIGH_STIFFNESS/"
+
+    file = '2023083_proxy_sample_5_yaw_45_rep_1_stiff_high_force_low.bag'
 
     topic = "/usb_cam/image_raw"
     bag_to_pngs(folder + subfolder, file, topic, '/pngs_fixed_cam')
