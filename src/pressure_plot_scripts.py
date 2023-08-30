@@ -527,6 +527,9 @@ class Experiment:
         self.wrench_ztorque_values = median_filter(self.wrench_ztorque_values, filter_param)
 
     def get_relative_values(self):
+        """ Subtracts the first reading of the F/T -- when nothing is attached -- to get rid of
+            miscalibration or zero offsets
+        """
 
         for i in range(len(self.wrench_time_stamp)):
             relative_zforce = self.wrench_zforce_values[i] - self.wrench_zforce_values[0]
@@ -547,6 +550,30 @@ class Experiment:
             self.wrench_ztorque_relative_values.append(relative_ztorque)
             self.wrench_ytorque_relative_values.append(relative_ytorque)
             self.wrench_xtorque_relative_values.append(relative_xtorque)
+
+        # Print all values during the detachment
+        max_sumForce = max(self.wrench_sumforce_relative_values)
+        index = self.wrench_sumforce_relative_values.index(max_sumForce)
+        max_xForce = self.wrench_xforce_relative_values[index]
+        max_yForce = self.wrench_yforce_relative_values[index]
+        max_zForce = self.wrench_zforce_relative_values[index]
+
+        max_tanForce = math.sqrt(max_xForce ** 2 + max_yForce **2)
+        theta = math.degrees(math.atan((max_zForce/max_tanForce)))
+
+        print('Max x Force:', max_xForce)
+        print('Max y Force:', max_yForce)
+        print('Max z Force:', max_zForce)
+
+        print('\n Max Normal Force (z Force)', max_zForce)
+        print('Max Tangential Force', max_tanForce)
+        print('Max Sum Force:', max_sumForce)
+        print('Angle:', theta)
+
+
+
+
+
 
     def get_features(self):
         """Basically run all the methods"""
@@ -1649,6 +1676,7 @@ def proxy_experiments():
 
     folder = 'MEDIUM_STIFFNESS/'
     folder = 'HIGH_STIFFNESS/'
+    # folder = 'LOW_STIFFNESS/'
 
     location = location + folder
 
@@ -1656,7 +1684,10 @@ def proxy_experiments():
     # file ='2023083_proxy_sample_0_yaw_-15_rep_1_stiff_medium_force_medium'
     # file = '2023083_proxy_sample_5_yaw_45_rep_0_stiff_medium_force_low'
     # file = '2023082_proxy_sample_5_yaw_45_rep_0_stiff_high_force_low'
+
     file = '2023083_proxy_sample_5_yaw_45_rep_1_stiff_high_force_low'
+
+    # file = '2023083_proxy_sample_0_yaw_45_rep_1_stiff_low_force_low'
 
     # 2. Turn bag into csvs if needed
     if os.path.isdir(location + file):

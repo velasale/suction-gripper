@@ -194,13 +194,16 @@ def df_categorical_stats(df, cat_name, cat_value, x_filter_name, x_filter_values
     @param series_labels:
     @return:
     """
-
-    plt.figure(figsize=(6, 5), dpi=80)
+    # ---- Plot Parameters ----
+    FONTSIZE = 14  # Use 24 for papers
+    TICKSIZE = 14
+    plt.figure(figsize=(5, 5), dpi=80)
     plt.rc('font', family='serif')      # Font similar to Latex
-    # plt.grid()
+    plt.grid()
     plt.ylim([0, 105])
     marker = itertools.cycle(('x', '+', '.', 'o', '*'))
     line_styles = itertools.cycle(('dotted', 'dashed', 'dashdot',  (0, (3, 5, 1, 5, 1, 5)), (0, (1, 1))))
+    line_colors = itertools.cycle(('red', 'black', 'blue', 'green', 'gray'))
 
     if series_name == 'none':
         series_values = ['']
@@ -232,18 +235,15 @@ def df_categorical_stats(df, cat_name, cat_value, x_filter_name, x_filter_values
 
             values.append(value)
 
-        # if series_name == 'yaw':
-        #     file = "../art/delta.png"
-        #     logo = image.imread(file)
-
-        plt.plot(x_filter_values, values, marker=next(marker), linestyle=next(line_styles), label=(series_name + " = " + str(label)))
+        plt.plot(x_filter_values, values, color=next(line_colors), marker=next(marker), markersize=10, linewidth=3, linestyle=next(line_styles), label=("Offset" + " = " + str(label)))
         plt.gca().yaxis.set_major_formatter(mtick.PercentFormatter(xmax=100.0))
-        plt.ylabel('Grasps with 2 or 3 cups engaged [%]', fontsize=14)
+        plt.ylabel('Grasps with 2 or 3 cups engaged [%]', fontsize=FONTSIZE)
         # plt.ylabel('Good Apple picks [%]', fontsize=14)
-        plt.xticks(x_filter_values, x_filter_ticks)
-        plt.xlabel(x_filter_name, fontsize=14)
-        # plt.legend(bbox_to_anchor = (1, 1), loc = "upper left")
-        plt.legend()
+        plt.xticks(x_filter_values, x_filter_ticks, fontsize=FONTSIZE)
+        plt.yticks(fontsize=FONTSIZE)
+        plt.xlabel(x_filter_name, fontsize=FONTSIZE)
+        # plt.legend(bbox_to_anchor = (1, 1), loc="upper left", fontsize=FONTSIZE)
+        plt.legend(fontsize=FONTSIZE)
         plt.tight_layout()
 
 
