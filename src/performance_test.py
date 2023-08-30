@@ -94,10 +94,13 @@ def main():
     print("\n\n****** Suction Gripper Experiments *****")
     suction_gripper.info_from_user()
 
-    # --- Step 3: Check that the vacuum circuit is free of holes
+    # --- Step 3: Scan Apple and Stem
+    suction_gripper.scan_apple_and_Stem()
+
+    # --- Step 4: Check that the vacuum circuit is free of holes
     suction_gripper.suction_cup_test()
 
-    # --- Step 4: Start the desired experiment
+    # --- Step 5: Start the desired experiment
     if suction_gripper.TYPE == "proxy":
         proxy_picks(suction_gripper)
     elif suction_gripper.TYPE == "real":
@@ -334,6 +337,10 @@ class RoboticGripper():
         self.APPLE_HEIGHT = 70 / 1000  # units [m]
         self.SPRING_STIFFNESS_LEVEL = 'high'
         self.MAGNET_FORCE_LEVEL = 'high'
+        self.APPLE_SOUTH_POLE_COORD = []
+        self.APPLE_NORTH_POLE_COORD = []
+        self.ABCISSION_LAYER_COORD = []
+
 
         # ---- Noise variables
         # x,y,z and r,p,y
@@ -365,7 +372,11 @@ class RoboticGripper():
         self.APPROACH = 2 * self.SUCTION_CUP_GIVE + (self.sphere_diam - self.APPLE_DIAMETER) / 2  # Distance to approach normal
         self.RETRIEVE = -100 / 1000
 
+        # --- Scanning Probe Parameters
+        self.SCAN_PROBE_LENGTH = 0.1    # Length of scanning probe in [m]
+        self.SCAN_PROBE_BASE_WIDTH = 1.3 * 0.0254 # Width of the base [m]. CAUTION: It includes the plate's width
 
+        # --- Pick Pattern
         self.PICK_PATTERN = 'a'
 
     def read_pressure1(self, msg):
@@ -1107,6 +1118,53 @@ class RoboticGripper():
         while (pattern != 'a' and pattern != 'b' and pattern != 'c'):
             pattern = input()
         self.PICK_PATTERN = pattern
+
+    ####################### SCANNING FUNCTIONS ###################3
+    def scan_point(self):
+        """Transforms the position of the probe's tip into base_link frame"""
+
+        tf_buffer = tf2_ros.Buffer()
+        listener = tf2_ros.TransformListener(tf_buffer)
+        probe_tool = tf2_geometry_msgs.PoseStamped()
+
+        # Probe's (x,y,z) coordinate at 'tool0' frame
+        probe_tool.pose.position.x = 0
+        probe_tool.pose.position.y = 0
+        probe_tool.pose.position.z = self.SCAN_PROBE_LENGTH + self.SCAN_PROBE_BASE_WIDTH - 0.165 # CAUTION: See urdf.xacro
+        probe_tool.header.frame_id = "eef"
+        probe_tool.header.stamp = rospy.Time(0)
+
+        # Transform the position of the tip of the probe to the desired frame
+        try:
+            probe_base = tf_buffer.transform(probe_tool, "base_link", rospy.Duration(2))
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            raise
+
+        # Just pass the x,y,z, coordinates
+        point_coordinates = [float(probe_base.pose.position.x),
+                             float(probe_base.pose.position.y),
+                             float(probe_base.pose.position.z)]
+        print("Probe coordinates at 'base_link' frame:", point_coordinates)
+
+        return point_coordinates
+
+    def scan_apple_and_Stem(self):
+
+        print("--- Scanning Apple ---")
+
+        input("--- Place probe at apple CALIX (south pole), hit ENTER when ready.")
+        self.APPLE_SOUTH_POLE_COORD = self.scan_point()
+
+        input("--- Place probe at apple's north pole, hit ENTER when ready.")
+        self.APPLE_NORTH_POLE_COORD = self.scan_point()
+
+        input("--- Place probe at stem's abcission layer, hit ENTER when ready.")
+        self.ABCISSION_LAYER_COORD = self.scan_point()
+
+        print("The point are: ")
+        print(self.APPLE_SOUTH_POLE_COORD)
+        print(self.APPLE_NORTH_POLE_COORD)
+        print(self.ABCISSION_LAYER_COORD)
 
 
 if __name__ == '__main__':
