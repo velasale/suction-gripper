@@ -235,7 +235,7 @@ def df_categorical_stats(df, cat_name, cat_value, x_filter_name, x_filter_values
 
             values.append(value)
 
-        plt.plot(x_filter_values, values, color=next(line_colors), marker=next(marker), markersize=10, linewidth=3, linestyle=next(line_styles), label=("Offset" + " = " + str(label)))
+        plt.plot(x_filter_values, values, color=next(line_colors), marker=next(marker), markersize=10, linewidth=3, linestyle=next(line_styles), label=("Stiffness: " + str(label)))
         plt.gca().yaxis.set_major_formatter(mtick.PercentFormatter(xmax=100.0))
         plt.ylabel('Grasps with 2 or 3 cups engaged [%]', fontsize=FONTSIZE)
         # plt.ylabel('Good Apple picks [%]', fontsize=14)
