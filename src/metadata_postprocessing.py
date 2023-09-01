@@ -201,8 +201,8 @@ def df_categorical_stats(df, cat_name, cat_value, x_filter_name, x_filter_values
     plt.rc('font', family='serif')      # Font similar to Latex
     plt.grid()
     plt.ylim([0, 105])
-    marker = itertools.cycle(('x', '+', '.', 'o', '*'))
-    line_styles = itertools.cycle(('dotted', 'dashed', 'dashdot',  (0, (3, 5, 1, 5, 1, 5)), (0, (1, 1))))
+    marker = itertools.cycle(('o', '*', 'x', '+', '.', 'o', '*'))
+    line_styles = itertools.cycle(('dotted', 'dashed', 'dashdot',  (0, (3, 3, 1, 3, 1, 3)), (0, (1, 1))))
     line_colors = itertools.cycle(('red', 'black', 'blue', 'green', 'gray'))
 
     if series_name == 'none':
