@@ -9,6 +9,7 @@ import matplotlib.pyplot as pp
 import mpl_toolkits.mplot3d
 
 import numpy as np
+import pandas as pd
 from numpy import pi, cos, sin, arccos, arange
 import os
 import keyboard
@@ -38,6 +39,16 @@ import cv2
 from pressure_plot_scripts import *
 from ros_scripts import *
 from plot_scripts import *
+
+
+def slist_into_flist(string_list):
+    """Converts a string list into a float list"""
+
+    s = string_list.split('[')[1]
+    ss = s.split(']')[0]
+    sss = ss.split(',')
+
+    return(np.float_(sss))
 
 
 def draw_cross_hair():
@@ -98,7 +109,7 @@ def main():
     # suction_gripper.scan_apple_and_stem()
 
     # --- Step 4: Check that the vacuum circuit is free of holes
-    suction_gripper.suction_cup_test()
+    # suction_gripper.suction_cup_test()
 
     # --- Step 5: Start the desired experiment
     if suction_gripper.TYPE == "proxy":
@@ -251,27 +262,6 @@ def proxy_picks(gripper):
 
                     # Plot results, and decide to toss experiment away or not
 
-
-def real_picks(gripper):
-
-    # TODO: Fix again the proxy script
-    # TODO: Fix the pressure plots
-    # TODO: Have a different RVIZ environment without tables and proxy
-    # TODO: Fix limits
-    # TODO: Upload the csvs of the apple coordinates
-
-    # TODO: For each apple:
-    #       a) Place apple (sphere) and stem (vector) in RVIZ
-    #       b) Define the plane with Define the orientation
-    #
-    #
-
-
-    #1. Load list of coordinates
-
-    #2. Sweep all coordinates
-
-    ...
 
 
 class RoboticGripper():
@@ -909,7 +899,7 @@ class RoboticGripper():
         print("\n... Vacuum Preview")
         plot_vacuum(filename)
 
-    def place_marker_text(self, pos=[0, 0, 0], scale=0.01, text='caption'):
+    def place_marker_text(self, pos=[0, 0, 0], scale=0.01, text='caption', frame='world'):
         """
         Places text as marker in RVIZ
         @param pos: x,y,z location
@@ -923,7 +913,7 @@ class RoboticGripper():
 
         # Set the frame ID and type.  The frame ID is the frame in which the position of the marker
         # is specified.  The type is the shape of the marker, detailed on the wiki page.
-        caption.header.frame_id = 'world'
+        caption.header.frame_id = frame
         caption.type = caption.TEXT_VIEW_FACING
 
         # Each marker has a unique ID number.  If you have more than one marker that you want displayed at a
@@ -963,7 +953,7 @@ class RoboticGripper():
         # Set a rate.  10 Hz is a good default rate for a marker moving with the Fetch robot.
         rate = rospy.Rate(10)
 
-    def place_marker_sphere(self, color=[0, 0, 1, 1], pos=[0, 0, 0], scale=0.01):
+    def place_marker_sphere(self, color=[0, 0, 1, 1], pos=[0, 0, 0], scale=0.01, frame='world'):
         """
         Creates a Sphere as Marker, and appends it into an array of markers
         @param color: [r,g,b,a] where rgb are color i RGB format, and 'a' is visibility
@@ -977,7 +967,7 @@ class RoboticGripper():
 
         # Set the frame ID and type.  The frame ID is the frame in which the position of the marker
         # is specified.  The type is the shape of the marker, detailed on the wiki page.
-        sphere.header.frame_id = 'world'
+        sphere.header.frame_id = frame
         sphere.type = sphere.SPHERE
 
         # Each marker has a unique ID number.  If you have more than one marker that you want displayed at a
@@ -1019,6 +1009,54 @@ class RoboticGripper():
         self.marker_balls_publisher.publish(self.proxy_markers)
 
         # Set a rate.  10 Hz is a good default rate for a marker moving with the Fetch robot.
+        rate = rospy.Rate(10)
+
+    def place_marker_arrow(self, p1, p2, frame='world'):
+
+        stem = Marker()
+        stem.header.frame_id = frame
+        stem.type = stem.ARROW
+
+        # Since we want to publish an array of markers, the id must be updated.
+        stem.id = self.marker_id + 1
+        self.marker_id = stem.id
+
+        stem.action = stem.ADD
+
+        # For line markers, only sclae.x works, and it defines the line width
+        stem.scale.x = 0.01    # shaft diameter
+        stem.scale.y = 0.02    # head diameter
+        stem.scale.z = 0.02    # head length
+
+        stem.color.r = 0
+        stem.color.g = 1
+        stem.color.b = 0
+        stem.color.a = 1
+
+        # Translate points into floats
+        p1x = float(p1[0])
+        p1y = float(p1[1])
+        p1z = float(p1[2])
+        p2x = float(p2[0])
+        p2y = float(p2[1])
+        p2z = float(p2[2])
+
+        p1 = Point()
+        p1.x = p1x
+        p1.y = p1y
+        p1.z = p1z
+
+        p2 = Point()
+        p2.x = p2x
+        p2.y = p2y
+        p2.z = p2z
+
+        stem.points.append(p1)
+        stem.points.append(p2)
+
+        self.proxy_markers.markers.append(stem)
+        self.marker_balls_publisher.publish(self.proxy_markers)
+
         rate = rospy.Rate(10)
 
     def point_sampling_3d(self, n_points=1250):
@@ -1228,13 +1266,149 @@ def scan_apples():
 
     # Save into csv
 
-    with open('apples_coords', 'w') as f:
+    with open('../data/apples_coords.csv', 'w') as f:
         # using csv.writer method from CSV package
         write = csv.writer(f)
         write.writerow(fields)
         write.writerows(apples_coords)
 
 
+def real_picks(gripper=RoboticGripper()):
+
+    # TODO: Fix the pressure plots
+    # TODO: Have a different RVIZ environment without tables and proxy
+    # TODO: Fix limits
+
+    # TODO: For each apple:
+    #       b) Define the plane with Define the orientation
+
+    # --- Experiment Parameters
+
+
+    # --- Load list of apples' coordinates
+    with open("../data/apples_coords.csv", "r") as f:
+        apples_coords = list(csv.reader(f, delimiter=","))
+    apples_coords.pop(0)    # Remove header
+
+    # --- Sweep all coordinates of scanned apples
+    for apple_coords in apples_coords:
+
+        # --- Save properties into experiment class
+        gripper.APPLE_DIAMETER = float(apple_coords[1])
+        gripper.APPLE_HEIGHT = float(apple_coords[2])
+        gripper.APPLE_SOUTH_POLE_COORD = slist_into_flist(apple_coords[3])
+        gripper.APPLE_NORTH_POLE_COORD = slist_into_flist(apple_coords[4])
+        gripper.ABCISSION_LAYER_COORD = slist_into_flist(apple_coords[5])
+        center = np.mean([gripper.APPLE_NORTH_POLE_COORD, gripper.APPLE_SOUTH_POLE_COORD], axis=0)
+        gripper.apple_pose = (center[0], center[1], center[2], 0, 0, 0)
+
+        # --- Visualize apple and core vector in RVIZ
+        gripper.place_marker_sphere(color=[1, 0, 0, 0.5],
+                                    pos=center,
+                                    scale=gripper.APPLE_DIAMETER/1000,
+                                    frame='base_link')
+        gripper.place_marker_arrow(gripper.APPLE_SOUTH_POLE_COORD,
+                                   gripper.APPLE_NORTH_POLE_COORD,
+                                   frame='base_link')
+        label = apple_coords[0]
+        gripper.place_marker_text(center, 0.05, label, frame='base_link')
+
+        # --- Manually place gripper close to the apple
+        input('Please move the EEF close to the desired apple, and hit ENTER')
+
+        orientations = [0, 15, 30, 45, 60, 75, 90]
+        yaws = [0, 60]
+
+        for orientation in orientations:
+
+            gripper.sample = orientation
+
+            for yaw in yaws:
+
+                gripper.yaw = yaw
+
+                # --- Start Recording bagfile
+                location = os.path.dirname(os.getcwd())
+                folder = "/data/"
+                name = datetime_simplified() + "_" + gripper.TYPE + \
+                       + str(label) + \
+                       "_orientation_" + str(orientation) + \
+                       "_yaw_" + str(gripper.yaw)
+
+                filename = location + folder + name
+
+                topics_with_cameras = ["wrench", "joint_states",
+                                       "experiment_steps",
+                                       "/gripper/distance",
+                                       "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3",
+                                       "/usb_cam/image_raw",
+                                       "/camera/image_raw"]
+
+                topics_without_cameras = ["wrench", "joint_states",
+                                          "experiment_steps",
+                                          "/gripper/distance",
+                                          "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3"]
+
+                command, rosbag_process = start_rosbag(filename, topics_with_cameras)
+                print("\n... Start recording Rosbag")
+                time.sleep(0.2)
+
+                # --- Go to the desired pose
+                # TODO align gripper with apple pose
+                # TODO approach to a distance of 80mm from center
+
+                # --- Adopt desired yaw
+                gripper.apply_offset(0, 0, 0, yaw)
+
+                # --- Open Valve
+                print("\n... Applying vacuum")
+                gripper.publish_event("Vacuum On")
+                service_call("openValve")
+
+                # --- Approach Apple
+                print("\n... Approaching apple")
+                gripper.publish_event("Approach")
+                move = gripper.move_normal(gripper.APPROACH, speed_factor=0.1, condition=True)
+
+                # --- Label cup engagement
+                print("\n... Label how did the suction cups engaged")
+                gripper.publish_event("Labeling cups")
+                gripper.label_cups()
+
+                # --- Retrieve
+                print("\n... Picking Apple")
+                gripper.publish_event("Retrieve")
+                move = gripper.move_normal(gripper.RETRIEVE, speed_factor=0.1)
+
+                # --- Label Result
+                print("\n... Label the pick result")
+                gripper.publish_event("Labeling apple pick")
+                gripper.label_pick()
+
+                # --- Close Valve
+                print("\n... Stop vacuum")
+                gripper.publish_event("Vacuum Off")
+                service_call("closeValve")
+                time.sleep(0.05)
+
+                # --- Stop recording Rosbag file
+                stop_rosbag(command, rosbag_process)
+                print("\n... Stop recording Rosbag")
+                time.sleep(1)
+
+                # Save metadata in yaml file
+                gripper.save_metadata(filename)
+                print("\n... Saving metadata in *yaml file")
+
+
+
+
+
+        time.sleep(1)
+
+
+
 if __name__ == '__main__':
     # main()
-    scan_apples()
+    # scan_apples()
+    real_picks()
