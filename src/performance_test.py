@@ -263,7 +263,6 @@ def proxy_picks(gripper):
                     # Plot results, and decide to toss experiment away or not
 
 
-
 class RoboticGripper():
 
     def __init__(self):
@@ -1275,15 +1274,11 @@ def scan_apples():
 
 def real_picks(gripper=RoboticGripper()):
 
-    # TODO: Fix the pressure plots
-    # TODO: Have a different RVIZ environment without tables and proxy
+    # TODO: Fix pressure plots
     # TODO: Fix limits
 
     # TODO: For each apple:
-    #       b) Define the plane with Define the orientation
-
-    # --- Experiment Parameters
-
+    #       b) Define the plane wich Define the orientation
 
     # --- Load list of apples' coordinates
     with open("../data/apples_coords.csv", "r") as f:
@@ -1331,7 +1326,7 @@ def real_picks(gripper=RoboticGripper()):
                 location = os.path.dirname(os.getcwd())
                 folder = "/data/"
                 name = datetime_simplified() + "_" + gripper.TYPE + \
-                       + str(label) + \
+                       str(label) + \
                        "_orientation_" + str(orientation) + \
                        "_yaw_" + str(gripper.yaw)
 
@@ -1354,7 +1349,7 @@ def real_picks(gripper=RoboticGripper()):
                 time.sleep(0.2)
 
                 # --- Go to the desired pose
-                # TODO align gripper with apple pose
+                # TODO align gripper with apple vector pose
                 # TODO approach to a distance of 80mm from center
 
                 # --- Adopt desired yaw
@@ -1402,9 +1397,6 @@ def real_picks(gripper=RoboticGripper()):
 
 
 
-
-
-        time.sleep(1)
 
 
 
