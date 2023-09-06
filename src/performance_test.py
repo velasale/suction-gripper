@@ -95,7 +95,7 @@ def main():
     suction_gripper.info_from_user()
 
     # --- Step 3: Scan Apple and Stem
-    suction_gripper.scan_apple_and_Stem()
+    # suction_gripper.scan_apple_and_stem()
 
     # --- Step 4: Check that the vacuum circuit is free of holes
     suction_gripper.suction_cup_test()
@@ -117,9 +117,10 @@ def proxy_picks(gripper):
     offsets = [5 / 1000, 10 / 1000, 15 / 1000, 20 / 1000]
     n_reps = 1  # number of repetitions at each configuration
 
-    yaws = [0]
+    # --- Uncomment if you need other poses
+    # yaws = [0]
     # offsets = [5/1000, 10/1000]
-    offsets = [0 / 1000]
+    # offsets = [0 / 1000]
 
     cart_noises = [0, 5/1000, 10/1000, 15/1000, 20/1000]
     ang_noises = [0, 5, 10, 15, 20]
@@ -180,19 +181,19 @@ def proxy_picks(gripper):
                            "_stiff_" + str(gripper.SPRING_STIFFNESS_LEVEL) + "_force_" + str(gripper.MAGNET_FORCE_LEVEL)
                     filename = location + folder + name
 
-                    topics = ["wrench", "joint_states",
-                              "experiment_steps",
-                              "/gripper/distance",
-                              "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3",
-                              "/usb_cam/image_raw",
-                              "/camera/image_raw"]
+                    topics_with_cameras = ["wrench", "joint_states",
+                                           "experiment_steps",
+                                           "/gripper/distance",
+                                           "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3",
+                                           "/usb_cam/image_raw",
+                                           "/camera/image_raw"]
 
-                    # topics = ["wrench", "joint_states",
-                    #           "experiment_steps",
-                    #           "/gripper/distance",
-                    #           "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3"]
+                    topics_without_cameras = ["wrench", "joint_states",
+                                              "experiment_steps",
+                                              "/gripper/distance",
+                                              "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3"]
 
-                    command, rosbag_process = start_rosbag(filename, topics)
+                    command, rosbag_process = start_rosbag(filename, topics_with_cameras)
                     print("\n... Start recording Rosbag")
                     time.sleep(0.2)
 
@@ -252,6 +253,24 @@ def proxy_picks(gripper):
 
 
 def real_picks(gripper):
+
+    # TODO: Fix again the proxy script
+    # TODO: Fix the pressure plots
+    # TODO: Have a different RVIZ environment without tables and proxy
+    # TODO: Fix limits
+    # TODO: Upload the csvs of the apple coordinates
+
+    # TODO: For each apple:
+    #       a) Place apple (sphere) and stem (vector) in RVIZ
+    #       b) Define the plane with Define the orientation
+    #
+    #
+
+
+    #1. Load list of coordinates
+
+    #2. Sweep all coordinates
+
     ...
 
 
@@ -1119,7 +1138,8 @@ class RoboticGripper():
             pattern = input()
         self.PICK_PATTERN = pattern
 
-    ####################### SCANNING FUNCTIONS ###################3
+    ####################### SCANNING FUNCTIONS ###################
+
     def scan_point(self):
         """Transforms the position of the probe's tip into base_link frame"""
 
@@ -1130,7 +1150,7 @@ class RoboticGripper():
         # Probe's (x,y,z) coordinate at 'tool0' frame
         probe_tool.pose.position.x = 0
         probe_tool.pose.position.y = 0
-        probe_tool.pose.position.z = self.SCAN_PROBE_LENGTH + self.SCAN_PROBE_BASE_WIDTH - 0.165 # CAUTION: See urdf.xacro
+        probe_tool.pose.position.z = self.SCAN_PROBE_LENGTH + self.SCAN_PROBE_BASE_WIDTH - (0.162 + 0.02) # CAUTION: See urdf.xacro
         probe_tool.header.frame_id = "eef"
         probe_tool.header.stamp = rospy.Time(0)
 
@@ -1148,7 +1168,7 @@ class RoboticGripper():
 
         return point_coordinates
 
-    def scan_apple_and_Stem(self):
+    def scan_apple_and_stem(self):
 
         print("--- Scanning Apple ---")
 
@@ -1166,7 +1186,55 @@ class RoboticGripper():
         print(self.APPLE_NORTH_POLE_COORD)
         print(self.ABCISSION_LAYER_COORD)
 
+        input("Hit Enter to check the vacuum line")
+
+
+def scan_apples():
+    """Simple method to (i) scan a bunch of points in space, an (ii) saves them as .csv for further use."""
+
+    suction_gripper = RoboticGripper()
+
+    fields = ['Label', 'Apple Diameter [mm]', 'Apple Height [mm]', 'South Pole coords', 'North Pole coords', 'Abcision coords']
+    number_of_apples = 20
+    apples_coords = []
+
+    for apple in range(number_of_apples):
+
+        print("\n\nApple No.", apple + 1)
+
+        # Inputs from keyword
+        label = input("--- Label item to be scanned (e.g. apple #1, imu #2), or hit ESC to finish : ")
+
+        if label == '\x1b':
+            break
+
+        apple_diameter = input("--- Measure the Apple Main Diameter in [mm]: ")
+        apple_height = input("--- Measure the Apple Height in [mm]: ")
+
+        # Inputs from scanning probe
+        input("--- Place probe at apple CALIX (south pole), hit ENTER when ready.")
+        APPLE_SOUTH_POLE_COORD = suction_gripper.scan_point()
+
+        input("--- Place probe at apple's north pole, hit ENTER when ready.")
+        APPLE_NORTH_POLE_COORD = suction_gripper.scan_point()
+
+        input("--- Place probe at stem's abcission layer, hit ENTER when ready.")
+        ABCISSION_LAYER_COORD = suction_gripper.scan_point()
+
+        apple_coords = [label, apple_diameter, apple_height,
+                        APPLE_SOUTH_POLE_COORD, APPLE_NORTH_POLE_COORD, ABCISSION_LAYER_COORD]
+
+        apples_coords.append(apple_coords)
+
+    # Save into csv
+
+    with open('apples_coords', 'w') as f:
+        # using csv.writer method from CSV package
+        write = csv.writer(f)
+        write.writerow(fields)
+        write.writerows(apples_coords)
+
 
 if __name__ == '__main__':
-    main()
-
+    # main()
+    scan_apples()
