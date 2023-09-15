@@ -330,21 +330,23 @@ def main():
     # --- Tutorial to use bag_to_video ----
     # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/HIGH STIFFNESS/4th run - HIGH STIFFNESS - LOW FORCE/"
     folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"
+    folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'
 
     # subfolder = "LOW_STIFFNESS/"
     # subfolder = "MEDIUM_STIFFNESS/"
-    subfolder = "HIGH_STIFFNESS/"
+    # subfolder = "HIGH_STIFFNESS/"
+    subfolder = ''
 
-    file = '2023083_proxy_sample_5_yaw_45_rep_1_stiff_high_force_low.bag'
+    file = '2023096_realapple3_attempt1.bag'
+
+    topic = "/camera/image_raw"
+    bag_to_pngs(folder + subfolder, file, topic,'/pngs_inhand_cam')
 
     topic = "/usb_cam/image_raw"
     bag_to_pngs(folder + subfolder, file, topic, '/pngs_fixed_cam')
 
-    # topic = "/camera/image_raw"
-    # bag_to_pngs(folder + subfolder, file, topic,'/pngs_inhand_cam')
-
     # bag_to_csvs(folder + file)
-    # bag_to_video(folder, file, topic)
+    bag_to_video(folder, file, topic)
 
     # -------------------------------------
 

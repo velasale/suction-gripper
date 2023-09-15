@@ -197,7 +197,7 @@ def df_categorical_stats(df, cat_name, cat_value, x_filter_name, x_filter_values
     # ---- Plot Parameters ----
     FONTSIZE = 14  # Use 24 for papers
     TICKSIZE = 14
-    plt.figure(figsize=(5, 5), dpi=80)
+    plt.figure(figsize=(5, 4), dpi=80)
     plt.rc('font', family='serif')      # Font similar to Latex
     plt.grid()
     plt.ylim([0, 105])
@@ -235,9 +235,9 @@ def df_categorical_stats(df, cat_name, cat_value, x_filter_name, x_filter_values
 
             values.append(value)
 
-        plt.plot(x_filter_values, values, color=next(line_colors), marker=next(marker), markersize=10, linewidth=3, linestyle=next(line_styles), label=("Stiffness: " + str(label)))
+        plt.plot(x_filter_values, values, color=next(line_colors), marker=next(marker), markersize=10, linewidth=3, linestyle=next(line_styles), label=("offset: " + str(label)))
         plt.gca().yaxis.set_major_formatter(mtick.PercentFormatter(xmax=100.0))
-        plt.ylabel('Grasps with 2 or 3 cups engaged [%]', fontsize=FONTSIZE)
+        plt.ylabel('Two or three cups engaged', fontsize=FONTSIZE)
         # plt.ylabel('Good Apple picks [%]', fontsize=14)
         plt.xticks(x_filter_values, x_filter_ticks, fontsize=FONTSIZE)
         plt.yticks(fontsize=FONTSIZE)
@@ -293,40 +293,71 @@ def main():
     #
 
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    yaw_filter = df['yaw'] == 45
+    delta_yaw_filter = df['yaw'] == 45
+    nabla_yaw_filter = df['yaw'] == -15
+    low_strength_filter = df['strength'] == '1_low_strength'
+
+    # --- x_axis: Offset        series: stiffness
+    df_categorical_stats(df, 'cup engagement', '2 or 3',
+                         'x_offset', [0.00, 0.005, 0.010, 0.015, 0.02], [0, 5, 10, 15, 20],
+                         'stiffness', ['1_low_stiffness', '2_medium_stiffness', '3_high_stiffness'], ['low', 'medium', 'high'])
+
+    # --- x_axis: Offset        series: stiffness       filter: delta-yaw
+    df_categorical_stats(df[delta_yaw_filter], 'cup engagement', '2 or 3',
+                         'x_offset', [0.00, 0.005, 0.010, 0.015, 0.02], [0, 5, 10, 15, 20],
+                         'stiffness', ['1_low_stiffness', '2_medium_stiffness', '3_high_stiffness'], ['low', 'medium', 'high'])
+
+    # --- x_axis: Offset        series: stiffness       filter: nabla-yaw
+    df_categorical_stats(df[nabla_yaw_filter], 'cup engagement', '2 or 3',
+                         'x_offset', [0.00, 0.005, 0.010, 0.015, 0.02], [0, 5, 10, 15, 20],
+                         'stiffness', ['1_low_stiffness', '2_medium_stiffness', '3_high_stiffness'],
+                         ['low', 'medium', 'high'])
+
+    # --- x_axis: Offset        series: Yaw
     df_categorical_stats(df, 'cup engagement', '2 or 3',
                          'x_offset', [0.00, 0.005, 0.010, 0.015, 0.02], [0, 5, 10, 15, 20],
                          'yaw', [-15, 45], ['nabla', 'delta'])
 
-    df_categorical_stats(df[yaw_filter], 'cup engagement', '2 or 3',
-                         'x_offset', [0.00, 0.005, 0.010, 0.015, 0.02], [0, 5, 10, 15, 20],
-                         'stiffness', ['1_low_stiffness', '2_medium_stiffness', '3_high_stiffness'], ['Low', 'Medium', 'High'])
-
-    yaw_filter = df['yaw'] == -15
-    df_categorical_stats(df[yaw_filter], 'cup engagement', '2 or 3',
-                         'x_offset', [0.00, 0.005, 0.010, 0.015, 0.02], [0, 5, 10, 15, 20],
+    # --- x_axis: Roll          series: stiffness
+    df_categorical_stats(df, 'cup engagement', '2 or 3',
+                         'sampling point', [0, 1, 2, 3, 4, 5, 6, 7, 8], [0, 15, 30, 45, 60, 75, 90, 105, 120],
                          'stiffness', ['1_low_stiffness', '2_medium_stiffness', '3_high_stiffness'],
-                         ['Low', 'Medium', 'High'])
+                         ['low', 'medium', 'high'])
 
+    # --- x_axis: Roll          series: stiffness       filter: delta-yaw
+    df_categorical_stats(df[delta_yaw_filter], 'cup engagement', '2 or 3',
+                         'sampling point', [0, 1, 2, 3, 4, 5, 6, 7, 8], [0, 15, 30, 45, 60, 75, 90, 105, 120],
+                         'stiffness', ['1_low_stiffness', '2_medium_stiffness', '3_high_stiffness'], ['low', 'medium', 'high'])
+
+    # --- x_axis: Roll          series: stiffness       filter: nabla-yaw
+    df_categorical_stats(df[nabla_yaw_filter], 'cup engagement', '2 or 3',
+                         'sampling point', [0, 1, 2, 3, 4, 5, 6, 7, 8], [0, 15, 30, 45, 60, 75, 90, 105, 120],
+                         'stiffness', ['1_low_stiffness', '2_medium_stiffness', '3_high_stiffness'],
+                         ['low', 'medium', 'high'])
+
+    # --- x_axis: Roll          series: Yaw
     df_categorical_stats(df, 'cup engagement', '2 or 3',
                        'sampling point', [0, 1, 2, 3, 4, 5, 6, 7, 8], [0, 15, 30, 45, 60, 75, 90, 105, 120],
                        'yaw', [-15, 45], ['nabla', 'delta'])
 
+    # --- x_axis: Roll          series: Offset          filter: delta-yaw
+    df_categorical_stats(df[delta_yaw_filter], 'cup engagement', '2 or 3',
+                         'sampling point', [0, 1, 2, 3, 4, 5, 6, 7, 8], [0, 15, 30, 45, 60, 75, 90, 105, 120],
+                         'x_offset', [0.00, 0.005, 0.010, 0.015, 0.02], ['0mm', '5mm', '10mm', '15mm', '20mm'])
+
+    # --- x_axis: Stiffness     series: Yaw
     df_categorical_stats(df, 'cup engagement', '2 or 3',
                          'stiffness', ['1_low_stiffness', '2_medium_stiffness', '3_high_stiffness'], ['Low Stiffness', 'Medium Stiffness', 'High Stiffness'],
                          'yaw', [-15, 45], ['nabla', 'delta'])
 
-    yaw_filter = df['yaw'] == 45
-    df_categorical_stats(df[yaw_filter], 'cup engagement', '2 or 3',
-                         'sampling point', [0, 1, 2, 3, 4, 5, 6, 7, 8], [0, 15, 30, 45, 60, 75, 90, 105, 120],
-                         'x_offset', [0.00, 0.005, 0.010, 0.015, 0.02], ['0mm', '5mm', '10mm', '15mm', '20mm'])
 
-    strength_filter = df['strength'] == '1_low_strength'
-    df_categorical_stats(df[strength_filter], 'result', 'Good Pick',
+
+    # --- x_axis: # cups        series: Stiffness       filter: low_strength
+    df_categorical_stats(df[low_strength_filter], 'result', 'Good Pick',
                          'cups engaged', [0, 1, 2, 3], [0, 1, 2, 3],
                          'stiffness', ['1_low_stiffness', '2_medium_stiffness', '3_high_stiffness'],
-                         ['Low', 'Medium', 'High'])
-                        # 'none', [''], [''])
+                         ['low', 'medium', 'high'])
+
     plt.show()
 
 

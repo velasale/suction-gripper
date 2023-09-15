@@ -571,10 +571,6 @@ class Experiment:
         print('Angle:', theta)
 
 
-
-
-
-
     def get_features(self):
         """Basically run all the methods"""
         self.elapsed_times()
@@ -944,8 +940,8 @@ class Experiment:
         @return:
         """
 
-        FONTSIZE = 16   # Use 24 for papers
-        TICKSIZE = 16
+        FONTSIZE = 18   # Use 24 for papers
+        TICKSIZE = 18
         FIGURESIZE = (10, 4)
         lines = itertools.cycle(('dotted', 'dashed', 'dashdot'))
         colors = itertools.cycle(('orange', 'blue', 'green'))
@@ -979,7 +975,7 @@ class Experiment:
 
         pressure_times = [suctionCup1_times, suctionCup2_times, suctionCup3_times]
         pressure_values = [suctionCup1_values, suctionCup2_values, suctionCup3_values]
-        pressure_labels = ["side_A", "side_B", "side_C"]
+        pressure_labels = ["cup A", "cup B", "cup C"]
 
         event_x = self.event_elapsed_time
         event_y = self.event_values
@@ -1053,23 +1049,24 @@ class Experiment:
 
             # Plot experiment events for reference
             for event, label in zip(event_x, event_y):
-                plt.axvline(x=event, color='black', linestyle='dotted', linewidth=1.5)
-                plt.text(event, 60, label, rotation=40, color='black', fontsize=14)
+                plt.axvline(x=event, color='black', linestyle='dotted', linewidth=2.0)
+                plt.text(event, 10, label, rotation=40, color='black', fontsize=TICKSIZE)
 
             plt.xlabel("Elapsed Time [sec]", fontsize=FONTSIZE)
             plt.ylabel("Pressure [kPa]", fontsize=FONTSIZE)
             plt.ylim([0, 110])
+            plt.xlim([0, 100])
             plt.yticks(fontsize=TICKSIZE)
             plt.xticks(fontsize=TICKSIZE)
             plt.grid()
-            plt.legend()
+            plt.legend(fontsize=FONTSIZE)
             plt.tight_layout()
 
     def plot_only_total_force(self):
         """Plots only force readings (forces and moments)"""
 
-        FONTSIZE = 16  # Use 24 for papers
-        TICKSIZE = 16
+        FONTSIZE = 18  # Use 24 for papers
+        TICKSIZE = 18
         FIGURESIZE = (10, 4)
 
         plt.figure(figsize=FIGURESIZE)
@@ -1079,7 +1076,10 @@ class Experiment:
         force_time = []
         sumforce_values = []
 
-        for i, j in zip(self.wrench_elapsed_time, self.wrench_sumforce_relative_values):
+        force_values = self.wrench_sumforce_relative_values
+        # force_values = self.wrench_zforce_values
+
+        for i, j in zip(self.wrench_elapsed_time, force_values):
             if i > threshold:
                 force_time.append(i)
                 sumforce_values.append(j)
@@ -1109,12 +1109,12 @@ class Experiment:
 
         plt.plot(force_time, sumforce_values, linewidth=2, color='red')
         plt.annotate('Max Force: ' + str(round(max_sumforce_val, 3)), xy=(max_sumforce_time, max_sumforce_val),
-                            xycoords='data', xytext=(max_sumforce_time + 0, max_sumforce_val + 1.5),
-                            va='top', ha='right', arrowprops=dict(facecolor='orange', shrink=0), fontsize=14)
+                            xycoords='data', xytext=(max_sumforce_time + 0, max_sumforce_val + 1.7),
+                            va='top', ha='right', arrowprops=dict(facecolor='orange', shrink=0), fontsize=FONTSIZE)
 
         for event, label in zip(event_x, event_y):
             plt.axvline(x=event, color='black', linestyle='dotted', linewidth=1.5)
-            plt.text(event, 6, label, rotation=40, color='black', fontsize=14)
+            plt.text(event, 2.5, label, rotation=40, color='black', fontsize=FONTSIZE)
             plt.xlabel("Elapsed Time [sec]", fontsize=FONTSIZE)
             plt.ylabel("Force [N]", fontsize=FONTSIZE)
             plt.ylim([0, 10])
@@ -1139,6 +1139,7 @@ class Experiment:
         plt.yticks(size=TICKSIZE)
         # plt.title(self.filename + "\n" + error_type, fontsize=8)
         # plt.suptitle(title_text)
+        plt.xlim([0, 100])
         plt.tight_layout()
 
     def plot_only_pressure_animated(self, location, filename):
@@ -1670,13 +1671,15 @@ def plot_and_video():
 
 def proxy_experiments():
 
-    # 1. Find file
+    # --- 1. Find file
     # location = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/SUCTION_GRIPPER/MEDIUM_STIFFNESS/'
-    location = '/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/'
+    # location = '/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/'
+    location = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'
 
-    folder = 'MEDIUM_STIFFNESS/'
-    folder = 'HIGH_STIFFNESS/'
+    # folder = 'MEDIUM_STIFFNESS/'
+    # folder = 'HIGH_STIFFNESS/'
     # folder = 'LOW_STIFFNESS/'
+    folder = ''
 
     location = location + folder
 
@@ -1685,34 +1688,38 @@ def proxy_experiments():
     # file = '2023083_proxy_sample_5_yaw_45_rep_0_stiff_medium_force_low'
     # file = '2023082_proxy_sample_5_yaw_45_rep_0_stiff_high_force_low'
 
-    file = '2023083_proxy_sample_5_yaw_45_rep_1_stiff_high_force_low'
+    # --- ICRA24 paper plots
+    # file = '2023083_proxy_sample_5_yaw_45_rep_1_stiff_high_force_low'
+    # file = '2023096_realapple5_attempt3'
+
+    file = '2023096_realapple6_attempt4'
 
     # file = '2023083_proxy_sample_0_yaw_45_rep_1_stiff_low_force_low'
 
-    # 2. Turn bag into csvs if needed
+    # --- 2. Turn bag into csvs if needed
     if os.path.isdir(location + file):
         # print("csvs already created")
         pass
     else:
         bag_to_csvs(location + file + ".bag")
 
-    # 3. Create Experiment Object
+    # --- 3. Create Experiment Object
     experiment = Experiment()
 
-    # 4. Assign json dictionary as property of the experiment
+    # --- 4. Assign json dictionary as property of the experiment
     json_file = open(location + file + '.json')
     json_data = json.load(json_file)
     experiment.metadata = json_data
 
     print(experiment.metadata['general'])
 
-    # 4. Read values from 'csv'
+    # --- 4. Read values from 'csv'
     read_csvs(experiment, location + file)
 
-    # 5. Get different features for the experiment
+    # --- 5. Get different features for the experiment
     experiment.get_features()
 
-    # 6. Plot
+    # --- 6. Plot
     experiment.plot_only_pressure()
     experiment.plot_only_total_force()
     plt.show()
