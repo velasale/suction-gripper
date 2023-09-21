@@ -109,7 +109,7 @@ def main():
     # suction_gripper.scan_apple_and_stem()
 
     # --- Step 4: Check that the vacuum circuit is free of holes
-    # suction_gripper.suction_cup_test()
+    suction_gripper.suction_cup_test()
 
     # --- Step 5: Start the desired experiment
     if suction_gripper.TYPE == "proxy":
@@ -293,7 +293,6 @@ class RoboticGripper():
         self.ps3 = 1000.00
 
 
-
         planning_frame = move_group.get_planning_frame()
         print("=========== Planning frame: %s" % planning_frame)
 
@@ -309,6 +308,7 @@ class RoboticGripper():
 
         # ---- Variables for markers
         self.marker_id = 1
+        self.caption_id = 1
         self.proxy_markers = MarkerArray()
         self.marker_text_publisher = marker_text_publisher
         self.marker_balls_publisher = marker_balls_publisher
@@ -378,7 +378,8 @@ class RoboticGripper():
         self.z_coord = []
         self.pose_starts = []
         self.APPROACH = 2 * self.SUCTION_CUP_GIVE + (self.sphere_diam - self.APPLE_DIAMETER) / 2  # Distance to approach normal
-        self.RETRIEVE = -100 / 1000
+        # self.RETRIEVE = -100 / 1000
+        self.RETRIEVE = -130 / 1000
 
         # --- Scanning Probe Parameters
         self.SCAN_PROBE_LENGTH = 0.1    # Length of scanning probe in [m]
@@ -571,6 +572,58 @@ class RoboticGripper():
 
         # --- Step 3: Move robot
         self.move_group.set_pose_targets(goal_pose_pframe.pose)
+        self.move_group.go(wait=True)
+        self.move_group.stop()
+
+        # --- Step 4: Compare goal with current state
+        current_pose = self.move_group.get_current_pose().pose
+        success = all_close(goal_pose_pframe.pose, current_pose, self.TOLERANCE)
+
+        # --- Step 5: Save pose for future steps
+        self.previous_pose = current_pose
+
+        return success
+
+    def go_close_to_apple(self, yaw=0):
+        """Reaches a desired End Effector pose (Inverse Kinematics)"""
+
+        # --- Place marker with text in RVIZ
+        caption = "Going to an ideal starting End Effector pose (IK)"
+        self.place_marker_text(pos=[0, 0, 1.5], scale=0.1, text=caption, frame=self.planning_frame)
+
+        # --- ROS tool for transformation among c-frames
+        tf_buffer = tf2_ros.Buffer()
+        listener = tf2_ros.TransformListener(tf_buffer)
+
+        # --- Step 1: Set Goal in the intuitive/easy c-frame
+        goal_pose = tf2_geometry_msgs.PoseStamped()
+        goal_pose.header.frame_id = 'base_link'
+        goal_pose.header.stamp = rospy.Time(0)
+
+        goal_pose.pose.position.x = self.apple_pose[0]
+        goal_pose.pose.position.y = self.apple_pose[1]
+        goal_pose.pose.position.z = self.apple_pose[2]
+
+        # Euler angles
+        roll = self.apple_pose[3]
+        pitch = self.apple_pose[4]
+        yaw = yaw * pi / 180
+        q = quaternion_from_euler(roll, pitch, yaw)
+        goal_pose.pose.orientation.x = q[0]
+        goal_pose.pose.orientation.y = q[1]
+        goal_pose.pose.orientation.z = q[2]
+        goal_pose.pose.orientation.w = q[3]
+
+        self.start_pose = goal_pose
+
+        # --- Step 2: Transform Goal into Planning Frame
+        try:
+            goal_pose_pframe = tf_buffer.transform(goal_pose, self.planning_frame, rospy.Duration(1))
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            raise
+
+        # --- Step 3: Move robot
+        self.move_group.set_pose_target(goal_pose_pframe.pose)
         self.move_group.go(wait=True)
         self.move_group.stop()
 
@@ -918,7 +971,8 @@ class RoboticGripper():
         # Each marker has a unique ID number.  If you have more than one marker that you want displayed at a
         # given time, then each needs to have a unique ID number.  If you publish a new marker with the same
         # ID number and an existing marker, it will replace the existing marker with that ID number.
-        caption.id = 0
+        caption.id = self.caption_id + 1
+        self.caption_id = caption.id
 
         # Set the action.  We can add, delete, or modify markers.
         caption.action = caption.ADD
@@ -1237,7 +1291,7 @@ def scan_apples():
 
     for apple in range(number_of_apples):
 
-        print("\n\nApple No.", apple + 1)
+        print("\n\nPick No.", apple + 1)
 
         # Inputs from keyword
         label = input("--- Label item to be scanned (e.g. apple #1, imu #2), or hit ESC to finish : ")
@@ -1276,17 +1330,36 @@ def real_picks(gripper=RoboticGripper()):
 
     # TODO: Fix pressure plots
     # TODO: Fix limits
+    # TODO: During each apple pick, simply allow user to choose the apple label
 
     # TODO: For each apple:
     #       b) Define the plane wich Define the orientation
 
     # --- Load list of apples' coordinates
-    with open("../data/apples_coords.csv", "r") as f:
+    with open("../data/20230920 apples_coords.csv", "r") as f:
         apples_coords = list(csv.reader(f, delimiter=","))
     apples_coords.pop(0)    # Remove header
 
-    # --- Sweep all coordinates of scanned apples
-    for apple_coords in apples_coords:
+    # --- Add a column to keep track of the attempts at each apple
+    for apple in apples_coords:
+        apple.append(0)
+
+    while True:
+
+        # --- First ask what apple to approach
+        apple_label = input('What is the apple number?')
+
+        # --- Find the apple coordinates
+        index = 0
+        for apple in apples_coords:
+            if apple[0] == ('apple' + apple_label):
+                break
+            index += 1
+        apple_coords = apples_coords[index]
+        apples_coords[index][-1] += 1
+        attempt = apples_coords[index][-1]
+
+        print('\nApple%s - Picking attempt No.%i' % (apple_label, attempt))
 
         # --- Save properties into experiment class
         gripper.APPLE_DIAMETER = float(apple_coords[1])
@@ -1295,7 +1368,15 @@ def real_picks(gripper=RoboticGripper()):
         gripper.APPLE_NORTH_POLE_COORD = slist_into_flist(apple_coords[4])
         gripper.ABCISSION_LAYER_COORD = slist_into_flist(apple_coords[5])
         center = np.mean([gripper.APPLE_NORTH_POLE_COORD, gripper.APPLE_SOUTH_POLE_COORD], axis=0)
-        gripper.apple_pose = (center[0], center[1], center[2], 0, 0, 0)
+
+        # --- Calculate the angles of the apple
+        delta_x = gripper.APPLE_NORTH_POLE_COORD[0] - gripper.APPLE_SOUTH_POLE_COORD[0]
+        delta_y = gripper.APPLE_NORTH_POLE_COORD[1] - gripper.APPLE_SOUTH_POLE_COORD[1]
+        delta_z = gripper.APPLE_NORTH_POLE_COORD[2] - gripper.APPLE_SOUTH_POLE_COORD[2]
+
+        pitch = - math.atan(-delta_x/delta_y)
+        roll = - math.atan(math.sqrt(delta_x**2+delta_y**2)/delta_z)
+        gripper.apple_pose = (center[0], center[1], center[2], roll, pitch, 0)
 
         # --- Visualize apple and core vector in RVIZ
         gripper.place_marker_sphere(color=[1, 0, 0, 0.5],
@@ -1314,6 +1395,12 @@ def real_picks(gripper=RoboticGripper()):
         orientations = [0, 15, 30, 45, 60, 75, 90]
         yaws = [0, 60]
 
+        # TODO: Measure offset between gripper and apple center
+        # TODO: approaches
+
+        orientations = [0]
+        yaws = [0]
+
         for orientation in orientations:
 
             gripper.sample = orientation
@@ -1325,8 +1412,10 @@ def real_picks(gripper=RoboticGripper()):
                 # --- Start Recording bagfile
                 location = os.path.dirname(os.getcwd())
                 folder = "/data/"
+
                 name = datetime_simplified() + "_" + gripper.TYPE + \
                        str(label) + \
+                       "_attempt_" + str(attempt) + \
                        "_orientation_" + str(orientation) + \
                        "_yaw_" + str(gripper.yaw)
 
@@ -1336,8 +1425,8 @@ def real_picks(gripper=RoboticGripper()):
                                        "experiment_steps",
                                        "/gripper/distance",
                                        "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3",
-                                       "/usb_cam/image_raw",
-                                       "/camera/image_raw"]
+                                       "/usb_cam/image_raw"]
+                                       # "/camera/image_raw"]
 
                 topics_without_cameras = ["wrench", "joint_states",
                                           "experiment_steps",
@@ -1346,11 +1435,12 @@ def real_picks(gripper=RoboticGripper()):
 
                 command, rosbag_process = start_rosbag(filename, topics_with_cameras)
                 print("\n... Start recording Rosbag")
-                time.sleep(0.2)
+                time.sleep(1)
 
                 # --- Go to the desired pose
                 # TODO align gripper with apple vector pose
                 # TODO approach to a distance of 80mm from center
+                gripper.go_close_to_apple()
 
                 # --- Adopt desired yaw
                 gripper.apply_offset(0, 0, 0, yaw)
@@ -1394,9 +1484,6 @@ def real_picks(gripper=RoboticGripper()):
                 # Save metadata in yaml file
                 gripper.save_metadata(filename)
                 print("\n... Saving metadata in *yaml file")
-
-
-
 
 
 
