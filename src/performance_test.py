@@ -1336,7 +1336,7 @@ def real_picks(gripper=RoboticGripper()):
     #       b) Define the plane wich Define the orientation
 
     # --- Load list of apples' coordinates
-    with open("../data/20230920 apples_coords.csv", "r") as f:
+    with open("../data/20230922 apples_coords.csv", "r") as f:
         apples_coords = list(csv.reader(f, delimiter=","))
     apples_coords.pop(0)    # Remove header
 
@@ -1440,7 +1440,7 @@ def real_picks(gripper=RoboticGripper()):
                 # --- Go to the desired pose
                 # TODO align gripper with apple vector pose
                 # TODO approach to a distance of 80mm from center
-                gripper.go_close_to_apple()
+                # gripper.go_close_to_apple()
 
                 # --- Adopt desired yaw
                 gripper.apply_offset(0, 0, 0, yaw)
@@ -1488,6 +1488,6 @@ def real_picks(gripper=RoboticGripper()):
 
 
 if __name__ == '__main__':
-    # main()
+    main()
     # scan_apples()
-    real_picks()
+    # real_picks()
