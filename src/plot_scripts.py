@@ -6,9 +6,10 @@ import os
 import time
 from matplotlib import pyplot as plt
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+from matplotlib.gridspec import GridSpec
 
 
-def running_plot_and_video(location, filename, time_list, values_list, xlabel='Elapsed time [sec]', ylabel='Pressure [kPa]'):
+def running_plot_and_video(location, filename, experiment, xlabel='Elapsed time [sec]', ylabel='Pressure [kPa]'):
     """
     Plots a graph with a vertical line running while playing a video given images
     @param location: Folder
@@ -20,8 +21,15 @@ def running_plot_and_video(location, filename, time_list, values_list, xlabel='E
     Ref:https://stackoverflow.com/questions/61808191/is-there-an-easy-way-to-animate-a-scrolling-vertical-line-in-matplotlib
     """
 
+    time_list = experiment.pressure_sc1_elapsed_time
+    values_list = experiment.pressure_sc1_values
+    values_list_2 = experiment.pressure_sc2_values
+    values_list_3 = experiment.pressure_sc3_values
+
+    force_time_list = experiment.wrench_elapsed_time
+    net_force_values_list = experiment.wrench_sumforce_relative_values
     # Sort png files in a list
-    lst = os.listdir(location + filename + '/pngs')
+    lst = os.listdir(location + filename + '/pngs_fixed_cam')
     listop = []
     for i in lst:
         if i.endswith('.png'):
@@ -30,15 +38,29 @@ def running_plot_and_video(location, filename, time_list, values_list, xlabel='E
     listop.sort()
 
     fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(12, 4.8))
-    ax[0].plot(time_list, values_list, 'k-', linewidth=2)
+
+    # --- Pressure Plots
+    ax[0].plot(time_list, values_list, 'red', linewidth=2, label='cup A')
+    ax[0].plot(time_list, values_list_2, 'green', linewidth=2, label='cup B')
+    ax[0].plot(time_list, values_list_3, 'blue', linewidth=2, label='cup C')
     ax[0].set_xlim(0, max(time_list))
     ax[0].set_ylim(0, 120)
     ax[0].grid()
     ax[0].set_xlabel(xlabel)
     ax[0].set_ylabel(ylabel)
+    ax[0].legend()
+
+    # --- Force Plots
+    ax_1 = ax[0].twinx()
+    ax_1.plot(force_time_list, net_force_values_list, 'k-', linestyle='dashed', linewidth=2, label='net force')
+    ax_1.set_ylim(0, 10)
+    ax_1.set_ylabel("Force [N]")
+    ax_1.legend()
+
     plt.ion()
     plt.show()
-    plt.title(filename, loc='right')
+    # plt.title(filename, loc='right')
+
 
     # Remove details from ax[1] because we are displaying only the image
     ax[1].xaxis.set_visible(False)
@@ -54,7 +76,7 @@ def running_plot_and_video(location, filename, time_list, values_list, xlabel='E
         line = ax[0].axvline(x=x, color='red', linestyle='dotted', linewidth=2)
 
         # Picture from the rosbag file
-        img = plt.imread(location + filename + '/pngs/' + str(i) + '.png', 0)
+        img = plt.imread(location + filename + '/pngs_fixed_cam/' + str(i) + '.png', 0)
         im = OffsetImage(img, zoom=0.55)
         ab = AnnotationBbox(im, (0, 0), xycoords='axes fraction', box_alignment=(0, 0))
         ax[1].add_artist(ab)
