@@ -300,7 +300,7 @@ def bag_to_video(input_dir, bag_file, cam_topic):
 
         if out is None:
             fps = bag.get_type_and_topic_info()[1][cam_topic][3]
-
+            print("\nFrames per second: ", fps)
             out = cv2.VideoWriter(output_dir + only_filename + '.avi', cv2.VideoWriter_fourcc(*'MP4V'), fps, (w, h))
         out.write(img)
 
@@ -327,9 +327,15 @@ def datetime_simplified():
 
 def main():
 
-    # --- Tutorial to use bag_to_video ----
-    # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/HIGH STIFFNESS/4th run - HIGH STIFFNESS - LOW FORCE/"
-    folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"
+    #################### Small tutorial to use 'bag_to_video' #################
+
+    # --- Step 1: Provide file ---
+
+    # --- Lab's Laptop - Hard Drive A ---
+    folder = '/home/alejo/gripper_ws/src/suction-gripper/data/'
+    # --- Lab's Laptop - Hard Drive B ---
+    # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"
+    # --- Lab's Laptop - Hard Drive C ---
     folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'
 
     # subfolder = "LOW_STIFFNESS/"
@@ -337,8 +343,17 @@ def main():
     # subfolder = "HIGH_STIFFNESS/"
     subfolder = ''
 
-    file = '2023096_realapple3_attempt1.bag'
+    # file = '2023096_realapple9_attempt3.bag'
+    # file = '20230920_realapple2_orientation_0_yaw_0.bag'
+    # file = '20230922_realapple2_attempt_2_orientation_0_yaw_0.bag'
 
+    # --- files used for ICRA24 media ---
+    file = '20230731_proxy_sample_6_yaw_45_rep_0_stiff_low_force_low.bag'
+    file = '20230922_realapple3_attempt_1_orientation_0_yaw_0.bag'
+
+    file = '20230922_realapple2_attempt_1_orientation_0_yaw_0.bag'
+
+    # --- Step 2: You may save the png files as well ---
     topic = "/camera/image_raw"
     bag_to_pngs(folder + subfolder, file, topic,'/pngs_inhand_cam')
 
@@ -346,11 +361,9 @@ def main():
     bag_to_pngs(folder + subfolder, file, topic, '/pngs_fixed_cam')
 
     # bag_to_csvs(folder + file)
-    bag_to_video(folder, file, topic)
-
+    bag_to_video(folder + subfolder, file, topic)
     # -------------------------------------
 
-    # --- Tutorial to use bag_to_csvs -----
 
 
 if __name__ == '__main__':
