@@ -580,7 +580,7 @@ class Experiment:
 
         # -------- Wrench Features ------------
         # filter wrench signals
-        self.filter_wrench(40)
+        self.filter_wrench(30)
         self.get_relative_values()
 
         # Normal and Tangential Forces
@@ -940,9 +940,9 @@ class Experiment:
         @return:
         """
 
-        FONTSIZE = 18   # Use 24 for papers
-        TICKSIZE = 18
-        FIGURESIZE = (10, 4)
+        FONTSIZE = 30   # Use 24 for papers
+        TICKSIZE = 30
+        FIGURESIZE = (8, 6)
         lines = itertools.cycle(('dotted', 'dashed', 'dashdot'))
         colors = itertools.cycle(('orange', 'blue', 'green'))
         # text_locations = itertools.cycle((0, 6, 12, 0, 6, 12))
@@ -951,7 +951,7 @@ class Experiment:
         # pressure_time = self.pressure_elapsed_time
         # pressure_values = self.pressure_values
 
-        # ------- Zoom In the a-xis if needed -------
+        # --- Zoom In the a-xis if needed ---
         threshold = 0
         suctionCup1_times = []
         suctionCup2_times = []
@@ -959,6 +959,7 @@ class Experiment:
         suctionCup1_values = []
         suctionCup2_values = []
         suctionCup3_values = []
+
 
         for i, j in zip(self.pressure_sc1_elapsed_time, self.pressure_sc1_values):
             if i > threshold:
@@ -980,14 +981,15 @@ class Experiment:
         event_x = self.event_elapsed_time
         event_y = self.event_values
 
-        # --- Condition the Event's labels a bit for the paper paper purposes
-        picking_time = 10.597
+        # --- Condition the Event's labels a bit for the paper purposes
+        # picking_time = 10.597
+        picking_time = 22.9
         cnt = 0
         flag = 0
         for i, j in zip(event_x, event_y):
-            if j == 'Labeling cups':       # Replace this label in the paper
+            if j == 'Labeling cups':                # Renames label
                 event_y[cnt] = 'Cup engagement'
-            if j == 'Labeling apple pick':
+            if j == 'Labeling apple pick' or j == 'Vacuum On':          # Deletes label
                 event_x.pop(cnt)
                 event_y.pop(cnt)
             if (i > picking_time) and (flag == 0):
@@ -1044,30 +1046,30 @@ class Experiment:
 
             # Plot pressure signals
             for pressure_time, pressure_value, pressure_label in zip(pressure_times, pressure_values, pressure_labels):
-                plt.plot(pressure_time, pressure_value, linewidth=2, label=pressure_label, linestyle=next(lines), color=next(colors))
+                plt.plot(pressure_time, pressure_value, linewidth=4, label=pressure_label, linestyle=next(lines), color=next(colors))
                 cnt += 1
 
             # Plot experiment events for reference
             for event, label in zip(event_x, event_y):
-                plt.axvline(x=event, color='black', linestyle='dotted', linewidth=2.0)
-                plt.text(event, 10, label, rotation=40, color='black', fontsize=TICKSIZE)
+                plt.axvline(x=event, color='black', linestyle='dotted', linewidth=1.5)
+                plt.text(event, 5, label.lower(), rotation=45, color='black', fontsize=TICKSIZE)
 
             plt.xlabel("Elapsed Time [sec]", fontsize=FONTSIZE)
             plt.ylabel("Pressure [kPa]", fontsize=FONTSIZE)
             plt.ylim([0, 110])
-            plt.xlim([0, 100])
+            # plt.xlim([0, 25])
             plt.yticks(fontsize=TICKSIZE)
             plt.xticks(fontsize=TICKSIZE)
             plt.grid()
             plt.legend(fontsize=FONTSIZE)
-            plt.tight_layout()
+            # plt.tight_layout()
 
     def plot_only_total_force(self):
         """Plots only force readings (forces and moments)"""
 
-        FONTSIZE = 18  # Use 24 for papers
-        TICKSIZE = 18
-        FIGURESIZE = (10, 4)
+        FONTSIZE = 30           # Use 24 for papers
+        TICKSIZE = 30
+        FIGURESIZE = (8, 6)
 
         plt.figure(figsize=FIGURESIZE)
 
@@ -1088,17 +1090,18 @@ class Experiment:
         event_x = self.event_elapsed_time
         event_y = self.event_values
 
-        # --- Condition the Event's labels a bit for the paper paper purposes
-        picking_time = 10.597
+        # --- Condition the Event's labels a bit for the paper purposes
+        # picking_time = 10.597
+        picking_time = 22.9
         cnt = 0
         flag = 0
         for i, j in zip(event_x, event_y):
-            if j == 'Labeling cups':  # Replace this label in the paper
+            if j == 'Labeling cups':                # Renames label for ICRA'24 paper
                 event_y[cnt] = 'Cup engagement'
-            if j == 'Labeling apple pick':
+            if j == 'Labeling apple pick' or j =='Vacuum On':          # Delete this label
                 event_x.pop(cnt)
                 event_y.pop(cnt)
-            if (i > picking_time) and (flag == 0):
+            if (i > picking_time) and (flag == 0):  # Adds label for ICRA'24 paper
                 event_y.insert(cnt, 'Apple Picked')
                 event_x.insert(cnt, picking_time)
                 flag = 1
@@ -1108,16 +1111,16 @@ class Experiment:
         max_sumforce_time = self.max_detach_sumforce_time
 
         plt.plot(force_time, sumforce_values, linewidth=2, color='red')
-        plt.annotate('Max Force: ' + str(round(max_sumforce_val, 3)), xy=(max_sumforce_time, max_sumforce_val),
-                            xycoords='data', xytext=(max_sumforce_time + 0, max_sumforce_val + 1.7),
+        plt.annotate('Max Force: ' + str(round(max_sumforce_val, 1)), xy=(max_sumforce_time, max_sumforce_val),
+                            xycoords='data', xytext=(max_sumforce_time + 0, max_sumforce_val + 2.2),
                             va='top', ha='right', arrowprops=dict(facecolor='orange', shrink=0), fontsize=FONTSIZE)
 
         for event, label in zip(event_x, event_y):
             plt.axvline(x=event, color='black', linestyle='dotted', linewidth=1.5)
-            plt.text(event, 2.5, label, rotation=40, color='black', fontsize=FONTSIZE)
+            plt.text(event, 0.5, label.lower(), rotation=45, color='black', fontsize=FONTSIZE)
             plt.xlabel("Elapsed Time [sec]", fontsize=FONTSIZE)
             plt.ylabel("Force [N]", fontsize=FONTSIZE)
-            plt.ylim([0, 10])
+            plt.ylim([0, 11])
 
         # --- Add error in the title if there was any ---
         try:
@@ -1139,8 +1142,8 @@ class Experiment:
         plt.yticks(size=TICKSIZE)
         # plt.title(self.filename + "\n" + error_type, fontsize=8)
         # plt.suptitle(title_text)
-        plt.xlim([0, 100])
-        plt.tight_layout()
+        # plt.xlim([0, 100])
+        # plt.tight_layout()
 
     def plot_only_pressure_animated(self, location, filename):
         """Plots wrench (forces and moments) and pressure readings
@@ -1634,7 +1637,15 @@ def simple_suction_experiment():
 def plot_and_video():
     """Method to run a vertical line on a plot and a video"""
 
-    # --- Give File
+    # --- Provide File ---
+
+    # --- Default Hard Drive ---
+    # folder = '/home/alejo/gripper_ws/src/suction-gripper/data/'
+    # --- Hard Drive B ---
+    folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"
+    # --- Hard Drive C ---
+    folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'
+
     location = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/DATASET5/'
     filename = 'horizontal_#7_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_26.46_pitch_45.0_rep_1'
     # Sample with 0deg tilt and 0 mm offset:
@@ -1648,40 +1659,54 @@ def plot_and_video():
     # Sample with 45deg tilt and 26.5mm offsrt
     # filename = 'horizontal_#7_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_26.46_pitch_45.0_rep_1'
 
+    # --- ICRA24 accompanying video
+    # subfolder = "LOW_STIFFNESS/"
+    subfolder = ''
+    location = folder + subfolder
+    filename = '20230731_proxy_sample_6_yaw_45_rep_0_stiff_low_force_low'
+    filename = '20230922_realapple3_attempt_1_orientation_0_yaw_0'
 
-    # --- Open Bag file
-    # bag_to_csvs(location + filename + ".bag")
+    filename = '20230922_realapple1_attempt_1_orientation_0_yaw_0'
+    filename = '20230922_realapple2_attempt_1_orientation_0_yaw_0'
 
-    # --- Read Metadata from json file
-    metadata = read_json(location + filename + ".json")
+    # --- 3. Create Experiment Object
+    experiment = Experiment()
 
-    # --- Read Values from 'csv' files
-    experiment = read_csvs(metadata, location + filename)
-    experiment.filename = filename
+    # --- 4. Assign json dictionary as property of the experiment
+    json_file = open(location + filename + '.json')
+    json_data = json.load(json_file)
+    experiment.metadata = json_data
+    print(experiment.metadata['general'])
 
-    # --- Get some features
-    experiment.elapsed_times()
-    experiment.get_atmospheric_pressure()
-    experiment.get_steady_vacuum('Steady', "Vacuum Off")
+    # --- 4. Read values from 'csv'
+    read_csvs(experiment, location + filename)
+
+    # --- 5. Get different features for the experiment
+    experiment.get_features()
 
     # 6. Plot each experiment if needed
-    running_plot_and_video(location, filename, experiment.pressure_elapsed_time, experiment.pressure_values)
+    running_plot_and_video(location, filename, experiment)
     plt.show()
 
 
 def proxy_experiments():
 
     # --- 1. Find file
-    # location = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/SUCTION_GRIPPER/MEDIUM_STIFFNESS/'
-    # location = '/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/'
-    location = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'
 
-    # folder = 'MEDIUM_STIFFNESS/'
-    # folder = 'HIGH_STIFFNESS/'
-    # folder = 'LOW_STIFFNESS/'
-    folder = ''
+    # --- Default Hard Drive ---
+    # folder = '/home/alejo/gripper_ws/src/suction-gripper/data/'
+    # --- Hard Drive B ---
+    # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"
+    # --- Hard Drive C ---
+    folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'
 
-    location = location + folder
+
+    # subfolder = 'MEDIUM_STIFFNESS/'
+    # subfolder = 'HIGH_STIFFNESS/'
+    # subfolder = 'LOW_STIFFNESS/'
+    subfolder = ''
+
+    location = folder + subfolder
 
     # file = '2023083_proxy_sample_6_yaw_45_rep_0_stiff_medium_force_low'
     # file ='2023083_proxy_sample_0_yaw_-15_rep_1_stiff_medium_force_medium'
@@ -1691,10 +1716,21 @@ def proxy_experiments():
     # --- ICRA24 paper plots
     # file = '2023083_proxy_sample_5_yaw_45_rep_1_stiff_high_force_low'
     # file = '2023096_realapple5_attempt3'
+    # file = '2023096_realapple6_attempt5' # nice plots
 
-    file = '2023096_realapple6_attempt4'
-
+    # file = '2023096_realapple3_attempt1'
     # file = '2023083_proxy_sample_0_yaw_45_rep_1_stiff_low_force_low'
+
+    # file = '20230922_realapple3_attempt_1_orientation_0_yaw_0'
+
+    # file = '20230920_sim_sample_0_yaw_-15_offset_0.005_rep_0_stiff_low_force_low'
+
+    # --- ICRA24 accompanying vidoe
+    file = '20230731_proxy_sample_6_yaw_45_rep_0_stiff_low_force_low'
+    file = '20230922_realapple3_attempt_1_orientation_0_yaw_0'
+
+    file = '20230922_realapple2_attempt_1_orientation_0_yaw_0'
+
 
     # --- 2. Turn bag into csvs if needed
     if os.path.isdir(location + file):
@@ -1729,15 +1765,17 @@ def main():
         
     # TODO Interpret moments (lever = height of the rig)
 
-    # --- Uncomment the desired experiment
+    # --- Simply choose the desired experiment by un-commenting it ---
     # circle_plots(1,1,1)
     # noise_experiments('horizontal')
     # noise_experiments('vertical')
-    radius = 85 / 2000  # in meters! swith between 75mm and 85mm
+    radius = 85 / 2000  # in meters! switch between 75mm and 85mm
     variable = 'pressure'  # switch between force, pressure and zforce
     # noise_experiments_pitch(exp_type='horizontal', radius=radius, variable=variable)
     # simple_suction_experiment()
     proxy_experiments()
+
+    # --- Build video from pngs and a plot beside of it with a vertical line running ---
     # plot_and_video()
 
 
