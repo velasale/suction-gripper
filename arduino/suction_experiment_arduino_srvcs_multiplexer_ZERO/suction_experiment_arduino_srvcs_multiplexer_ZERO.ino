@@ -32,7 +32,7 @@ const bool  USE_ROSSERIAL = true;
 //You don't *need* a reset and EOC pin for most usees, so we set to -1 and don't connect
 #define RESET_PIN -1
 #define EOC_PIN   -1
-#define VALVE 13
+#define VALVE 7
 Adafruit_MPRLS mpr = Adafruit_MPRLS(RESET_PIN, EOC_PIN);
 Adafruit_VL53L0X lox = Adafruit_VL53L0X();
 
