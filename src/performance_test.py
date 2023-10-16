@@ -1488,6 +1488,6 @@ def real_picks(gripper=RoboticGripper()):
 
 
 if __name__ == '__main__':
-    main()
-    # scan_apples()
+    # main()
+    scan_apples()
     # real_picks()

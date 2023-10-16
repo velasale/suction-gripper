@@ -6,30 +6,30 @@
   <!-- Real Robot and Rviz-->
   <group if="$(eval arg('with_robot') == 'yes')">
 
-       <!--    Step 1: Launch robot -->
-      <include file="$(find ur_robot_driver)/launch/ur5e_bringup.launch">
-        <arg name="robot_ip" value="169.254.177.232" doc="Joe's ur5e IP: 169.254.174.50  Cindy's ur5e IP: 169.254.177.232."/>
-        <arg name="kinematics_config" value="$(find suction-gripper)/calibration/cindys_ur5e_calibration.yaml"/>
-        <arg name="robot_description_file" value="$(find suction-gripper)/launch/load_ur5e.launch" />
-      </include>
+    <!--        Step 1: Launch robot -->
+<!--       <include file="$(find ur_robot_driver)/launch/ur5e_bringup.launch"> -->
+<!--         <arg name="robot_ip" value="169.254.177.232" doc="Joe's ur5e IP: 169.254.174.50  Cindy's ur5e IP: 169.254.177.232."/> -->
+<!--         <arg name="kinematics_config" value="$(find suction-gripper)/calibration/cindys_ur5e_calibration.yaml"/> -->
+<!--         <arg name="robot_description_file" value="$(find suction-gripper)/launch/load_ur5e.launch" /> -->
+<!--       </include> -->
     
 
       <!--      Step 2: Launch lab setup with moveIt -->
       <!-- Remember that line 27 of pickApp_real.launch is commented, to avoid the node issue-->
-      <include file="$(find suction-gripper)/launch/pickApp.launch">
-        <arg name="with_robot" value="$(arg with_robot)"/>
-        <arg name="use_gui" value="false"/>
-        <arg name="fake_execution" value="false"/>
-      </include> 
+<!--       <include file="$(find suction-gripper)/launch/pickApp.launch"> -->
+<!--         <arg name="with_robot" value="$(arg with_robot)"/> -->
+<!--         <arg name="use_gui" value="false"/> -->
+<!--         <arg name="fake_execution" value="false"/> -->
+<!--       </include> -->
   
 
       <!-- Step 3:Launch Camera -->
 
           <!-- In-Hand Camera -->
-          <include file="$(find video_stream_opencv)/launch/camera.launch">
-            <arg name="video_stream_provider" value="/dev/video0"/>
-            <arg name="visualize" value="true" />
-          </include>
+<!--           <include file="$(find video_stream_opencv)/launch/camera.launch"> -->
+<!--             <arg name="video_stream_provider" value="/dev/video0"/> -->
+<!--             <arg name="visualize" value="true" /> -->
+<!--           </include> -->
 
           <!-- Fixed USB Camera -->
           <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="screen" >
@@ -52,10 +52,10 @@
           </node>
 
 
-      <!--       Step 4: Launch ROS Serial -->
+      <!-- Step 4: Launch ROS Serial -->
       <node pkg="rosserial_python" type="serial_node.py" name="rosserial" output="screen">
         <param name="port" value="/dev/ttyACM0" />
-        <!-- <param name="baud" value="250000" doc="baudrate for Arduino Zero"/> -->
+        <param name="baud" value="250000" doc="baudrate for Arduino Zero"/>
         <param name="baud" value="57600" />
       </node>
 
