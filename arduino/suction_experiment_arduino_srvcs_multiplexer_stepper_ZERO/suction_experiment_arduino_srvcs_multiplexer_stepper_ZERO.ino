@@ -25,11 +25,16 @@
 
 
 /********   Stepper Motor Variables ********/
+const byte manualFW = 5;
+const byte manualRW = 4;
+
 const byte enablePinA = 8;
 const byte enablePinB = 13;
 
-const int stepsPerRevolution = 400;  // change this to fit the number of steps per revolution
-const int steps = 1300;              // for your motor
+const int stepsPerRevolution = 2000;  // change this to fit the number of steps per revolution
+const int steps = 1475;               // 1400 (70-80mm)    1475(80-90mm)
+const int stepSpeed = 20;
+const int distCalib = 100;             // Prototype (70-80mm): 85 - 25 = 60    Prototype (80-90mm): 80 - 25 = 55
 
 // initialize the stepper library on pins 8 through 11:
 Stepper myStepper(stepsPerRevolution, 9, 10, 11, 12);
@@ -138,8 +143,10 @@ void setup() {
     Serial.begin(57600);     // 57600, 76800, 115200    
   }
 
-  // set the speed at 60 rpm
-  myStepper.setSpeed(100);
+  // Initialize stepper motor parameters
+  pinMode(manualFW, INPUT);
+  pinMode(manualRW, INPUT);  
+  myStepper.setSpeed(stepSpeed);
   
   // Initialize VALVE pin as output
   delay(10);
@@ -233,9 +240,14 @@ void loop() {
       lox.rangingTest(&measure, false); // pass in 'true' to get debug data printout!
 
       if (measure.RangeStatus != 4) {  // phase failures have incorrect data
-        dist_msg.data = measure.RangeMilliMeter;        
+        dist_msg.data = measure.RangeMilliMeter - distCalib;    
+
+        if (dist_msg.data < 0) {
+          dist_msg.data = 0;
+        }
+            
       } else {
-        dist_msg.data = 1e4;
+        dist_msg.data = 1e5;
       }
 
       if (USE_ROSSERIAL){
@@ -246,9 +258,18 @@ void loop() {
         Serial.println("[Ch" + String(i) +"] " + "Period: " + String(millis() - currentMillis) + " ms, " + "Distance: " + String(dist_msg.data) + " mm");    
       }      
     }    
-    
-
   }
+
+//  /****  Manual Steps ****/
+//  while(digitalRead(manualFW) == LOW){
+//    myStepper.step(100);
+//    delay(500);    
+//  }
+//
+//  while(digitalRead(manualRW) == LOW){
+//    myStepper.step(-100);
+//    delay(500);    
+//  }
 
   
 
@@ -294,6 +315,13 @@ bool closeFingers() {
   digitalWrite(enablePinA, LOW);
   digitalWrite(enablePinB, LOW);  
   delay(1500);
+}
+
+
+bool manualForward() {
+  // step one step:
+  myStepper.step(1);
+  delay(500);
 }
 
 
