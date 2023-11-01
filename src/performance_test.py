@@ -329,12 +329,15 @@ class RoboticGripper():
         self.sample = 0
         self.repetition = 0
 
+
         # ---- Gripper Parameters
         # Source https://www.piab.com/inriverassociations/0206204/#specifications
         self.SUCTION_CUP_NAME = "F-BX20 Silicone"
         self.SUCTION_CUP_GIVE = 0.010
         self.SUCTION_CUP_RADIUS = 0.021 / 2
-        self.YAW_OFFSET = math.radians(15)      #In order for the x-axis to be aligned with suction cup B and C
+        self.YAW_OFFSET = math.radians(15)      # In order for the x-axis to be aligned with suction cup B and C
+        self.GRIPPER_TRACKS = "v8 70_80"
+        self.ACTUATION_MODE = "dual"
 
         # ---- Apple Proxy Parameters
         # Medium Force z = 1.05
@@ -759,6 +762,8 @@ class RoboticGripper():
                 "gripper's ideal orientation [quaternian]": str(self.gripper_pose.orientation),
                 "position noise command [m]": self.position_noise,
                 "orientation noise commmand ": self.orientation_noise,
+                "tracks being used": self.GRIPPER_TRACKS,
+                "actuation mode": self.ACTUATION_MODE,
             },
             "proxy": {
                 "branch stiffness": self.SPRING_STIFFNESS_LEVEL,
@@ -1210,24 +1215,37 @@ class RoboticGripper():
             pressure = int(input())
         self.pressure_at_valve = pressure
 
-        # --- Proxy parameters
-        print("d. Branch Stiffness level (low, medium, high):")
-        stiffness = ''
-        while (stiffness != 'low' and stiffness != 'medium' and stiffness != 'high'):
-            stiffness = input()
-        self.SPRING_STIFFNESS_LEVEL = stiffness
+        if self.TYPE == 'proxy':
+            # --- Proxy parameters
+            print("d. Branch Stiffness level (low, medium, high):")
+            stiffness = ''
+            while (stiffness != 'low' and stiffness != 'medium' and stiffness != 'high'):
+                stiffness = input()
+            self.SPRING_STIFFNESS_LEVEL = stiffness
 
-        print("e. Magnet force level (low, medium, high):")
-        magnet = ''
-        while (magnet != 'low' and magnet != 'medium' and magnet != 'high'):
-            magnet = input()
-        self.MAGNET_FORCE_LEVEL = magnet
+            print("e. Magnet force level (low, medium, high):")
+            magnet = ''
+            while (magnet != 'low' and magnet != 'medium' and magnet != 'high'):
+                magnet = input()
+            self.MAGNET_FORCE_LEVEL = magnet
 
         print("f. Apple Pick Pattern: (a) Retreat (b) Rotate and Retreat (c) Flex and Retreat:")
         pattern = ''
         while (pattern != 'a' and pattern != 'b' and pattern != 'c'):
             pattern = input()
         self.PICK_PATTERN = pattern
+
+        print("What gripper tracks are you using 'v8 70_80' or 'v8 80_90'?")
+        tracks = ''
+        while(tracks != 'v8 70_80' and tracks != 'v8 80_90'):
+            tracks = input()
+        self.GRIPPER_TRACKS = tracks
+
+        print("What actuation mode are you doing on these experiments ('dual, 'suction' or 'fingers')")
+        act_mode = ''
+        while(act_mode != 'dual' and act_mode != 'suction' and act_mode != 'fingers'):
+            act_mode = input()
+        self.ACTUATION_MODE = act_mode
 
     ####################### SCANNING FUNCTIONS ###################
 
@@ -1415,6 +1433,7 @@ def real_picks(gripper=RoboticGripper()):
 
                 name = datetime_simplified() + "_" + gripper.TYPE + \
                        str(label) + \
+                       "_mode_" + gripper.ACTUATION_MODE +\
                        "_attempt_" + str(attempt) + \
                        "_orientation_" + str(orientation) + \
                        "_yaw_" + str(gripper.yaw)
@@ -1425,13 +1444,15 @@ def real_picks(gripper=RoboticGripper()):
                                        "experiment_steps",
                                        "/gripper/distance",
                                        "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3",
-                                       "/usb_cam/image_raw"]
-                                       # "/camera/image_raw"]
+                                       "/usb_cam/image_raw",
+                                       "/camera/image_raw"]
 
                 topics_without_cameras = ["wrench", "joint_states",
                                           "experiment_steps",
                                           "/gripper/distance",
                                           "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3"]
+
+                topics_just_camera = ["/usb_cam/image_raw"]
 
                 command, rosbag_process = start_rosbag(filename, topics_with_cameras)
                 print("\n... Start recording Rosbag")
@@ -1443,38 +1464,56 @@ def real_picks(gripper=RoboticGripper()):
                 # gripper.go_close_to_apple()
 
                 # --- Adopt desired yaw
-                gripper.apply_offset(0, 0, 0, yaw)
+                # gripper.apply_offset(0, 0, 0, yaw)
 
                 # --- Open Valve
-                print("\n... Applying vacuum")
-                gripper.publish_event("Vacuum On")
-                service_call("openValve")
+                if gripper.ACTUATION_MODE != 'fingers':
+                    print("\n... Applying vacuum")
+                    gripper.publish_event("Vacuum On")
+                    service_call("openValve")
 
                 # --- Approach Apple
                 print("\n... Approaching apple")
                 gripper.publish_event("Approach")
-                move = gripper.move_normal(gripper.APPROACH, speed_factor=0.1, condition=True)
+                # move = gripper.move_normal(gripper.APPROACH, speed_factor=0.1, condition=True)
 
                 # --- Label cup engagement
-                print("\n... Label how did the suction cups engaged")
-                gripper.publish_event("Labeling cups")
-                gripper.label_cups()
+                if gripper.ACTUATION_MODE != 'fingers':
+                    print("\n... Label how did the suction cups engaged")
+                    gripper.publish_event("Labeling cups")
+                    gripper.label_cups()
+
+                # --- Close Fingers
+                if gripper.ACTUATION_MODE != 'suction':
+                    input('Hit Enter to close the fingers')
+                    gripper.publish_event("Closing fingers")
+                    service_call("closeFingers")
 
                 # --- Retrieve
+                time.sleep(0.05)
+                input('Hit Enter to start picking the apple')
                 print("\n... Picking Apple")
                 gripper.publish_event("Retrieve")
-                move = gripper.move_normal(gripper.RETRIEVE, speed_factor=0.1)
+                # move = gripper.move_normal(gripper.RETRIEVE, speed_factor=0.1)
 
                 # --- Label Result
                 print("\n... Label the pick result")
                 gripper.publish_event("Labeling apple pick")
                 gripper.label_pick()
 
+                # --- Open Fingers
+                if gripper.ACTUATION_MODE != 'suction':
+                    input('Hit Enter to open the fingers')
+                    gripper.publish_event("Opening fingers")
+                    service_call("openFingers")
+                    time.sleep(0.05)
+
                 # --- Close Valve
-                print("\n... Stop vacuum")
-                gripper.publish_event("Vacuum Off")
-                service_call("closeValve")
-                time.sleep(0.05)
+                if gripper.ACTUATION_MODE != 'fingers':
+                    print("\n... Stop vacuum")
+                    gripper.publish_event("Vacuum Off")
+                    service_call("closeValve")
+                    time.sleep(0.05)
 
                 # --- Stop recording Rosbag file
                 stop_rosbag(command, rosbag_process)
@@ -1488,6 +1527,8 @@ def real_picks(gripper=RoboticGripper()):
 
 
 if __name__ == '__main__':
-    # main()
-    scan_apples()
+    main()
+    # scan_apples()
+
     # real_picks()
+    # just record camera
