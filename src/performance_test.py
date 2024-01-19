@@ -109,7 +109,7 @@ def main():
     # suction_gripper.scan_apple_and_stem()
 
     # --- Step 4: Check that the vacuum circuit is free of holes
-    suction_gripper.suction_cup_test()
+    # suction_gripper.suction_cup_test()
 
     # --- Step 5: Start the desired experiment
     if suction_gripper.TYPE == "proxy":
@@ -381,6 +381,7 @@ class RoboticGripper():
         self.z_coord = []
         self.pose_starts = []
         self.APPROACH = 2 * self.SUCTION_CUP_GIVE + (self.sphere_diam - self.APPLE_DIAMETER) / 2  # Distance to approach normal
+        # self.APPROACH = 25
         # self.RETRIEVE = -100 / 1000
         self.RETRIEVE = -130 / 1000
 
@@ -912,9 +913,9 @@ class RoboticGripper():
         print("\n **** Testing Vacuum Levels ****")
 
         # --- Start Rosbag
-        location = os.path.dirname(os.getcwd())
-        foldername = "/data/"
-        name = "vacuum_test_" + "stiffness_" + self.SPRING_STIFFNESS_LEVEL + "_force_" + self.MAGNET_FORCE_LEVEL
+        location = "/media/alejo/Elements"
+        foldername = "/Prosser_Data/"
+        name = "vacuum_test_"
         filename = location + foldername + name
         topics = ["experiment_steps",
                   "/gripper/pressure/sc1",
@@ -1354,7 +1355,7 @@ def real_picks(gripper=RoboticGripper()):
     #       b) Define the plane wich Define the orientation
 
     # --- Load list of apples' coordinates
-    with open("../data/20230922 apples_coords.csv", "r") as f:
+    with open("../data/20231101_2nd_apples_coords.csv", "r") as f:
         apples_coords = list(csv.reader(f, delimiter=","))
     apples_coords.pop(0)    # Remove header
 
@@ -1428,8 +1429,9 @@ def real_picks(gripper=RoboticGripper()):
                 gripper.yaw = yaw
 
                 # --- Start Recording bagfile
-                location = os.path.dirname(os.getcwd())
-                folder = "/data/"
+                location = '/media/alejo/Elements'
+                # location = os.path.dirname(os.getcwd())
+                folder = "/Prosser_Data/"
 
                 name = datetime_simplified() + "_" + gripper.TYPE + \
                        str(label) + \
@@ -1475,7 +1477,7 @@ def real_picks(gripper=RoboticGripper()):
                 # --- Approach Apple
                 print("\n... Approaching apple")
                 gripper.publish_event("Approach")
-                # move = gripper.move_normal(gripper.APPROACH, speed_factor=0.1, condition=True)
+                move = gripper.move_normal(gripper.APPROACH, speed_factor=0.1, condition=True)
 
                 # --- Label cup engagement
                 if gripper.ACTUATION_MODE != 'fingers':
@@ -1489,12 +1491,12 @@ def real_picks(gripper=RoboticGripper()):
                     gripper.publish_event("Closing fingers")
                     service_call("closeFingers")
 
-                # --- Retrieve
+                # # --- Retrieve
                 time.sleep(0.05)
                 input('Hit Enter to start picking the apple')
                 print("\n... Picking Apple")
                 gripper.publish_event("Retrieve")
-                # move = gripper.move_normal(gripper.RETRIEVE, speed_factor=0.1)
+                move = gripper.move_normal(gripper.RETRIEVE, speed_factor=0.1)
 
                 # --- Label Result
                 print("\n... Label the pick result")
