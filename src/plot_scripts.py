@@ -60,7 +60,7 @@ def running_plot_and_video(location, filename, experiment, xlabel='Elapsed time 
     # --- Force Plots
     ax_1 = ax[0].twinx()       # same plot, sharing the x axis, but different y-axis
     ax_1.plot(force_time_list, net_force_values_list, 'k-', linestyle='dashed', linewidth=2, label='net force')
-    ax_1.set_ylim(0, 15)
+    ax_1.set_ylim(0, 25)
     ax_1.set_ylabel("Force [N]")
     ax_1.legend()
 
@@ -110,6 +110,7 @@ def running_plot_and_video(location, filename, experiment, xlabel='Elapsed time 
     for i in listop:
         img = cv2.imread(temporal_dir + '/' + str(i) + '.png', cv2.IMREAD_ANYCOLOR)
         h, w, _ = img.shape
+        fps = 9.93
 
         if out is None:
             out = cv2.VideoWriter(temporal_dir + 'party.avi', cv2.VideoWriter_fourcc(*'MP4V'), 10, (w, h))

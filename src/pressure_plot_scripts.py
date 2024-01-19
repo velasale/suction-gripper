@@ -150,12 +150,17 @@ def read_csvs(experiment, folder):
 
             if file == "oint_states.csv":
                 experiment.joint_time_stamp = data_list.iloc[:, 0].tolist()
+                experiment.j0_shoulder_pan_values = data_list.iloc[:, 8].tolist()
+                experiment.j1_shoulder_lift_values = data_list.iloc[:, 7].tolist()
+                experiment.j2_elbow_values = data_list.iloc[:, 6].tolist()
+                experiment.j3_wrist1_values = data_list.iloc[:, 9].tolist()
+                experiment.j4_wrist2_values = data_list.iloc[:, 10].tolist()
+                experiment.j5_wrist3_values = data_list.iloc[:, 11].tolist()
+
 
             if file == "gripper-distance.csv":
                 experiment.tof_time_stamp = data_list.iloc[:, 0].tolist()
                 experiment.tof_values = data_list.iloc[:, 1].tolist()
-
-
 
     return experiment
 
@@ -351,7 +356,7 @@ def circle_plots(x_noises, z_noises, radius, x_forces, z_forces, pressure):
 
 #todo: create class Experiment and then Class Apple_Pick_Experiment
 class Experiment:
-    """Class to define experiments as objects. Each experiment has properties from its json file.
+    """Class to define an Experiment as an Object. Each experiment has properties from its json file.
     """
     def __init__(self, id=0,
                  exp_type="vertical",
@@ -466,7 +471,7 @@ class Experiment:
 
     # --- Functions and methods to use in different experiments ---
     def initial_stamp(self):
-        """ Takes the initial stamp from all the topics. This is useful to subtract from all Time stamps and get a readable time"""
+        """ Takes the initial stamp from all the topics. This is useful to subtract it from all Time stamps and get a readable time"""
         try:
             # self.first_time_stamp = min(min(self.pressure_time_stamp), min(self.wrench_time_stamp),
             #                             min(self.event_time_stamp))
@@ -484,24 +489,27 @@ class Experiment:
             self.first_time_stamp = 0
 
     def elapsed_times(self):
-        """Subtracts the initial stamp from all the topics' time-stamps to improve readability"""
+        """Subtracts the initial stamp from all topics' time-stamps to improve readability"""
 
         # First Obtain the initial time stamp of the experiment as a reference to the rest
         self.initial_stamp()
+
 
         self.pressure_elapsed_time = [None] * len(self.pressure_time_stamp)
         for i in range(len(self.pressure_time_stamp)):
             self.pressure_elapsed_time[i] = self.pressure_time_stamp[i] - self.first_time_stamp
 
+        # Wrench topic
         self.wrench_elapsed_time = [None] * len(self.wrench_time_stamp)
         for i in range(len(self.wrench_time_stamp)):
             self.wrench_elapsed_time[i] = self.wrench_time_stamp[i] - self.first_time_stamp
 
+        # Events topic
         self.event_elapsed_time = [None] * len(self.event_time_stamp)
         for i in range(len(self.event_time_stamp)):
             self.event_elapsed_time[i] = self.event_time_stamp[i] - self.first_time_stamp
 
-        # Values for the three suction cups
+        # Pressure Sensors topics
         self.pressure_sc1_elapsed_time = [None] * len(self.pressure_sc1_time_stamp)
         for i in range(len(self.pressure_sc1_time_stamp)):
             self.pressure_sc1_elapsed_time[i] = self.pressure_sc1_time_stamp[i] - self.first_time_stamp
@@ -513,6 +521,8 @@ class Experiment:
         self.pressure_sc3_elapsed_time = [None] * len(self.pressure_sc3_time_stamp)
         for i in range(len(self.pressure_sc3_time_stamp)):
             self.pressure_sc3_elapsed_time[i] = self.pressure_sc3_time_stamp[i] - self.first_time_stamp
+
+
 
         self.tof_elapsed_time = [None] * len(self.tof_time_stamp)
         for i in range(len(self.tof_time_stamp)):
@@ -1669,6 +1679,10 @@ def plot_and_video():
     filename = '20230922_realapple1_attempt_1_orientation_0_yaw_0'
     filename = '20230922_realapple2_attempt_1_orientation_0_yaw_0'
 
+    # --- Prosser2
+    location = '/media/alejo/Elements/Prosser_Data/Dataset - apple picks/'
+    filename = '2023111_realapple24_mode_dual_attempt_1_orientation_0_yaw_0'
+
     # --- 3. Create Experiment Object
     experiment = Experiment()
 
@@ -1761,6 +1775,57 @@ def proxy_experiments():
     plt.show()
 
 
+def real_experiments():
+
+    # STEP 1: Find file
+    # --- Default Hard Drive ---
+    # folder = '/home/alejo/gripper_ws/src/suction-gripper/data/'
+    # --- Hard Drive B ---
+    # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"
+    # --- Hard Drive C ---
+    # folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'
+    # --- External Drive ---
+    folder = '/media/alejo/Elements/Prosser_Data/'
+    subfolder = 'Dataset - apple picks/'
+
+    location = folder + subfolder
+
+    # --- ICRA24 accompanying vidoe
+    # file = '20230731_proxy_sample_6_yaw_45_rep_0_stiff_low_force_low'
+    # file = '20230922_realapple3_attempt_1_orientation_0_yaw_0'
+    # file = '20230922_realapple2_attempt_1_orientation_0_yaw_0'
+
+    file = '2023111_realapple1_mode_dual_attempt_1_orientation_0_yaw_0'
+
+    # STEP 2: Turn bag into csvs if needed
+    if os.path.isdir(location + file):
+        # print("csvs already created")
+        pass
+    else:
+        bag_to_csvs(location + file + ".bag")
+
+    # STEP 3: Create Experiment Object
+    experiment = Experiment()
+
+    # STEP 4: Assign json dictionary as property of the experiment
+    json_file = open(location + file + '.json')
+    json_data = json.load(json_file)
+    experiment.metadata = json_data
+    print('metadata: ', experiment.metadata['general'], '\n')
+
+    # STEP 5: Read values from 'csv'
+    read_csvs(experiment, location + file)
+
+    # STEP 6: Get different features for the experiment
+    experiment.get_features()
+
+    # STEP 7: Plots
+    experiment.plot_only_pressure()
+    experiment.plot_only_total_force()
+    plt.show()
+
+
+
 def main():
         
     # TODO Interpret moments (lever = height of the rig)
@@ -1773,7 +1838,8 @@ def main():
     variable = 'pressure'  # switch between force, pressure and zforce
     # noise_experiments_pitch(exp_type='horizontal', radius=radius, variable=variable)
     # simple_suction_experiment()
-    proxy_experiments()
+    # proxy_experiments()
+    real_experiments()
 
     # --- Build video from pngs and a plot beside of it with a vertical line running ---
     # plot_and_video()
