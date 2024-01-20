@@ -1815,6 +1815,7 @@ def real_experiments():
 
     # STEP 5: Read values from 'csv'
     read_csvs(experiment, location + file)
+    print(experiment.j0_shoulder_pan_values)
 
     # STEP 6: Get different features for the experiment
     experiment.get_features()
