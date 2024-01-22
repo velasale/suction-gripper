@@ -17,6 +17,7 @@ import itertools
 import bagpy
 from matplotlib import pyplot as plt
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+from mpl_toolkits.mplot3d import Axes3D
 import pandas as pd
 from bagpy import bagreader
 import numpy as np
@@ -28,6 +29,57 @@ import pyautogui
 ######## Self developed imports ########
 from ros_scripts import *
 from plot_scripts import *
+
+
+def DH_T(i, thetas, alphas, a_links, d_offsets):
+    """
+    Forward Kinematics Denavit Hartenberg transformations
+    @param i: joint
+    @param thetas:
+    @param alphas:
+    @param a_links:
+    @param d_offsets:
+    @return:
+    """
+
+    cos_t = math.cos(thetas[i])
+    sin_t = math.sin(thetas[i])
+    cos_a = math.cos(alphas[i])
+    sin_a = math.sin(alphas[i])
+    a = a_links[i]
+    d = d_offsets[i]
+
+    # DH Homogeneous Transformation Matrix
+    T = np.array([[cos_t, -sin_t*cos_a, sin_t*sin_a, a*cos_t],
+                  [sin_t, cos_t*cos_a, - cos_t*sin_a, a*sin_t],
+                  [0, sin_a, cos_a, d],
+                  [0, 0, 0, 1]])
+
+    return T
+
+def ur5e_fk_dh(joint_angles):
+    """ Forward kinematics with the Denavit-Hartemberg approach"""
+    # Source: https://www.universal-robots.com/articles/ur/application-installation/dh-parameters-for-calculations-of-kinematics-and-dynamics/
+
+    # STEP1: UR5e DH parameters
+    # Note: Parameters can also be found in 'default_kinematics.yaml'
+    # -- Link twists [rad] --
+    alphas = np.array([math.pi/2, 0, 0, math.pi/2, -math.pi/2, 0])
+    # -- Link lengths [m] --
+    a_links = np.array([0, -0.425, -0.3922, 0, 0, 0])
+    # -- Link offsets [m] --
+    d_offsets = np.array([0.1625, 0, 0, 0.1333, 0.0997, 0.0996])
+
+    # STEP2: Obtain all the transformation matrices
+    T = np.identity(4)
+    for i in range(len(joint_angles)):
+        T = np.dot(T, DH_T(i, joint_angles, alphas, a_links, d_offsets))
+    # print('\nDH Homogeneous Transformation Matrix:\n', T)
+
+    eef_xyx = T[:, 3]
+    # print('xyz position:\n', eef_xyx)
+
+    return eef_xyx
 
 def read_json(file):
     """Creates a list of experiments as objects. It then reads their respective json file and adds the metadata as
@@ -101,6 +153,16 @@ def read_json(file):
         # print(experiment.exp_type)
 
     return experiment
+
+
+def relative_values(original_list, reference_value):
+    "Subtracts a value from all the elements of a list. Handy for converting time stamps"
+
+    relative_list = [None] * len(original_list)
+    for i in range(len(original_list)):
+        relative_list[i] = original_list[i] - reference_value
+
+    return relative_list
 
 
 def read_csvs(experiment, folder):
@@ -433,6 +495,13 @@ class Experiment:
 
         # Topic: UR5e's Joint States
         self.joint_time_stamp = []
+        self.joint_elapsed_time = []
+        self.j0_shoulder_pan_values = []
+        self.j1_shoulder_lift_values = []
+        self.j2_elbow_values = []
+        self.j3_wrist1_values = []
+        self.j4_wrist2_values = []
+        self.j5_wrist3_values = []
 
         # Topic: Experiment Steps
         self.event_time_stamp = []
@@ -443,7 +512,7 @@ class Experiment:
         self.atmospheric_pressure = 0
         self.errors = []
 
-        # ---------------- Features from Data (Statistical and Math) ----------------
+        # ---------------- Features from Data (Statistics and Math) ----------------
         self.steady_pressure_values = []
         self.steady_vacuum_mean = 0
         self.steady_vacuum_std = 0
@@ -477,6 +546,7 @@ class Experiment:
             #                             min(self.event_time_stamp))
 
             self.first_time_stamp = min(min(self.wrench_time_stamp),
+                                        min(self.joint_time_stamp),
                                         min(self.event_time_stamp),
                                         min(self.pressure_sc1_time_stamp),
                                         min(self.pressure_sc2_time_stamp),
@@ -491,42 +561,21 @@ class Experiment:
     def elapsed_times(self):
         """Subtracts the initial stamp from all topics' time-stamps to improve readability"""
 
-        # First Obtain the initial time stamp of the experiment as a reference to the rest
+        # STEP1: Obtain the initial time stamp of the experiment as a reference to the rest
         self.initial_stamp()
 
-
-        self.pressure_elapsed_time = [None] * len(self.pressure_time_stamp)
-        for i in range(len(self.pressure_time_stamp)):
-            self.pressure_elapsed_time[i] = self.pressure_time_stamp[i] - self.first_time_stamp
-
-        # Wrench topic
-        self.wrench_elapsed_time = [None] * len(self.wrench_time_stamp)
-        for i in range(len(self.wrench_time_stamp)):
-            self.wrench_elapsed_time[i] = self.wrench_time_stamp[i] - self.first_time_stamp
-
-        # Events topic
-        self.event_elapsed_time = [None] * len(self.event_time_stamp)
-        for i in range(len(self.event_time_stamp)):
-            self.event_elapsed_time[i] = self.event_time_stamp[i] - self.first_time_stamp
-
-        # Pressure Sensors topics
-        self.pressure_sc1_elapsed_time = [None] * len(self.pressure_sc1_time_stamp)
-        for i in range(len(self.pressure_sc1_time_stamp)):
-            self.pressure_sc1_elapsed_time[i] = self.pressure_sc1_time_stamp[i] - self.first_time_stamp
-
-        self.pressure_sc2_elapsed_time = [None] * len(self.pressure_sc2_time_stamp)
-        for i in range(len(self.pressure_sc2_time_stamp)):
-            self.pressure_sc2_elapsed_time[i] = self.pressure_sc2_time_stamp[i] - self.first_time_stamp
-
-        self.pressure_sc3_elapsed_time = [None] * len(self.pressure_sc3_time_stamp)
-        for i in range(len(self.pressure_sc3_time_stamp)):
-            self.pressure_sc3_elapsed_time[i] = self.pressure_sc3_time_stamp[i] - self.first_time_stamp
-
-
-
-        self.tof_elapsed_time = [None] * len(self.tof_time_stamp)
-        for i in range(len(self.tof_time_stamp)):
-            self.tof_elapsed_time[i] = self.tof_time_stamp[i] - self.first_time_stamp
+        # STEP2: Elapsed times for all the topics
+        # UR5e topics
+        self.wrench_elapsed_time = relative_values(self.wrench_time_stamp, self.first_time_stamp)
+        self.joint_elapsed_time = relative_values(self.joint_time_stamp, self.first_time_stamp)
+        # Experiment topics
+        self.event_elapsed_time = relative_values(self.event_time_stamp, self.first_time_stamp)
+        # Gripper topics
+        self.pressure_elapsed_time = relative_values(self.pressure_time_stamp, self.first_time_stamp)
+        self.pressure_sc1_elapsed_time = relative_values(self.pressure_sc1_time_stamp, self.first_time_stamp)
+        self.pressure_sc2_elapsed_time = relative_values(self.pressure_sc2_time_stamp, self.first_time_stamp)
+        self.pressure_sc3_elapsed_time = relative_values(self.pressure_sc3_time_stamp, self.first_time_stamp)
+        self.tof_elapsed_time = relative_values(self.tof_time_stamp, self.first_time_stamp)
 
     def filter_wrench(self, filter_param):
         self.wrench_xforce_values = median_filter(self.wrench_xforce_values, filter_param)
@@ -535,6 +584,41 @@ class Experiment:
         self.wrench_xtorque_values = median_filter(self.wrench_xtorque_values, filter_param)
         self.wrench_ytorque_values = median_filter(self.wrench_ytorque_values, filter_param)
         self.wrench_ztorque_values = median_filter(self.wrench_ztorque_values, filter_param)
+
+    def eef_location(self):
+        "Obtain the position of the End Effector"
+
+        x = []
+        y = []
+        z = []
+
+        # FK
+        for i in range(len(self.j0_shoulder_pan_values)):
+            joints = np.array([self.j0_shoulder_pan_values[i],
+                               self.j1_shoulder_lift_values[i],
+                               self.j2_elbow_values[i],
+                               self.j3_wrist1_values[i],
+                               self.j4_wrist2_values[i],
+                               self.j5_wrist3_values[i]])
+
+            coords = ur5e_fk_dh(joints)
+            x.append(coords[0])
+            y.append(coords[1])
+            z.append(coords[2])
+
+        # Plot
+        fig = plt.figure()
+        ax = plt.axes(projection='3d')
+        ax.set_xlim3d(-0.75, 0.75)
+        ax.set_ylim3d(-0.75, 0.75)
+        ax.set_zlim3d(-0.75, 0.75)
+        ax.set_xlabel('x[m]')
+        ax.set_ylabel('y[m]')
+        ax.set_zlabel('z[m]')
+
+        ax.plot3D(x,y,z)
+
+
 
     def get_relative_values(self):
         """ Subtracts the first reading of the F/T -- when nothing is attached -- to get rid of
@@ -580,10 +664,11 @@ class Experiment:
         print('Max Sum Force:', max_sumForce)
         print('Angle:', theta)
 
-
     def get_features(self):
         """Basically run all the methods"""
+
         self.elapsed_times()
+
         # -------- Pressure Features ----------
         # self.get_atmospheric_pressure()
         # self.get_steady_vacuum()
@@ -1229,6 +1314,8 @@ class Experiment:
         # out.release()
 
 
+
+
 def noise_experiments(exp_type="vertical"):
 
     plt.figure()
@@ -1815,10 +1902,12 @@ def real_experiments():
 
     # STEP 5: Read values from 'csv'
     read_csvs(experiment, location + file)
-    print(experiment.j0_shoulder_pan_values)
 
     # STEP 6: Get different features for the experiment
     experiment.get_features()
+
+    # STEP 7: FK to see the end effector path.
+    experiment.eef_location()
 
     # STEP 7: Plots
     experiment.plot_only_pressure()
@@ -1841,6 +1930,8 @@ def main():
     # simple_suction_experiment()
     # proxy_experiments()
     real_experiments()
+
+
 
     # --- Build video from pngs and a plot beside of it with a vertical line running ---
     # plot_and_video()
