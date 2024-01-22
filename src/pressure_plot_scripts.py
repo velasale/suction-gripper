@@ -57,6 +57,7 @@ def DH_T(i, thetas, alphas, a_links, d_offsets):
 
     return T
 
+
 def ur5e_fk_dh(joint_angles):
     """ Forward kinematics with the Denavit-Hartemberg approach"""
     # Source: https://www.universal-robots.com/articles/ur/application-installation/dh-parameters-for-calculations-of-kinematics-and-dynamics/
@@ -80,6 +81,7 @@ def ur5e_fk_dh(joint_angles):
     # print('xyz position:\n', eef_xyx)
 
     return eef_xyx
+
 
 def read_json(file):
     """Creates a list of experiments as objects. It then reads their respective json file and adds the metadata as
@@ -538,6 +540,11 @@ class Experiment:
         self.normal_force_values = []
         self.tangent_force_values = []
 
+        self.eef_x = []
+        self.eef_y = []
+        self.eef_z = []
+        self.eef_travel = []
+
     # --- Functions and methods to use in different experiments ---
     def initial_stamp(self):
         """ Takes the initial stamp from all the topics. This is useful to subtract it from all Time stamps and get a readable time"""
@@ -600,13 +607,12 @@ class Experiment:
                                self.j3_wrist1_values[i],
                                self.j4_wrist2_values[i],
                                self.j5_wrist3_values[i]])
-
             coords = ur5e_fk_dh(joints)
             x.append(coords[0])
             y.append(coords[1])
             z.append(coords[2])
 
-        # Plot
+        # 3D Plot of eef trajectory
         fig = plt.figure()
         ax = plt.axes(projection='3d')
         ax.set_xlim3d(-0.75, 0.75)
@@ -615,8 +621,57 @@ class Experiment:
         ax.set_xlabel('x[m]')
         ax.set_ylabel('y[m]')
         ax.set_zlabel('z[m]')
-
         ax.plot3D(x,y,z)
+
+        # Measure distance travelled
+        self.eef_x = x
+        self.eef_y = y
+        self.eef_z = z
+        distances = []
+        counter = []
+        for i in range(len(self.eef_x)):
+            delta_x = self.eef_x[i] - self.eef_x[0]
+            delta_y = self.eef_y[i] - self.eef_y[0]
+            delta_z = self.eef_z[i] - self.eef_z[0]
+            # print('\Deltas:', delta_x, delta_y, delta_z)
+            distance = math.sqrt(delta_x**2 + delta_y**2 + delta_z**2)
+            distances.append(distance)
+            counter.append(i)
+        self.eef_travel = distances
+        # print('\nDistances:', distances)
+        fig = plt.figure()
+        plt.plot(counter, distances)
+
+        # Plot Force vs Travel
+        # Find the point of maximum force
+        idx = np.argmax(self.wrench_zforce_values)
+        min_length = min(len(self.eef_travel), len(self.wrench_zforce_values))
+        fig = plt.figure()
+
+        new_travel_list = self.eef_travel[:idx]
+        new_force_list = self.wrench_zforce_values[:idx]
+        plt.plot(self.eef_travel[:idx], self.wrench_zforce_values[:idx])
+
+        # Measure Stiffness = Delta_Force / Delta_displacement
+        idx_max = np.argmax(new_force_list)
+        idx_min = np.argmin(new_force_list)
+
+        max_force = new_force_list[idx_max]
+        min_force = new_force_list[idx_min]
+        max_force_loc = new_travel_list[idx_max]
+        min_force_loc = new_travel_list[idx_min]
+
+        plt.plot([min_force_loc,max_force_loc],[min_force, max_force])
+
+        stiffness = abs(max_force - min_force) / abs(max_force_loc - min_force_loc)
+        print('\nStiffness: ', stiffness)
+
+
+
+
+
+
+
 
 
 
@@ -1882,7 +1937,7 @@ def real_experiments():
     # file = '20230922_realapple3_attempt_1_orientation_0_yaw_0'
     # file = '20230922_realapple2_attempt_1_orientation_0_yaw_0'
 
-    file = '2023111_realapple1_mode_dual_attempt_1_orientation_0_yaw_0'
+    file = '2023111_realapple6_mode_dual_attempt_1_orientation_0_yaw_0'
 
     # STEP 2: Turn bag into csvs if needed
     if os.path.isdir(location + file):
@@ -1930,8 +1985,6 @@ def main():
     # simple_suction_experiment()
     # proxy_experiments()
     real_experiments()
-
-
 
     # --- Build video from pngs and a plot beside of it with a vertical line running ---
     # plot_and_video()
