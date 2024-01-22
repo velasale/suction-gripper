@@ -544,6 +544,7 @@ class Experiment:
         self.eef_y = []
         self.eef_z = []
         self.eef_travel = []
+        self.stiffness()
 
     # --- Functions and methods to use in different experiments ---
     def initial_stamp(self):
@@ -593,13 +594,14 @@ class Experiment:
         self.wrench_ztorque_values = median_filter(self.wrench_ztorque_values, filter_param)
 
     def eef_location(self):
-        "Obtain the position of the End Effector"
+        "Obtain the 3d position of the End Effector"
 
         x = []
         y = []
         z = []
 
         # FK
+        counter = []
         for i in range(len(self.j0_shoulder_pan_values)):
             joints = np.array([self.j0_shoulder_pan_values[i],
                                self.j1_shoulder_lift_values[i],
@@ -611,22 +613,64 @@ class Experiment:
             x.append(coords[0])
             y.append(coords[1])
             z.append(coords[2])
+            counter.append(i)
 
-        # 3D Plot of eef trajectory
+        self.eef_x = x
+        self.eef_y = y
+        self.eef_z = z
+
+        # ---- 3D Plot of eef trajectory
         fig = plt.figure()
         ax = plt.axes(projection='3d')
+        ax.set_title('End Effector Trajectory')
         ax.set_xlim3d(-0.75, 0.75)
         ax.set_ylim3d(-0.75, 0.75)
         ax.set_zlim3d(-0.75, 0.75)
         ax.set_xlabel('x[m]')
         ax.set_ylabel('y[m]')
         ax.set_zlabel('z[m]')
-        ax.plot3D(x,y,z)
+        ax.plot3D(x, y, z)
 
-        # Measure distance travelled
-        self.eef_x = x
-        self.eef_y = y
-        self.eef_z = z
+        fig = plt.figure()
+        plt.plot(counter, z)
+        plt.title('z axis Distance [m]')
+
+    def stiffness(self):
+        """Analyze the stiffness of the branch"""
+
+        x = self.eef_x
+        y = self.eef_y
+        z = self.eef_z
+
+        # ----- Detect point at which we want to measure
+        previous = z[0]
+        rango = 50
+        move = 3 / 10000
+        POIS_plus = []
+        POIS_minus = []
+        POIS = []
+        for i in range(len(z) - rango):
+            delta = z[i + rango] - previous
+            # print(delta)
+            previous = z[i]
+            if delta > move:
+                POIS_plus.append(i)
+            if delta < -move:
+                POIS_minus.append(i)
+        POIS.append(POIS_minus[0])
+        POIS.append(POIS_minus[-1])
+        POIS.append(POIS_plus[0])
+        POIS.append(POIS_plus[-1])
+        print('\nPOIs: ', POIS)
+        POIS.sort()
+        print('\n2nd and 3rd POI: ', POIS[2], POIS[3])
+        idx_1 = POIS[2]
+        idx_2 = POIS[3]
+
+        # Measure distance travelled by the eef
+        self.eef_x = x[idx_1:idx_2]
+        self.eef_y = y[idx_1:idx_2]
+        self.eef_z = z[idx_1:idx_2]
         distances = []
         counter = []
         for i in range(len(self.eef_x)):
@@ -641,38 +685,32 @@ class Experiment:
         # print('\nDistances:', distances)
         fig = plt.figure()
         plt.plot(counter, distances)
+        plt.title('Net distance travelled [m]')
 
-        # Plot Force vs Travel
-        # Find the point of maximum force
-        idx = np.argmax(self.wrench_zforce_values)
-        min_length = min(len(self.eef_travel), len(self.wrench_zforce_values))
+        # Plot Force vs Travel zoomed
         fig = plt.figure()
-
-        new_travel_list = self.eef_travel[:idx]
-        new_force_list = self.wrench_zforce_values[:idx]
-        plt.plot(self.eef_travel[:idx], self.wrench_zforce_values[:idx])
+        new_force_list = self.wrench_zforce_values[idx_1:idx_2]
+        plt.plot(self.eef_travel, new_force_list)
+        plt.title('z-Force vs Net distance travelled')
 
         # Measure Stiffness = Delta_Force / Delta_displacement
         idx_max = np.argmax(new_force_list)
-        idx_min = np.argmin(new_force_list)
 
         max_force = new_force_list[idx_max]
-        min_force = new_force_list[idx_min]
-        max_force_loc = new_travel_list[idx_max]
-        min_force_loc = new_travel_list[idx_min]
+        min_force = new_force_list[0]
+        max_force_loc = distances[idx_max]
+        min_force_loc = distances[0]
+
+        delta_force = max_force - min_force
+        delta_travel = max_force_loc - min_force_loc
 
         plt.plot([min_force_loc,max_force_loc],[min_force, max_force])
+        stiffness = abs(delta_force) / abs(delta_travel)
+        text = 'Stiffness: ' + str(round(stiffness, 0)) + 'N/m'
+        plt.text(delta_travel/2, min_force + delta_force/2, text)
 
-        stiffness = abs(max_force - min_force) / abs(max_force_loc - min_force_loc)
-        print('\nStiffness: ', stiffness)
-
-
-
-
-
-
-
-
+        self.stiffness = stiffness
+        # print('\nStiffness: ', stiffness)
 
 
     def get_relative_values(self):
@@ -1937,7 +1975,7 @@ def real_experiments():
     # file = '20230922_realapple3_attempt_1_orientation_0_yaw_0'
     # file = '20230922_realapple2_attempt_1_orientation_0_yaw_0'
 
-    file = '2023111_realapple6_mode_dual_attempt_1_orientation_0_yaw_0'
+    file = '2023111_realapple10_mode_dual_attempt_1_orientation_0_yaw_0'
 
     # STEP 2: Turn bag into csvs if needed
     if os.path.isdir(location + file):
@@ -1963,6 +2001,7 @@ def real_experiments():
 
     # STEP 7: FK to see the end effector path.
     experiment.eef_location()
+    experiment.stiffness()
 
     # STEP 7: Plots
     experiment.plot_only_pressure()
