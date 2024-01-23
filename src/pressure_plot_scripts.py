@@ -1,14 +1,17 @@
 # @Time : 6/6/2023 11:15 AM
 # @Author : Alejandro Velasquez
 
-## --- Standard Library Imports
+######## Standard Library Imports ########
 import json
 import math
 import os
 import re
 import csv
 import time
+import numpy as np
 
+
+######## 3rd parties Imports ########
 from operator import sub, add
 # from cv_bridge import CvBridge
 import cv2
@@ -20,7 +23,6 @@ from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 from mpl_toolkits.mplot3d import Axes3D
 import pandas as pd
 from bagpy import bagreader
-import numpy as np
 
 from sklearn.metrics import r2_score
 from sklearn.cluster import KMeans
@@ -31,8 +33,12 @@ import pyautogui
 from ros_scripts import *
 from plot_scripts import *
 
+import logging
+logging_format = "[%(asctime)s - %(levelname)s] %(message)s"
+logging.basicConfig(format=logging_format, level=logging.INFO, datefmt="%H:%M:%S")
 
 def list_to_hist(list, x_label):
+    """Generates histogram out of a list, and provides k-means clusters"""
 
     values = np.array(list)
     kmeans = KMeans(n_clusters=3, random_state=0).fit(values.reshape(-1,1))
@@ -611,7 +617,7 @@ class Experiment:
         self.wrench_ztorque_values = median_filter(self.wrench_ztorque_values, filter_param)
 
     def eef_location(self, plots='no'):
-        "Obtain the 3d position of the End Effector"
+        """Obtain the 3d position of the End Effector"""
 
         x = []
         y = []
@@ -687,9 +693,9 @@ class Experiment:
         POIS.append(POIS_minus[-1]+rango)
         POIS.append(POIS_plus[0])
         POIS.append(POIS_plus[-1]+rango)
-        # print('\nPOIs: ', POIS)
+        logging.debug('POIs: %i %i %i %i', POIS[0], POIS[1], POIS[2], POIS[3])
         POIS.sort()
-        # print('\n2nd and 3rd POI: ', POIS[2], POIS[3])
+        logging.debug('2nd and 3rd POI: %i %i', POIS[2], POIS[3])
         idx_1 = POIS[2]
         idx_2 = POIS[3]
 
@@ -722,8 +728,7 @@ class Experiment:
         max_force_time = new_time_list[idx_max]
 
         self.wrench_idx_at_pick = self.wrench_elapsed_time.index(max_force_time)
-        print('max force pick time and index: ', max_force_time, self.wrench_idx_at_pick)
-
+        logging.debug('Pick MaxForce occurs at %i.2s (index %i)' %(max_force_time, self.wrench_idx_at_pick))
 
         min_force = new_force_list[0]
         max_force_loc = distances[idx_max]
@@ -792,15 +797,8 @@ class Experiment:
         self.max_tangentialForce_at_pick = max_tanForce
         self.max_netForce_at_pick = max_netForce
         self.theta_at_pick = theta
-
-        print('Max x-Force [N]:', round(max_xForce,2))
-        print('Max y-Force [N]:', round(max_yForce,2))
-        print('Max z-Force [N]:', round(max_zForce,2))
-
-        print('\nMax Normal Force (z-Force) [N]: ', round(max_zForce,2))
-        print('Max Tangential Force [N]: ', round(max_tanForce,2))
-        print('Max Net Force [N]: ', round(max_netForce,2))
-        print('Angle [deg]: ', round(theta,0))
+        logging.debug('Max xForce: %i.2N, yForce: %i.2N, zForce: %i.2N' %(max_xForce, max_yForce, max_zForce))
+        logging.debug('Max Normal: %i.2N, Tangential: %i.2N, Net: %i.2N, Theta: %i.0deg' %(max_zForce, max_tanForce, max_netForce, theta))
 
     def get_features(self):
         """Basically run all the methods"""
@@ -2007,7 +2005,7 @@ def real_experiments():
     subfolder = 'Dataset - apple picks/'
     location = folder + subfolder
 
-    # --- ICRA24 accompanying vidoe
+    # --- ICRA24 accompanying video
     # file = '20230731_proxy_sample_6_yaw_45_rep_0_stiff_low_force_low'
     # file = '20230922_realapple3_attempt_1_orientation_0_yaw_0'
     # file = '20230922_realapple2_attempt_1_orientation_0_yaw_0'
@@ -2023,13 +2021,13 @@ def real_experiments():
     # STEP C: Sweep all bag files, and for each one do next
     for file in os.listdir(location):
         if file.endswith('.bag'):
-            # print(file)
+            logging.debug('------------- Filename: %s ------------' %file)
             only_name = file.split('.')[0]  # remove extension
             file = only_name
 
             # STEP 1: Turn bag into csvs if needed
             if os.path.isdir(location + file):
-                print("\ncsvs were already generated!")
+                logging.debug('csvs were already generated')
                 pass
             else:
                 bag_to_csvs(location + file + ".bag")
@@ -2040,8 +2038,8 @@ def real_experiments():
             json_file = open(location + file + '.json')
             json_data = json.load(json_file)
             experiment.metadata = json_data
-            # print('metadata: ', experiment.metadata['general'], '\n')
-            print('Filename: ', experiment.filename)
+
+            logging.debug('metadata: %s' %experiment.metadata['general'])
 
             # STEP 3: Check conditions to continue the analysis
             mode = experiment.metadata['robot']['actuation mode']
@@ -2069,7 +2067,7 @@ def real_experiments():
                 # experiment.plot_only_pressure()
                 # experiment.plot_only_total_force()
 
-    list_to_hist(stiffnesses,'Branch stiffness [N/m]')
+    list_to_hist(stiffnesses, 'Branch stiffness [N/m]')
     list_to_hist(max_normalForces, 'Max Normal Force [N]')
     list_to_hist(max_tangentialForces, 'Max Tangential Force [N]')
     list_to_hist(max_netForces, 'Max Net Force [N]')
@@ -2081,8 +2079,10 @@ def real_experiments():
     plt.close('all')  # all open plots are correctly closed after each run
 
 def main():
-        
-    # TODO Interpret moments (lever = height of the rig)
+
+    logging.getLogger('matplotlib.font_manager').disabled = True
+    # Comment out this line for all DEBUG-level messages to be suppressed
+    logging.getLogger().setLevel(logging.DEBUG)
 
     # --- Simply choose the desired experiment by un-commenting it ---
     # circle_plots(1,1,1)
@@ -2099,6 +2099,9 @@ def main():
     # plot_and_video()
 
     # TODO: Compare results between  get_detach_values() and get_forces_at_pick()
+    # TODO: Interpret moments (lever = height of the rig)
+
+
 
 if __name__ == '__main__':
     main()
