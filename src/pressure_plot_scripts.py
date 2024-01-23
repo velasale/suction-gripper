@@ -23,12 +23,25 @@ from bagpy import bagreader
 import numpy as np
 
 from sklearn.metrics import r2_score
+from sklearn.cluster import KMeans
 from scipy.ndimage import gaussian_filter, median_filter
 import pyautogui
 
 ######## Self developed imports ########
 from ros_scripts import *
 from plot_scripts import *
+
+
+def list_to_hist(list, x_label):
+
+    values = np.array(list)
+    kmeans = KMeans(n_clusters=3, random_state=0).fit(values.reshape(-1,1))
+    clusters = kmeans.cluster_centers_
+
+    fig = plt.figure()
+    plt.hist(values)
+    plt.title('Kmeans: ' + str(clusters))
+    plt.xlabel(x_label)
 
 
 def DH_T(i, thetas, alphas, a_links, d_offsets):
@@ -75,10 +88,8 @@ def ur5e_fk_dh(joint_angles):
     T = np.identity(4)
     for i in range(len(joint_angles)):
         T = np.dot(T, DH_T(i, joint_angles, alphas, a_links, d_offsets))
-    # print('\nDH Homogeneous Transformation Matrix:\n', T)
 
     eef_xyx = T[:, 3]
-    # print('xyz position:\n', eef_xyx)
 
     return eef_xyx
 
@@ -486,7 +497,7 @@ class Experiment:
         self.wrench_yforce_relative_values = []
         self.wrench_zforce_values = []
         self.wrench_zforce_relative_values = []
-        self.wrench_sumforce_relative_values = []
+        self.wrench_netforce_relative_values = []
 
         self.wrench_xtorque_values = []
         self.wrench_xtorque_relative_values = []
@@ -544,7 +555,13 @@ class Experiment:
         self.eef_y = []
         self.eef_z = []
         self.eef_travel = []
-        self.stiffness()
+        self.stiffness = 0
+
+        self.wrench_idx_at_pick = 0
+        self.max_normalForce_at_pick = 0
+        self.max_tangentialForce_at_pick = 0
+        self.max_netForce_at_pick = 0
+        self.theta_at_pick = 0
 
     # --- Functions and methods to use in different experiments ---
     def initial_stamp(self):
@@ -593,7 +610,7 @@ class Experiment:
         self.wrench_ytorque_values = median_filter(self.wrench_ytorque_values, filter_param)
         self.wrench_ztorque_values = median_filter(self.wrench_ztorque_values, filter_param)
 
-    def eef_location(self):
+    def eef_location(self, plots='no'):
         "Obtain the 3d position of the End Effector"
 
         x = []
@@ -619,30 +636,32 @@ class Experiment:
         self.eef_y = y
         self.eef_z = z
 
-        # ---- 3D Plot of eef trajectory
-        fig = plt.figure()
-        ax = plt.axes(projection='3d')
-        ax.set_title('End Effector Trajectory')
-        ax.set_xlim3d(-0.75, 0.75)
-        ax.set_ylim3d(-0.75, 0.75)
-        ax.set_zlim3d(-0.75, 0.75)
-        ax.set_xlabel('x[m]')
-        ax.set_ylabel('y[m]')
-        ax.set_zlabel('z[m]')
-        ax.plot3D(x, y, z)
+        # plots
+        if plots == 'yes':
+            # 3D Plot of eef trajectory
+            fig = plt.figure()
+            ax = plt.axes(projection='3d')
+            ax.set_title('End Effector Trajectory\n' + self.filename)
+            ax.set_xlim3d(-0.75, 0)
+            ax.set_ylim3d(-0.75, 0.75)
+            ax.set_zlim3d(0, 0.75)
+            ax.set_xlabel('x[m]')
+            ax.set_ylabel('y[m]')
+            ax.set_zlabel('z[m]')
+            ax.plot3D(x, y, z)
 
-        fig = plt.figure()
-        plt.plot(counter, z)
-        plt.title('z axis Distance [m]')
+            # Z axis over time
+            # fig = plt.figure()
+            # plt.plot(counter, z)
+            # plt.title('z axis Distance [m]')
 
-    def stiffness(self):
+    def branch_stiffness(self, plots='no'):
         """Analyze the stiffness of the branch"""
-
         x = self.eef_x
         y = self.eef_y
         z = self.eef_z
 
-        # ----- Detect point at which we want to measure
+        # Step1: Detect points at which we want to measure
         previous = z[0]
         rango = 50
         move = 3 / 10000
@@ -661,13 +680,13 @@ class Experiment:
         POIS.append(POIS_minus[-1])
         POIS.append(POIS_plus[0])
         POIS.append(POIS_plus[-1])
-        print('\nPOIs: ', POIS)
+        # print('\nPOIs: ', POIS)
         POIS.sort()
-        print('\n2nd and 3rd POI: ', POIS[2], POIS[3])
+        # print('\n2nd and 3rd POI: ', POIS[2], POIS[3])
         idx_1 = POIS[2]
         idx_2 = POIS[3]
 
-        # Measure distance travelled by the eef
+        # Step2: Measure distance travelled by the eef
         self.eef_x = x[idx_1:idx_2]
         self.eef_y = y[idx_1:idx_2]
         self.eef_z = z[idx_1:idx_2]
@@ -682,36 +701,43 @@ class Experiment:
             distances.append(distance)
             counter.append(i)
         self.eef_travel = distances
-        # print('\nDistances:', distances)
-        fig = plt.figure()
-        plt.plot(counter, distances)
-        plt.title('Net distance travelled [m]')
 
-        # Plot Force vs Travel zoomed
-        fig = plt.figure()
+        # if plots == 'yes':
+        #     fig = plt.figure()
+        #     plt.plot(counter, distances)
+        #     plt.title('Net distance travelled [m]')
+
+        # Step3: Measure Stiffness = Delta_Force / Delta_displacement
         new_force_list = self.wrench_zforce_values[idx_1:idx_2]
-        plt.plot(self.eef_travel, new_force_list)
-        plt.title('z-Force vs Net distance travelled')
-
-        # Measure Stiffness = Delta_Force / Delta_displacement
+        new_time_list = self.wrench_elapsed_time[idx_1:idx_2]
         idx_max = np.argmax(new_force_list)
-
         max_force = new_force_list[idx_max]
+        max_force_time = new_time_list[idx_max]
+
+        self.wrench_idx_at_pick = self.wrench_elapsed_time.index(max_force_time)
+        print(self.wrench_idx_at_pick)
+
+
         min_force = new_force_list[0]
         max_force_loc = distances[idx_max]
         min_force_loc = distances[0]
 
         delta_force = max_force - min_force
         delta_travel = max_force_loc - min_force_loc
-
-        plt.plot([min_force_loc,max_force_loc],[min_force, max_force])
         stiffness = abs(delta_force) / abs(delta_travel)
-        text = 'Stiffness: ' + str(round(stiffness, 0)) + 'N/m'
-        plt.text(delta_travel/2, min_force + delta_force/2, text)
+
+        if plots == 'yes':
+            fig = plt.figure()
+            plt.plot(self.eef_travel, new_force_list)
+            plt.title('z-Force vs Net distance travelled\n' + self.filename)
+            plt.plot([min_force_loc,max_force_loc],[min_force, max_force])
+            text = 'Stiffness: ' + str(round(stiffness, 0)) + 'N/m'
+            plt.text(delta_travel/2, min_force + delta_force/2, text)
+            plt.ylim([-15, 30])
+            plt.xlabel('EEF displacement [m]')
+            plt.ylabel('zForce @ EEF [m]')
 
         self.stiffness = stiffness
-        # print('\nStiffness: ', stiffness)
-
 
     def get_relative_values(self):
         """ Subtracts the first reading of the F/T -- when nothing is attached -- to get rid of
@@ -726,36 +752,48 @@ class Experiment:
             relative_ytorque = self.wrench_ytorque_values[i] - self.wrench_ytorque_values[0]
             relative_xtorque = self.wrench_xtorque_values[i] - self.wrench_xtorque_values[0]
 
-            relative_sumforce = math.sqrt(relative_zforce ** 2 + relative_xforce ** 2 + relative_yforce ** 2)
+            relative_netforce = math.sqrt(relative_zforce ** 2 + relative_xforce ** 2 + relative_yforce ** 2)
 
             self.wrench_zforce_relative_values.append(relative_zforce)
             self.wrench_yforce_relative_values.append(relative_yforce)
             self.wrench_xforce_relative_values.append(relative_xforce)
 
-            self.wrench_sumforce_relative_values.append(relative_sumforce)
+            self.wrench_netforce_relative_values.append(relative_netforce)
 
             self.wrench_ztorque_relative_values.append(relative_ztorque)
             self.wrench_ytorque_relative_values.append(relative_ytorque)
             self.wrench_xtorque_relative_values.append(relative_xtorque)
 
+    def get_forces_at_pick(self):
+        """ APPROACH 1: USING POIS """
+
         # Print all values during the detachment
-        max_sumForce = max(self.wrench_sumforce_relative_values)
-        index = self.wrench_sumforce_relative_values.index(max_sumForce)
+        max_netForce = max(self.wrench_netforce_relative_values)
+
+        # index = self.wrench_netforce_relative_values.index(max_netForce)
+        index = self.wrench_idx_at_pick
+
         max_xForce = self.wrench_xforce_relative_values[index]
         max_yForce = self.wrench_yforce_relative_values[index]
         max_zForce = self.wrench_zforce_relative_values[index]
 
-        max_tanForce = math.sqrt(max_xForce ** 2 + max_yForce **2)
+        max_tanForce = math.sqrt(max_xForce ** 2 + max_yForce ** 2)
         theta = math.degrees(math.atan((max_zForce/max_tanForce)))
 
-        print('Max x Force:', max_xForce)
-        print('Max y Force:', max_yForce)
-        print('Max z Force:', max_zForce)
+        # Store values
+        self.max_normalForce_at_pick = max_zForce
+        self.max_tangentialForce_at_pick = max_tanForce
+        self.max_netForce_at_pick = max_netForce
+        self.theta_at_pick = theta
 
-        print('\n Max Normal Force (z Force)', max_zForce)
-        print('Max Tangential Force', max_tanForce)
-        print('Max Sum Force:', max_sumForce)
-        print('Angle:', theta)
+        print('Max x-Force [N]:', round(max_xForce,2))
+        print('Max y-Force [N]:', round(max_yForce,2))
+        print('Max z-Force [N]:', round(max_zForce,2))
+
+        print('\nMax Normal Force (z-Force) [N]: ', round(max_zForce,2))
+        print('Max Tangential Force [N]: ', round(max_tanForce,2))
+        print('Max Net Force [N]: ', round(max_netForce,2))
+        print('Angle [deg]: ', round(theta,0))
 
     def get_features(self):
         """Basically run all the methods"""
@@ -767,7 +805,6 @@ class Experiment:
         # self.get_steady_vacuum()
 
         # -------- Wrench Features ------------
-        # filter wrench signals
         self.filter_wrench(30)
         self.get_relative_values()
 
@@ -778,7 +815,7 @@ class Experiment:
         self.get_detach_values()
         # self.check_errors()
 
-    # --- Functions specifically for pressure related stuff ---
+    # --------------- METHODS FOR AIR PRESSURE -------------
     def get_atmospheric_pressure(self):
         """Takes initial and last reading as the atmospheric pressure.
         Both are taken because in some cases the valve was already on, hence the last one (after valve is off) is also checked
@@ -854,7 +891,7 @@ class Experiment:
         sumforce_detach_values = []
 
         list_of_detach_values = [xforce_detach_values, ytorque_detach_values, zforce_detach_values, nforce_detach_values, tforce_detach_values, sumforce_detach_values]
-        list_of_values = [self.wrench_xforce_relative_values, self.wrench_ytorque_relative_values, self.wrench_zforce_relative_values, self.normal_force_values, self.tangent_force_values, self.wrench_sumforce_relative_values]
+        list_of_values = [self.wrench_xforce_relative_values, self.wrench_ytorque_relative_values, self.wrench_zforce_relative_values, self.normal_force_values, self.tangent_force_values, self.wrench_netforce_relative_values]
 
         list_of_max_values = []
         list_of_max_times = []
@@ -893,7 +930,6 @@ class Experiment:
         self.max_detach_tforce_time = list_of_min_times[4]
         self.max_detach_sumforce = list_of_max_values[5]
         self.max_detach_sumforce_time = list_of_max_times[5]
-
 
         return self.max_detach_zforce, self.max_detach_xforce
 
@@ -980,6 +1016,7 @@ class Experiment:
         if (pressure_at_retrieve - pressure_at_vacuum_off) > pressure_range:
             self.errors.append("Cup collapsed after retrieve")
 
+    # ------------ METHODS FOR PLOTS ----------------
     def plots_stuff(self):
         """Plots wrench (forces and moments) and pressure readings"""
 
@@ -987,7 +1024,7 @@ class Experiment:
         xforce_values = self.wrench_xforce_relative_values
         yforce_values = self.wrench_yforce_relative_values
         zforce_values = self.wrench_zforce_relative_values
-        sumforce_values = self.wrench_sumforce_relative_values
+        sumforce_values = self.wrench_netforce_relative_values
 
         nforce_values = self.normal_force_values
         tforce_values = self.tangent_force_values
@@ -1266,7 +1303,7 @@ class Experiment:
         force_time = []
         sumforce_values = []
 
-        force_values = self.wrench_sumforce_relative_values
+        force_values = self.wrench_netforce_relative_values
         # force_values = self.wrench_zforce_values
 
         for i, j in zip(self.wrench_elapsed_time, force_values):
@@ -1405,8 +1442,6 @@ class Experiment:
             counter += 1
 
         # out.release()
-
-
 
 
 def noise_experiments(exp_type="vertical"):
@@ -1957,58 +1992,85 @@ def proxy_experiments():
 
 def real_experiments():
 
-    # STEP 1: Find file
-    # --- Default Hard Drive ---
-    # folder = '/home/alejo/gripper_ws/src/suction-gripper/data/'
-    # --- Hard Drive B ---
-    # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"
-    # --- Hard Drive C ---
-    # folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'
-    # --- External Drive ---
-    folder = '/media/alejo/Elements/Prosser_Data/'
+    # STEP A: Data Location
+    # folder = '/home/alejo/gripper_ws/src/suction-gripper/data/'   # Default Hard Drive
+    # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"     # Hard Drive B
+    # folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'  # Hard Drive C
+    folder = '/media/alejo/Elements/Prosser_Data/'      # External Hard Drive
     subfolder = 'Dataset - apple picks/'
-
     location = folder + subfolder
 
     # --- ICRA24 accompanying vidoe
     # file = '20230731_proxy_sample_6_yaw_45_rep_0_stiff_low_force_low'
     # file = '20230922_realapple3_attempt_1_orientation_0_yaw_0'
     # file = '20230922_realapple2_attempt_1_orientation_0_yaw_0'
+    # file = '2023111_realapple1_mode_dual_attempt_1_orientation_0_yaw_0'
 
-    file = '2023111_realapple10_mode_dual_attempt_1_orientation_0_yaw_0'
+    # STEP B: Define variables to gather from all the experiments
+    stiffnesses = []
+    max_normalForces = []
+    max_tangentialForces = []
+    max_netForces = []
+    thetas = []
 
-    # STEP 2: Turn bag into csvs if needed
-    if os.path.isdir(location + file):
-        # print("csvs already created")
-        pass
-    else:
-        bag_to_csvs(location + file + ".bag")
+    # STEP C: Sweep all bag files, and for each one do next
+    for file in os.listdir(location):
+        if file.endswith('.bag'):
+            # print(file)
+            only_name = file.split('.')[0]  # remove extension
+            file = only_name
 
-    # STEP 3: Create Experiment Object
-    experiment = Experiment()
+            # STEP 1: Turn bag into csvs if needed
+            if os.path.isdir(location + file):
+                print("\ncsvs were already generated!")
+                pass
+            else:
+                bag_to_csvs(location + file + ".bag")
 
-    # STEP 4: Assign json dictionary as property of the experiment
-    json_file = open(location + file + '.json')
-    json_data = json.load(json_file)
-    experiment.metadata = json_data
-    print('metadata: ', experiment.metadata['general'], '\n')
+            # STEP 2: Generate an experiment object for each file, and read its json file
+            experiment = Experiment()
+            experiment.filename = file
+            json_file = open(location + file + '.json')
+            json_data = json.load(json_file)
+            experiment.metadata = json_data
+            # print('metadata: ', experiment.metadata['general'], '\n')
+            print('Filename: ', experiment.filename)
 
-    # STEP 5: Read values from 'csv'
-    read_csvs(experiment, location + file)
+            # STEP 3: Check conditions to continue the analysis
+            mode = experiment.metadata['robot']['actuation mode']
+            pick = experiment.metadata['labels']['apple pick result']
+            if mode == 'dual' and pick == 'a':
 
-    # STEP 6: Get different features for the experiment
-    experiment.get_features()
+                # STEP 4: Read values from 'csv'
+                read_csvs(experiment, location + file)
 
-    # STEP 7: FK to see the end effector path.
-    experiment.eef_location()
-    experiment.stiffness()
+                # STEP 5: Get different features for the experiment
+                experiment.get_features()
+                experiment.eef_location(plots='no')
+                experiment.branch_stiffness(plots='yes')
+                experiment.get_forces_at_pick()
 
-    # STEP 7: Plots
-    experiment.plot_only_pressure()
-    experiment.plot_only_total_force()
-    plt.show()
+                # STEP 6: Append variables of interest
+                stiffnesses.append(experiment.stiffness)
+                max_normalForces.append(experiment.max_normalForce_at_pick)
+                max_tangentialForces.append(experiment.max_tangentialForce_at_pick)
+                max_netForces.append(experiment.max_netForce_at_pick)
+                thetas.append(experiment.theta_at_pick)
 
+                # STEP 7: Plots
+                # experiment.plot_only_pressure()
+                # experiment.plot_only_total_force()
 
+    list_to_hist(stiffnesses,'Branch stiffness [N/m]')
+    list_to_hist(max_normalForces, 'Max Normal Force [N]')
+    list_to_hist(max_tangentialForces, 'Max Tangential Force [N]')
+    list_to_hist(max_netForces, 'Max Net Force [N]')
+    list_to_hist(thetas, 'Thetas [deg]')
+
+    plt.show(block=False)
+    plt.pause(0.001)  # Pause for interval seconds.
+    input("\nhit[enter] to end.")
+    plt.close('all')  # all open plots are correctly closed after each run
 
 def main():
         
@@ -2028,6 +2090,7 @@ def main():
     # --- Build video from pngs and a plot beside of it with a vertical line running ---
     # plot_and_video()
 
+    # TODO: Compare results between  get_detach_values() and get_forces_at_pick()
 
 if __name__ == '__main__':
     main()
