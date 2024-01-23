@@ -661,9 +661,16 @@ class Experiment:
         y = self.eef_y
         z = self.eef_z
 
+        ## Plot this to debug the POI
+        # counter=[]
+        # for i in range(len(z)):
+        #     counter.append(i)
+        # fig = plt.figure()
+        # plt.plot(counter,z)
+
         # Step1: Detect points at which we want to measure
         previous = z[0]
-        rango = 50
+        rango = 200
         move = 3 / 10000
         POIS_plus = []
         POIS_minus = []
@@ -677,9 +684,9 @@ class Experiment:
             if delta < -move:
                 POIS_minus.append(i)
         POIS.append(POIS_minus[0])
-        POIS.append(POIS_minus[-1])
+        POIS.append(POIS_minus[-1]+rango)
         POIS.append(POIS_plus[0])
-        POIS.append(POIS_plus[-1])
+        POIS.append(POIS_plus[-1]+rango)
         # print('\nPOIs: ', POIS)
         POIS.sort()
         # print('\n2nd and 3rd POI: ', POIS[2], POIS[3])
@@ -715,7 +722,7 @@ class Experiment:
         max_force_time = new_time_list[idx_max]
 
         self.wrench_idx_at_pick = self.wrench_elapsed_time.index(max_force_time)
-        print(self.wrench_idx_at_pick)
+        print('max force pick time and index: ', max_force_time, self.wrench_idx_at_pick)
 
 
         min_force = new_force_list[0]
@@ -1345,7 +1352,7 @@ class Experiment:
             plt.text(event, 0.5, label.lower(), rotation=45, color='black', fontsize=FONTSIZE)
             plt.xlabel("Elapsed Time [sec]", fontsize=FONTSIZE)
             plt.ylabel("Force [N]", fontsize=FONTSIZE)
-            plt.ylim([0, 11])
+            plt.ylim([-5, 40])
 
         # --- Add error in the title if there was any ---
         try:
@@ -1365,9 +1372,9 @@ class Experiment:
         plt.grid()
         plt.xticks(size=TICKSIZE)
         plt.yticks(size=TICKSIZE)
-        # plt.title(self.filename + "\n" + error_type, fontsize=8)
-        # plt.suptitle(title_text)
-        # plt.xlim([0, 100])
+        plt.title(self.filename + "\n" + error_type, fontsize=8)
+        plt.suptitle(title_text)
+        plt.xlim([0, 100])
         # plt.tight_layout()
 
     def plot_only_pressure_animated(self, location, filename):
@@ -2040,6 +2047,7 @@ def real_experiments():
             mode = experiment.metadata['robot']['actuation mode']
             pick = experiment.metadata['labels']['apple pick result']
             if mode == 'dual' and pick == 'a':
+            # if file == '2023111_realapple8_mode_dual_attempt_2_orientation_0_yaw_0':
 
                 # STEP 4: Read values from 'csv'
                 read_csvs(experiment, location + file)
