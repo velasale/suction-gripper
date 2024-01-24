@@ -29,6 +29,10 @@ from sklearn.cluster import KMeans
 from scipy.ndimage import gaussian_filter, median_filter
 import pyautogui
 
+import scipy.stats as st
+
+from tqdm import tqdm
+
 ######## Self developed imports ########
 from ros_scripts import *
 from plot_scripts import *
@@ -36,6 +40,8 @@ from plot_scripts import *
 import logging
 logging_format = "[%(asctime)s - %(levelname)s] %(message)s"
 logging.basicConfig(format=logging_format, level=logging.INFO, datefmt="%H:%M:%S")
+
+
 
 def list_to_hist(list, x_label):
     """Generates histogram out of a list, and provides k-means clusters"""
@@ -568,6 +574,8 @@ class Experiment:
         self.max_tangentialForce_at_pick = 0
         self.max_netForce_at_pick = 0
         self.theta_at_pick = 0
+        self.travel_at_pick = 0
+
 
     # --- Functions and methods to use in different experiments ---
     def initial_stamp(self):
@@ -667,12 +675,14 @@ class Experiment:
         y = self.eef_y
         z = self.eef_z
 
-        ## Plot this to debug the POI
-        # counter=[]
-        # for i in range(len(z)):
-        #     counter.append(i)
-        # fig = plt.figure()
-        # plt.plot(counter,z)
+        # Plot this to debug the POI
+        if plots == 'yes':
+            counter = []
+            for i in range(len(z)):
+                counter.append(i)
+            fig = plt.figure()
+            plt.plot(counter, z)
+            plt.title('EEF distance in z axis [m] \n' + self.filename)
 
         # Step1: Detect points at which we want to measure
         previous = z[0]
@@ -745,11 +755,12 @@ class Experiment:
             plt.plot([min_force_loc,max_force_loc],[min_force, max_force])
             text = 'Stiffness: ' + str(round(stiffness, 0)) + 'N/m'
             plt.text(delta_travel/2, min_force + delta_force/2, text)
-            plt.ylim([-15, 30])
+            plt.ylim([-15, 40])
             plt.xlabel('EEF displacement [m]')
             plt.ylabel('zForce @ EEF [m]')
 
         self.stiffness = stiffness
+        self.travel_at_pick = delta_travel
 
     def get_relative_values(self):
         """ Subtracts the first reading of the F/T -- when nothing is attached -- to get rid of
@@ -2017,9 +2028,10 @@ def real_experiments():
     max_tangentialForces = []
     max_netForces = []
     thetas = []
+    deltas= []
 
     # STEP C: Sweep all bag files, and for each one do next
-    for file in os.listdir(location):
+    for file in tqdm(os.listdir(location)):
         if file.endswith('.bag'):
             logging.debug('------------- Filename: %s ------------' %file)
             only_name = file.split('.')[0]  # remove extension
@@ -2038,7 +2050,6 @@ def real_experiments():
             json_file = open(location + file + '.json')
             json_data = json.load(json_file)
             experiment.metadata = json_data
-
             logging.debug('metadata: %s' %experiment.metadata['general'])
 
             # STEP 3: Check conditions to continue the analysis
@@ -2053,7 +2064,7 @@ def real_experiments():
                 # STEP 5: Get different features for the experiment
                 experiment.get_features()
                 experiment.eef_location(plots='no')
-                experiment.branch_stiffness(plots='yes')
+                experiment.branch_stiffness(plots='no')
                 experiment.get_forces_at_pick()
 
                 # STEP 6: Append variables of interest
@@ -2062,16 +2073,57 @@ def real_experiments():
                 max_tangentialForces.append(experiment.max_tangentialForce_at_pick)
                 max_netForces.append(experiment.max_netForce_at_pick)
                 thetas.append(experiment.theta_at_pick)
+                deltas.append(experiment.travel_at_pick)
 
                 # STEP 7: Plots
                 # experiment.plot_only_pressure()
                 # experiment.plot_only_total_force()
 
-    list_to_hist(stiffnesses, 'Branch stiffness [N/m]')
-    list_to_hist(max_normalForces, 'Max Normal Force [N]')
-    list_to_hist(max_tangentialForces, 'Max Tangential Force [N]')
-    list_to_hist(max_netForces, 'Max Net Force [N]')
-    list_to_hist(thetas, 'Thetas [deg]')
+    # Confidence Intervals
+    confidence = 0.99
+    a = stiffnesses
+    c_int = st.t.interval(confidence, len(a)-1, loc=np.mean(a), scale=st.sem(a))
+    print('Stiffness Confidence Interval 99%: ', round(c_int[0],2), round(c_int[1],2))
+    a = max_netForces
+    c_int = st.t.interval(confidence, len(a)-1, loc=np.mean(a), scale=st.sem(a))
+    print('Net Force Confidence Interval 99%: ', round(c_int[0],2), round(c_int[1],2))
+
+    # Boxplots
+    fig = plt.figure()
+    plt.boxplot(stiffnesses, notch=True, meanline=True)
+    plt.title('Branch Stiffness (NormalForce / Travelled Distance) [N/m]')
+    plt.grid()
+
+    fig = plt.figure()
+    plt.boxplot(max_netForces, notch=True, meanline=True)
+    plt.title('Max Net Forces [N]')
+    plt.grid()
+
+    # Violinplots
+    fig = plt.figure()
+    plt.violinplot(stiffnesses)
+    plt.title('Branch Stiffness (NormalForce / Travelled Distance) [N/m]')
+    plt.grid()
+
+    fig = plt.figure()
+    plt.violinplot(max_netForces)
+    plt.title('Max Net Forces [N]')
+    plt.grid()
+
+    # Scatter Plots
+    fig = plt.figure()
+    plt.scatter(deltas, max_netForces)
+    plt.title('Travelled Distance Vs Net Force')
+    plt.xlabel('EEF travelled distance [m]')
+    plt.ylabel('Net Force [N]')
+    plt.grid()
+
+    # Histograms
+    # list_to_hist(stiffnesses, 'Branch stiffness [N/m]')
+    # list_to_hist(max_normalForces, 'Max Normal Force [N]')
+    # list_to_hist(max_tangentialForces, 'Max Tangential Force [N]')
+    # list_to_hist(max_netForces, 'Max Net Force [N]')
+    # list_to_hist(thetas, 'Thetas [deg]')
 
     plt.show(block=False)
     plt.pause(0.001)  # Pause for interval seconds.
@@ -2082,7 +2134,7 @@ def main():
 
     logging.getLogger('matplotlib.font_manager').disabled = True
     # Comment out this line for all DEBUG-level messages to be suppressed
-    logging.getLogger().setLevel(logging.DEBUG)
+    # logging.getLogger().setLevel(logging.DEBUG)
 
     # --- Simply choose the desired experiment by un-commenting it ---
     # circle_plots(1,1,1)
@@ -2100,7 +2152,6 @@ def main():
 
     # TODO: Compare results between  get_detach_values() and get_forces_at_pick()
     # TODO: Interpret moments (lever = height of the rig)
-
 
 
 if __name__ == '__main__':
