@@ -10,6 +10,10 @@ import csv
 import time
 import numpy as np
 
+import scipy
+from scipy.ndimage import gaussian_filter, median_filter
+import scipy.stats as st
+
 
 ######## 3rd parties Imports ########
 from operator import sub, add
@@ -26,10 +30,8 @@ from bagpy import bagreader
 
 from sklearn.metrics import r2_score
 from sklearn.cluster import KMeans
-from scipy.ndimage import gaussian_filter, median_filter
+from sklearn.linear_model import LinearRegression
 import pyautogui
-
-import scipy.stats as st
 
 from tqdm import tqdm
 
@@ -842,7 +844,16 @@ class Experiment:
 
         delta_force = max_force - min_force
         delta_travel = max_force_loc - min_force_loc
+
+        # Delta Approach
         stiffness = abs(delta_force) / abs(delta_travel)
+        logging.debug('Stiffness - simple approach: %i' %stiffness)
+
+        # Linear Regression Approach
+        lr_xtrain = np.array(self.eef_travel[0:idx_max - idx_1])
+        lr_ytrain = np.array(self.wrench_zforce_values[idx_1:idx_max])
+        lr_stiffness = st.linregress(lr_xtrain, lr_ytrain)
+        logging.debug('Stiffness - lr approach: %i (Rvalue: %.2f)' %(lr_stiffness.slope, lr_stiffness.rvalue))
 
         # TODO Stiffness in the direction of the net force
         net_stiffness = abs(stiffness / math.sin(math.radians(self.theta_at_pick)))
@@ -852,13 +863,13 @@ class Experiment:
             plt.plot(self.eef_travel, new_force_list)
             plt.title('z-Force vs Net distance travelled\n' + self.filename)
             plt.plot([min_force_loc,max_force_loc],[min_force, max_force])
-            text = 'Stiffness: ' + str(round(stiffness, 0)) + 'N/m'
+            text = 'LR Stiffness: ' + str(int(lr_stiffness.slope)) + 'N/m' + ' Rvalue:'+ str(round(lr_stiffness.rvalue,2))
             plt.text(delta_travel/2, min_force + delta_force/2, text)
             plt.ylim([-15, 40])
             plt.xlabel('EEF displacement [m]')
             plt.ylabel('zForce @ EEF [m]')
 
-        self.stiffness = stiffness
+        self.stiffness = lr_stiffness.slope
         self.travel_at_pick = delta_travel
 
 
@@ -2093,8 +2104,8 @@ def real_experiments():
             # STEP 3: Check conditions to continue the analysis
             mode = experiment.metadata['robot']['actuation mode']
             pick = experiment.metadata['labels']['apple pick result']
-            if pick == 'a':
-            # if mode == 'dual' and pick == 'a':
+            # if pick == 'a':
+            if mode == 'dual' and pick == 'a':
             # if file == '2023111_realapple1_mode_dual_attempt_1_orientation_0_yaw_0':
 
                 # STEP 4: Read values from 'csv'
@@ -2120,7 +2131,8 @@ def real_experiments():
                 # experiment.plot_only_pressure()
                 # experiment.plot_only_total_force()
 
-    print ('Stiffness MEAN, MEDIAN: ', np.mean(stiffnesses), np.median(stiffnesses))
+    print('Stiffness MEAN, MEDIAN: ', round(np.mean(stiffnesses), 2), round(np.median(stiffnesses), 2))
+    print('NetForce MEAN, MEDIAN: ', round(np.mean(max_netForces), 2), round(np.median(max_netForces), 2))
     # Confidence Intervals
     confidence = 0.95
     a = stiffnesses
@@ -2163,10 +2175,10 @@ def real_experiments():
         plt.annotate(txt, (deltas[i], max_netForces[i]))
 
     # Histograms
-    # list_to_hist(stiffnesses, 'Branch stiffness [N/m]')
+    list_to_hist(stiffnesses, 'Branch stiffness [N/m]')
     # list_to_hist(max_normalForces, 'Max Normal Force [N]')
     # list_to_hist(max_tangentialForces, 'Max Tangential Force [N]')
-    # list_to_hist(max_netForces, 'Max Net Force [N]')
+    list_to_hist(max_netForces, 'Max Net Force [N]')
     # list_to_hist(thetas, 'Thetas [deg]')
 
     plt.show(block=False)
