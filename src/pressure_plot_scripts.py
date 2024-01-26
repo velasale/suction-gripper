@@ -482,7 +482,7 @@ def circle_plots(x_noises, z_noises, radius, x_forces, z_forces, pressure):
 class Experiment:
     """Class to define an Experiment as an Object. Each experiment has properties from its json file.
     """
-    def __init__(self, id=0,
+    def __init__(self, id=0, apple_id=0,
                  exp_type="vertical",
                  pressure=60,
                  surface="3DPrinted_with_Primer",
@@ -493,6 +493,7 @@ class Experiment:
                  vacuum_type='absolute'):
 
         self.id = id
+        self.apple_id = apple_id
         self.vacuum_type = vacuum_type
 
         # ------------------------- Data from jsons ---------------------------
@@ -2059,6 +2060,7 @@ def real_experiments():
     max_netForces = []
     thetas = []
     deltas= []
+    apple_ids = []
 
     # STEP C: Sweep all bag files, and for each one do next
     for file in tqdm(os.listdir(location)):
@@ -2066,6 +2068,11 @@ def real_experiments():
             logging.debug('------------- Filename: %s ------------' %file)
             only_name = file.split('.')[0]  # remove extension
             file = only_name
+
+            # Extract apple's id
+            apple_id = file.split('apple')[1]
+            apple_id = int(apple_id.split('_')[0])
+            logging.debug('Apple %i' %apple_id)
 
             # STEP 1: Turn bag into csvs if needed
             if os.path.isdir(location + file):
@@ -2076,7 +2083,7 @@ def real_experiments():
                 bag_to_csvs(location + file + ".bag")
 
             # STEP 2: Generate an experiment object for each file, and read its json file
-            experiment = Experiment()
+            experiment = Experiment(apple_id=apple_id)
             experiment.filename = file
             json_file = open(location + file + '.json')
             json_data = json.load(json_file)
@@ -2086,7 +2093,8 @@ def real_experiments():
             # STEP 3: Check conditions to continue the analysis
             mode = experiment.metadata['robot']['actuation mode']
             pick = experiment.metadata['labels']['apple pick result']
-            if mode == 'dual' and pick == 'a':
+            if pick == 'a':
+            # if mode == 'dual' and pick == 'a':
             # if file == '2023111_realapple1_mode_dual_attempt_1_orientation_0_yaw_0':
 
                 # STEP 4: Read values from 'csv'
@@ -2106,6 +2114,7 @@ def real_experiments():
                 max_netForces.append(experiment.max_netForce_at_pick)
                 thetas.append(experiment.theta_at_pick)
                 deltas.append(experiment.travel_at_pick)
+                apple_ids.append(experiment.apple_id)
 
                 # STEP 7: Plots
                 # experiment.plot_only_pressure()
@@ -2150,6 +2159,8 @@ def real_experiments():
     plt.xlabel('EEF travelled distance [m]')
     plt.ylabel('Net Force [N]')
     plt.grid()
+    for i, txt in enumerate(apple_ids):
+        plt.annotate(txt, (deltas[i], max_netForces[i]))
 
     # Histograms
     # list_to_hist(stiffnesses, 'Branch stiffness [N/m]')
@@ -2185,6 +2196,7 @@ def main():
 
     # TODO: Compare results between  get_detach_values() and get_forces_at_pick()
     # TODO: Interpret moments (lever = height of the rig)
+    # TODO: Script ideas
 
 
 if __name__ == '__main__':
