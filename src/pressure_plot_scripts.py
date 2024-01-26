@@ -34,13 +34,50 @@ import scipy.stats as st
 from tqdm import tqdm
 
 ######## Self developed imports ########
-from ros_scripts import *
+# from ros_scripts import *
 from plot_scripts import *
 
 import logging
 logging_format = "[%(asctime)s - %(levelname)s] %(message)s"
 logging.basicConfig(format=logging_format, level=logging.INFO, datefmt="%H:%M:%S")
 
+
+def locate_index_of_deltas(data, width=200, change=3/10000):
+    """
+    CAUTION: THIS WORKS ONLY FOR A SINGLE BACK AND FORTH MOVE
+    @param data:
+    @param width: distance between indexes to measure the delta
+    @param change: change that wants to be located
+    @return: begin and end of the deltas
+    """
+
+    POIS_plus = []
+    POIS_minus = []
+    POIS = []
+
+    previous = data[0]
+
+    for i in range(len(data) - width):
+        delta = data[i+width] - previous
+        previous = data[i]
+        if delta > change:
+            POIS_plus.append(i)     # collects all points with positive changes
+        if delta < - change:
+            POIS_minus.append(i)    # collects all points with negative changes
+
+    # Only store the first and last points
+    POIS.append(POIS_minus[0])
+    POIS.append(POIS_minus[-1] + width)
+    POIS.append(POIS_plus[0])
+    POIS.append(POIS_plus[-1] + width)
+
+    logging.debug('POIs: %i %i %i %i', POIS[0], POIS[1], POIS[2], POIS[3])
+    POIS.sort()
+    logging.debug('2nd and 3rd POI: %i %i', POIS[2], POIS[3])
+    idx_1 = POIS[2]
+    idx_2 = POIS[3]
+
+    return idx_1, idx_2
 
 
 def list_to_hist(list, x_label):
@@ -569,7 +606,9 @@ class Experiment:
         self.eef_travel = []
         self.stiffness = 0
 
-        self.wrench_idx_at_pick = 0
+        self.wrench_idx_start_pick = 0
+        self.wrench_idx_end_pick = 0
+        self.wrench_idx_maxForce_at_pick = 0
         self.max_normalForce_at_pick = 0
         self.max_tangentialForce_at_pick = 0
         self.max_netForce_at_pick = 0
@@ -624,6 +663,52 @@ class Experiment:
         self.wrench_ytorque_values = median_filter(self.wrench_ytorque_values, filter_param)
         self.wrench_ztorque_values = median_filter(self.wrench_ztorque_values, filter_param)
 
+    def get_relative_values(self):
+        """ Subtracts the first reading of the F/T -- when nothing is attached -- to get rid of
+            miscalibration or zero offsets
+        """
+
+        for i in range(len(self.wrench_time_stamp)):
+            relative_zforce = self.wrench_zforce_values[i] - self.wrench_zforce_values[0]
+            relative_yforce = self.wrench_yforce_values[i] - self.wrench_yforce_values[0]
+            relative_xforce = self.wrench_xforce_values[i] - self.wrench_xforce_values[0]
+            relative_ztorque = self.wrench_ztorque_values[i] - self.wrench_ztorque_values[0]
+            relative_ytorque = self.wrench_ytorque_values[i] - self.wrench_ytorque_values[0]
+            relative_xtorque = self.wrench_xtorque_values[i] - self.wrench_xtorque_values[0]
+
+            relative_netforce = math.sqrt(relative_zforce ** 2 + relative_xforce ** 2 + relative_yforce ** 2)
+
+            self.wrench_zforce_relative_values.append(relative_zforce)
+            self.wrench_yforce_relative_values.append(relative_yforce)
+            self.wrench_xforce_relative_values.append(relative_xforce)
+
+            self.wrench_netforce_relative_values.append(relative_netforce)
+
+            self.wrench_ztorque_relative_values.append(relative_ztorque)
+            self.wrench_ytorque_relative_values.append(relative_ytorque)
+            self.wrench_xtorque_relative_values.append(relative_xtorque)
+
+    def get_features(self):
+        """Basically run all the methods"""
+
+        self.elapsed_times()
+
+        # -------- Pressure Features ----------
+        # self.get_atmospheric_pressure()
+        # self.get_steady_vacuum()
+
+        # -------- Wrench Features ------------
+        self.filter_wrench(30)
+        self.get_relative_values()
+
+        # Normal and Tangential Forces
+        # self.get_normal_angle()
+        self.normal_and_tangent_forces()
+
+        self.get_detach_values()
+        # self.check_errors()
+
+    # ---------------- METHODS FOR BRANCH STIFFNESS --------------
     def eef_location(self, plots='no'):
         """Obtain the 3d position of the End Effector"""
 
@@ -665,88 +750,101 @@ class Experiment:
             ax.plot3D(x, y, z)
 
             # Z axis over time
-            # fig = plt.figure()
-            # plt.plot(counter, z)
-            # plt.title('z axis Distance [m]')
-
-    def branch_stiffness(self, plots='no'):
-        """Analyze the stiffness of the branch"""
-        x = self.eef_x
-        y = self.eef_y
-        z = self.eef_z
-
-        # Plot this to debug the POI
-        if plots == 'yes':
-            counter = []
-            for i in range(len(z)):
-                counter.append(i)
             fig = plt.figure()
             plt.plot(counter, z)
             plt.title('EEF distance in z axis [m] \n' + self.filename)
 
-        # Step1: Detect points at which we want to measure
-        previous = z[0]
-        rango = 200
-        move = 3 / 10000
-        POIS_plus = []
-        POIS_minus = []
-        POIS = []
-        for i in range(len(z) - rango):
-            delta = z[i + rango] - previous
-            # print(delta)
-            previous = z[i]
-            if delta > move:
-                POIS_plus.append(i)
-            if delta < -move:
-                POIS_minus.append(i)
-        POIS.append(POIS_minus[0])
-        POIS.append(POIS_minus[-1]+rango)
-        POIS.append(POIS_plus[0])
-        POIS.append(POIS_plus[-1]+rango)
-        logging.debug('POIs: %i %i %i %i', POIS[0], POIS[1], POIS[2], POIS[3])
-        POIS.sort()
-        logging.debug('2nd and 3rd POI: %i %i', POIS[2], POIS[3])
-        idx_1 = POIS[2]
-        idx_2 = POIS[3]
+    def pick_points(self, plots='no'):
+        """Find the EEF location during the Start and Finish of the pick
+        """
 
-        # Step2: Measure distance travelled by the eef
-        self.eef_x = x[idx_1:idx_2]
-        self.eef_y = y[idx_1:idx_2]
-        self.eef_z = z[idx_1:idx_2]
+        # EEF location from the FK
+        x = self.eef_x
+        y = self.eef_y
+        z = self.eef_z
+
+        # Step1: Locate starting and final points of the pick
+        idx_1, idx_2 = locate_index_of_deltas(z)
+        self.wrench_idx_start_pick = idx_1
+        self.wrench_idx_end_pick = idx_2
+
+        # Step2: Measure relative distance travelled by the eef
         distances = []
         counter = []
-        for i in range(len(self.eef_x)):
-            delta_x = self.eef_x[i] - self.eef_x[0]
-            delta_y = self.eef_y[i] - self.eef_y[0]
-            delta_z = self.eef_z[i] - self.eef_z[0]
+        for i in range(idx_2 - idx_1):
+            delta_x = x[idx_1 + i] - x[idx_1]
+            delta_y = y[idx_1 + i] - y[idx_1]
+            delta_z = z[idx_1 + i] - z[idx_1]
             # print('\Deltas:', delta_x, delta_y, delta_z)
-            distance = math.sqrt(delta_x**2 + delta_y**2 + delta_z**2)
+            distance = math.sqrt(delta_x ** 2 + delta_y ** 2 + delta_z ** 2)
             distances.append(distance)
             counter.append(i)
         self.eef_travel = distances
 
-        # if plots == 'yes':
-        #     fig = plt.figure()
-        #     plt.plot(counter, distances)
-        #     plt.title('Net distance travelled [m]')
+        if plots == 'yes':
+            fig = plt.figure()
+            plt.plot(counter, distances)
+            plt.title('Net distance travelled [m]')
 
-        # Step3: Measure Stiffness = Delta_Force / Delta_displacement
+        # Step3: Find Fmax between the POI's
         new_force_list = self.wrench_zforce_values[idx_1:idx_2]
         new_time_list = self.wrench_elapsed_time[idx_1:idx_2]
         idx_max = np.argmax(new_force_list)
+
         max_force = new_force_list[idx_max]
+
         max_force_time = new_time_list[idx_max]
+        self.wrench_idx_maxForce_at_pick = self.wrench_elapsed_time.index(max_force_time)
+        logging.debug('Pick MaxForce occurs at %i.2s (index %i)' % (max_force_time, self.wrench_idx_maxForce_at_pick))
 
-        self.wrench_idx_at_pick = self.wrench_elapsed_time.index(max_force_time)
-        logging.debug('Pick MaxForce occurs at %i.2s (index %i)' %(max_force_time, self.wrench_idx_at_pick))
+    def pick_forces(self):
+        """ APPROACH 1: USING POIS """
 
-        min_force = new_force_list[0]
-        max_force_loc = distances[idx_max]
-        min_force_loc = distances[0]
+        # Print all values during the detachment
+        max_netForce = max(self.wrench_netforce_relative_values)
+
+        # index = self.wrench_netforce_relative_values.index(max_netForce)
+        index = self.wrench_idx_maxForce_at_pick
+
+        max_xForce = self.wrench_xforce_relative_values[index]
+        max_yForce = self.wrench_yforce_relative_values[index]
+        max_zForce = self.wrench_zforce_relative_values[index]
+
+        max_tanForce = math.sqrt(max_xForce ** 2 + max_yForce ** 2)
+        theta_rad = math.atan((max_zForce / max_tanForce))
+        theta = math.degrees(theta_rad)
+
+        # Store values
+        self.max_normalForce_at_pick = max_zForce
+        self.max_tangentialForce_at_pick = max_tanForce
+        self.max_netForce_at_pick = max_netForce
+        self.theta_at_pick = theta
+
+        logging.debug('Max xForce: %i.2N, yForce: %i.2N, zForce: %i.2N' % (max_xForce, max_yForce, max_zForce))
+        logging.debug('Max Normal: %i.2N, Tangential: %i.2N, Net: %i.2N, Theta: %i.0deg' % (
+        max_zForce, max_tanForce, max_netForce, theta))
+
+    def pick_stiffness(self, plots='no'):
+
+        idx_1 = self.wrench_idx_start_pick
+        idx_2 = self.wrench_idx_end_pick
+        idx_max = self.wrench_idx_maxForce_at_pick
+
+        # Stiffness w.r.t zForce(@eef) because the displacement is measured in zaxis (@eef)
+        new_force_list = self.wrench_zforce_values[idx_1:idx_2]
+
+        min_force = self.wrench_zforce_values[idx_1]
+        max_force = self.wrench_zforce_values[idx_max]
+
+        min_force_loc = self.eef_travel[0]
+        max_force_loc = self.eef_travel[idx_max - idx_1]
 
         delta_force = max_force - min_force
         delta_travel = max_force_loc - min_force_loc
         stiffness = abs(delta_force) / abs(delta_travel)
+
+        # TODO Stiffness in the direction of the net force
+        net_stiffness = abs(stiffness / math.sin(math.radians(self.theta_at_pick)))
 
         if plots == 'yes':
             fig = plt.figure()
@@ -762,74 +860,6 @@ class Experiment:
         self.stiffness = stiffness
         self.travel_at_pick = delta_travel
 
-    def get_relative_values(self):
-        """ Subtracts the first reading of the F/T -- when nothing is attached -- to get rid of
-            miscalibration or zero offsets
-        """
-
-        for i in range(len(self.wrench_time_stamp)):
-            relative_zforce = self.wrench_zforce_values[i] - self.wrench_zforce_values[0]
-            relative_yforce = self.wrench_yforce_values[i] - self.wrench_yforce_values[0]
-            relative_xforce = self.wrench_xforce_values[i] - self.wrench_xforce_values[0]
-            relative_ztorque = self.wrench_ztorque_values[i] - self.wrench_ztorque_values[0]
-            relative_ytorque = self.wrench_ytorque_values[i] - self.wrench_ytorque_values[0]
-            relative_xtorque = self.wrench_xtorque_values[i] - self.wrench_xtorque_values[0]
-
-            relative_netforce = math.sqrt(relative_zforce ** 2 + relative_xforce ** 2 + relative_yforce ** 2)
-
-            self.wrench_zforce_relative_values.append(relative_zforce)
-            self.wrench_yforce_relative_values.append(relative_yforce)
-            self.wrench_xforce_relative_values.append(relative_xforce)
-
-            self.wrench_netforce_relative_values.append(relative_netforce)
-
-            self.wrench_ztorque_relative_values.append(relative_ztorque)
-            self.wrench_ytorque_relative_values.append(relative_ytorque)
-            self.wrench_xtorque_relative_values.append(relative_xtorque)
-
-    def get_forces_at_pick(self):
-        """ APPROACH 1: USING POIS """
-
-        # Print all values during the detachment
-        max_netForce = max(self.wrench_netforce_relative_values)
-
-        # index = self.wrench_netforce_relative_values.index(max_netForce)
-        index = self.wrench_idx_at_pick
-
-        max_xForce = self.wrench_xforce_relative_values[index]
-        max_yForce = self.wrench_yforce_relative_values[index]
-        max_zForce = self.wrench_zforce_relative_values[index]
-
-        max_tanForce = math.sqrt(max_xForce ** 2 + max_yForce ** 2)
-        theta = math.degrees(math.atan((max_zForce/max_tanForce)))
-
-        # Store values
-        self.max_normalForce_at_pick = max_zForce
-        self.max_tangentialForce_at_pick = max_tanForce
-        self.max_netForce_at_pick = max_netForce
-        self.theta_at_pick = theta
-        logging.debug('Max xForce: %i.2N, yForce: %i.2N, zForce: %i.2N' %(max_xForce, max_yForce, max_zForce))
-        logging.debug('Max Normal: %i.2N, Tangential: %i.2N, Net: %i.2N, Theta: %i.0deg' %(max_zForce, max_tanForce, max_netForce, theta))
-
-    def get_features(self):
-        """Basically run all the methods"""
-
-        self.elapsed_times()
-
-        # -------- Pressure Features ----------
-        # self.get_atmospheric_pressure()
-        # self.get_steady_vacuum()
-
-        # -------- Wrench Features ------------
-        self.filter_wrench(30)
-        self.get_relative_values()
-
-        # Normal and Tangential Forces
-        # self.get_normal_angle()
-        self.normal_and_tangent_forces()
-
-        self.get_detach_values()
-        # self.check_errors()
 
     # --------------- METHODS FOR AIR PRESSURE -------------
     def get_atmospheric_pressure(self):
@@ -2042,6 +2072,7 @@ def real_experiments():
                 logging.debug('csvs were already generated')
                 pass
             else:
+                logging.debug('make sure to import ros_scripts.py')
                 bag_to_csvs(location + file + ".bag")
 
             # STEP 2: Generate an experiment object for each file, and read its json file
@@ -2056,7 +2087,7 @@ def real_experiments():
             mode = experiment.metadata['robot']['actuation mode']
             pick = experiment.metadata['labels']['apple pick result']
             if mode == 'dual' and pick == 'a':
-            # if file == '2023111_realapple8_mode_dual_attempt_2_orientation_0_yaw_0':
+            # if file == '2023111_realapple1_mode_dual_attempt_1_orientation_0_yaw_0':
 
                 # STEP 4: Read values from 'csv'
                 read_csvs(experiment, location + file)
@@ -2064,8 +2095,9 @@ def real_experiments():
                 # STEP 5: Get different features for the experiment
                 experiment.get_features()
                 experiment.eef_location(plots='no')
-                experiment.branch_stiffness(plots='no')
-                experiment.get_forces_at_pick()
+                experiment.pick_points(plots='no')
+                experiment.pick_forces()
+                experiment.pick_stiffness(plots='no')
 
                 # STEP 6: Append variables of interest
                 stiffnesses.append(experiment.stiffness)
@@ -2079,14 +2111,15 @@ def real_experiments():
                 # experiment.plot_only_pressure()
                 # experiment.plot_only_total_force()
 
+    print ('Stiffness MEAN, MEDIAN: ', np.mean(stiffnesses), np.median(stiffnesses))
     # Confidence Intervals
-    confidence = 0.99
+    confidence = 0.95
     a = stiffnesses
     c_int = st.t.interval(confidence, len(a)-1, loc=np.mean(a), scale=st.sem(a))
-    print('Stiffness Confidence Interval 99%: ', round(c_int[0],2), round(c_int[1],2))
+    print('Stiffness Confidence Interval 95%: ', round(c_int[0],2), round(c_int[1],2))
     a = max_netForces
     c_int = st.t.interval(confidence, len(a)-1, loc=np.mean(a), scale=st.sem(a))
-    print('Net Force Confidence Interval 99%: ', round(c_int[0],2), round(c_int[1],2))
+    print('Net Force Confidence Interval 95%: ', round(c_int[0],2), round(c_int[1],2))
 
     # Boxplots
     fig = plt.figure()
@@ -2101,12 +2134,12 @@ def real_experiments():
 
     # Violinplots
     fig = plt.figure()
-    plt.violinplot(stiffnesses)
+    plt.violinplot(stiffnesses, showmedians=True)
     plt.title('Branch Stiffness (NormalForce / Travelled Distance) [N/m]')
     plt.grid()
 
     fig = plt.figure()
-    plt.violinplot(max_netForces)
+    plt.violinplot(max_netForces, showmedians=True)
     plt.title('Max Net Forces [N]')
     plt.grid()
 
