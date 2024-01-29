@@ -247,7 +247,10 @@ def df_categorical_stats(df, cat_name, cat_value, x_filter_name, x_filter_values
         plt.tight_layout()
 
 
-def main():
+def icra24_analysis():
+    """ This script is the main used for the plots of ICRA24 paper
+    ICRA 2024 Contributed paper 2508: Dynamic evaluation of a suction based gripper for fruit picking using a physical twin
+    """
 
     # ------ Dataset Location ------
     # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"
@@ -359,6 +362,10 @@ def main():
                          ['low', 'medium', 'high'])
 
     plt.show()
+
+
+def main():
+    icra24_analysis()
 
 
 if __name__ == '__main__':
