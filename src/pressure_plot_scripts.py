@@ -140,9 +140,16 @@ def ur5e_fk_dh(joint_angles):
     for i in range(len(joint_angles)):
         T = np.dot(T, DH_T(i, joint_angles, alphas, a_links, d_offsets))
 
-    eef_xyx = T[:, 3]
+    # STEP3: Get the euler angles
+    beta = math.atan2(-T[2, 0], math.sqrt(T[0, 0] ** 2 + T[1, 0]** 2))
+    alpha = math.atan2(T[1, 0]/math.cos(beta), T[0, 0]/math.cos(beta))
+    gamma = math.atan2(T[2, 1]/math.cos(beta), T[2, 2]/math.cos(beta))
 
-    return eef_xyx
+    # STEP4: Extract the 3d position and orientation
+    eef_xyx = T[:, 3]
+    eef_angles = [beta, alpha, gamma]
+
+    return eef_xyx, eef_angles
 
 
 def read_json(file):
@@ -495,7 +502,6 @@ class Experiment:
                  vacuum_type='absolute'):
 
         self.id = id
-        self.apple_id = apple_id
         self.vacuum_type = vacuum_type
 
         # ------------------------- Data from jsons ---------------------------
@@ -606,6 +612,9 @@ class Experiment:
         self.eef_x = []
         self.eef_y = []
         self.eef_z = []
+        self.eef_beta = []
+        self.eef_alpha = []
+        self.eef_gamma = []
         self.eef_travel = []
         self.stiffness = 0
 
@@ -618,6 +627,9 @@ class Experiment:
         self.theta_at_pick = 0
         self.travel_at_pick = 0
 
+        # --------------- Apple properties
+        self.apple_id = apple_id
+        self.apple_center_loc = [0,0,0]
 
     # --- Functions and methods to use in different experiments ---
     def initial_stamp(self):
@@ -719,6 +731,11 @@ class Experiment:
         y = []
         z = []
 
+        beta = []
+        alpha = []
+        gamma = []
+
+
         # FK
         counter = []
         for i in range(len(self.j0_shoulder_pan_values)):
@@ -728,15 +745,24 @@ class Experiment:
                                self.j3_wrist1_values[i],
                                self.j4_wrist2_values[i],
                                self.j5_wrist3_values[i]])
-            coords = ur5e_fk_dh(joints)
-            x.append(coords[0])
-            y.append(coords[1])
-            z.append(coords[2])
+            position, orientation = ur5e_fk_dh(joints)
+            x.append(position[0])
+            y.append(position[1])
+            z.append(position[2])
+
+            beta.append(orientation[0])
+            alpha.append(orientation[1])
+            gamma.append(orientation[2])
+
             counter.append(i)
 
         self.eef_x = x
         self.eef_y = y
         self.eef_z = z
+
+        self.beta = beta
+        self.alpha = alpha
+        self.gamma = gamma
 
         # plots
         if plots == 'yes':
@@ -756,6 +782,8 @@ class Experiment:
             fig = plt.figure()
             plt.plot(counter, z)
             plt.title('EEF distance in z axis [m] \n' + self.filename)
+
+            # 3D plot of eef axes
 
     def pick_points(self, plots='no'):
         """Find the EEF location during the Start and Finish of the pick
@@ -846,8 +874,8 @@ class Experiment:
         delta_travel = max_force_loc - min_force_loc
 
         # Delta Approach
-        stiffness = abs(delta_force) / abs(delta_travel)
-        logging.debug('Stiffness - simple approach: %i' %stiffness)
+        delta_stiffness = abs(delta_force) / abs(delta_travel)
+        logging.debug('Stiffness - simple approach: %i' %delta_stiffness)
 
         # Linear Regression Approach
         lr_xtrain = np.array(self.eef_travel[0:idx_max - idx_1])
@@ -855,8 +883,9 @@ class Experiment:
         lr_stiffness = st.linregress(lr_xtrain, lr_ytrain)
         logging.debug('Stiffness - lr approach: %i (Rvalue: %.2f)' %(lr_stiffness.slope, lr_stiffness.rvalue))
 
+        stiffness = lr_stiffness.slope
         # TODO Stiffness in the direction of the net force
-        net_stiffness = abs(stiffness / math.sin(math.radians(self.theta_at_pick)))
+        # stiffness = abs(stiffness / math.sin(math.radians(self.theta_at_pick)))
 
         if plots == 'yes':
             fig = plt.figure()
@@ -869,8 +898,52 @@ class Experiment:
             plt.xlabel('EEF displacement [m]')
             plt.ylabel('zForce @ EEF [m]')
 
-        self.stiffness = lr_stiffness.slope
+        self.stiffness = stiffness
         self.travel_at_pick = delta_travel
+
+    # ----------- METHODS FOR EEF POSE W.R.T APPLE ---------
+    def eef_offset(self):
+        """Measures the offset of the center of the EEF w.r.t. the apple"""
+
+        # STEP1: Obtain the location of the apple center
+        folder = '/media/alejo/Elements/Prosser_Data/Probe/20231101_apples_coords.csv'
+        data_list = pd.read_csv(folder)
+
+        try:
+            idx = data_list['Label'].tolist().index('apple' + str(self.apple_id))
+            apple_south_pole = data_list['South Pole coords'].iloc[idx]
+            apple_north_pole = data_list['North Pole coords'].iloc[idx]
+
+            # Convert string of list into list
+            sp = apple_south_pole.strip('][').split(', ')
+            np = apple_north_pole.strip('][').split(', ')
+
+            # Convert list of strings into list of floats
+            float_sp = [float(x) for x in sp]
+            float_np = [float(x) for x in np]
+
+            print("\napple", self.apple_id, idx, float_sp)
+
+        except ValueError:
+            print("Label not found")
+
+        self.apple_center_loc[0] = (float_np[0] + float_sp[0])/2
+        self.apple_center_loc[1] = (float_np[1] + float_sp[1])/2
+        self.apple_center_loc[2] = (float_np[2] + float_sp[2])/2
+
+        print("Apple center", self.apple_center_loc)
+
+
+
+
+
+        # STEP2: Obtain the vector normal to the EEF
+
+        # STEP3: Measure distance from apple center to normal vector
+
+
+
+    # def eef_angle(self):
 
 
     # --------------- METHODS FOR AIR PRESSURE -------------
@@ -1978,20 +2051,17 @@ def plot_and_video():
 
 def proxy_experiments():
 
-    # --- 1. Find file
-
-    # --- Default Hard Drive ---
-    # folder = '/home/alejo/gripper_ws/src/suction-gripper/data/'
-    # --- Hard Drive B ---
-    # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"
-    # --- Hard Drive C ---
-    folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'
-
+    # STEP A: Data Location
+    # folder = '/home/alejo/gripper_ws/src/suction-gripper/data/'   # Default Hard Drive
+    # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"     # Hard Drive B
+    # folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'  # Hard Drive C
+    folder = '/media/alejo/Elements/Prosser_Data/'  # External Hard Drive
 
     # subfolder = 'MEDIUM_STIFFNESS/'
     # subfolder = 'HIGH_STIFFNESS/'
     # subfolder = 'LOW_STIFFNESS/'
-    subfolder = ''
+    subfolder = 'Dataset - apple picks/'
+    # subfolder = ''
 
     location = folder + subfolder
 
@@ -2001,22 +2071,18 @@ def proxy_experiments():
     # file = '2023082_proxy_sample_5_yaw_45_rep_0_stiff_high_force_low'
 
     # --- ICRA24 paper plots
-    # file = '2023083_proxy_sample_5_yaw_45_rep_1_stiff_high_force_low'
+    file = '2023083_proxy_sample_5_yaw_45_rep_1_stiff_high_force_low'
     # file = '2023096_realapple5_attempt3'
     # file = '2023096_realapple6_attempt5' # nice plots
-
     # file = '2023096_realapple3_attempt1'
     # file = '2023083_proxy_sample_0_yaw_45_rep_1_stiff_low_force_low'
-
     # file = '20230922_realapple3_attempt_1_orientation_0_yaw_0'
-
     # file = '20230920_sim_sample_0_yaw_-15_offset_0.005_rep_0_stiff_low_force_low'
 
-    # --- ICRA24 accompanying vidoe
-    file = '20230731_proxy_sample_6_yaw_45_rep_0_stiff_low_force_low'
-    file = '20230922_realapple3_attempt_1_orientation_0_yaw_0'
-
-    file = '20230922_realapple2_attempt_1_orientation_0_yaw_0'
+    # --- ICRA24 accompanying video
+    # file = '20230731_proxy_sample_6_yaw_45_rep_0_stiff_low_force_low'
+    # file = '20230922_realapple3_attempt_1_orientation_0_yaw_0'
+    # file = '20230922_realapple2_attempt_1_orientation_0_yaw_0'
 
 
     # --- 2. Turn bag into csvs if needed
@@ -2117,6 +2183,7 @@ def real_experiments():
                 experiment.pick_points(plots='no')
                 experiment.pick_forces()
                 experiment.pick_stiffness(plots='no')
+                experiment.eef_offset()
 
                 # STEP 6: Append variables of interest
                 stiffnesses.append(experiment.stiffness)
