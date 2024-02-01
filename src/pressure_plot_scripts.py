@@ -140,13 +140,24 @@ def ur5e_fk_dh(joint_angles):
     for i in range(len(joint_angles)):
         T = np.dot(T, DH_T(i, joint_angles, alphas, a_links, d_offsets))
 
+    # WARNING XY AXES OF 'BASE LINK' CFRAME ARE ROTATED 180 FROM 'BASE' CFRAME.
+    # SINCE I DID IN ROS EVERYTHING RELATED TO 'BASELINK' AND THE 'DH' ARE W.R.T 'BASE'
+    # I SIMPLY MULTIPLY T BY AN ADDITIONAL ROTATION OF 180 IN Z.
+
+    theta = math.pi
+    rot_Mat = np.array([[math.cos(theta), -math.sin(theta), 0, 0],
+                      [math.sin(theta), math.cos(theta), 0, 0],
+                      [0, 0, 1, 0],
+                      [0, 0, 0, 1]])
+    new_T = np.dot(rot_Mat, T)
+
     # STEP3: Get the euler angles
-    beta = math.atan2(-T[2, 0], math.sqrt(T[0, 0] ** 2 + T[1, 0]** 2))
-    alpha = math.atan2(T[1, 0]/math.cos(beta), T[0, 0]/math.cos(beta))
-    gamma = math.atan2(T[2, 1]/math.cos(beta), T[2, 2]/math.cos(beta))
+    beta = math.atan2(-new_T[2, 0], math.sqrt(new_T[0, 0] ** 2 + new_T[1, 0]** 2))
+    alpha = math.atan2(new_T[1, 0]/math.cos(beta), new_T[0, 0]/math.cos(beta))
+    gamma = math.atan2(new_T[2, 1]/math.cos(beta), new_T[2, 2]/math.cos(beta))
 
     # STEP4: Extract the 3d position and orientation
-    eef_xyx = T[:, 3]
+    eef_xyx = new_T[:, 3]
     eef_angles = [beta, alpha, gamma]
 
     return eef_xyx, eef_angles
@@ -289,7 +300,6 @@ def read_csvs(experiment, folder):
                 experiment.j3_wrist1_values = data_list.iloc[:, 9].tolist()
                 experiment.j4_wrist2_values = data_list.iloc[:, 10].tolist()
                 experiment.j5_wrist3_values = data_list.iloc[:, 11].tolist()
-
 
             if file == "gripper-distance.csv":
                 experiment.tof_time_stamp = data_list.iloc[:, 0].tolist()
@@ -491,8 +501,8 @@ def circle_plots(x_noises, z_noises, radius, x_forces, z_forces, pressure):
 class Experiment:
     """Class to define an Experiment as an Object. Each experiment has properties from its json file.
     """
-    def __init__(self, id=0, apple_id=0,
-                 exp_type="vertical",
+    def __init__(self, metadata,
+                 id=0, apple_id=0,
                  pressure=60,
                  surface="3DPrinted_with_Primer",
                  radius=37.5,
@@ -505,7 +515,7 @@ class Experiment:
         self.vacuum_type = vacuum_type
 
         # ------------------------- Data from jsons ---------------------------
-        self.exp_type = exp_type
+        self.exp_type = metadata['general']['experiment type']
         self.pressure = pressure
         self.surface = surface
         self.surface_radius = radius
@@ -520,7 +530,7 @@ class Experiment:
         self.pitch = 0
         self.repetition = 0
 
-        self.metadata = dict()
+        self.metadata = metadata
 
         # ------------------------ Data from csvs -----------------------------
         # Topic: Gripper's Pressure Sensors
@@ -629,7 +639,9 @@ class Experiment:
 
         # --------------- Apple properties
         self.apple_id = apple_id
-        self.apple_center_loc = [0,0,0]
+        self.apple_diameter = self.metadata['proxy']['apple diameter']
+        self.apple_height = self.metadata['proxy']['apple height']
+        self.apple_center_loc = [0, 0, 0]
 
     # --- Functions and methods to use in different experiments ---
     def initial_stamp(self):
@@ -735,8 +747,7 @@ class Experiment:
         alpha = []
         gamma = []
 
-
-        # FK
+        # Forward Kinematics
         counter = []
         for i in range(len(self.j0_shoulder_pan_values)):
             joints = np.array([self.j0_shoulder_pan_values[i],
@@ -746,6 +757,7 @@ class Experiment:
                                self.j4_wrist2_values[i],
                                self.j5_wrist3_values[i]])
             position, orientation = ur5e_fk_dh(joints)
+
             x.append(position[0])
             y.append(position[1])
             z.append(position[2])
@@ -764,26 +776,127 @@ class Experiment:
         self.alpha = alpha
         self.gamma = gamma
 
+        # Location of the apple
+        calix_coord, stem_coord, branch_coord = self.apple_pose()
+
         # plots
         if plots == 'yes':
+
+            plot_factor = 0.1      # to plot vectors with about 10cm length
+
             # 3D Plot of eef trajectory
             fig = plt.figure()
             ax = plt.axes(projection='3d')
             ax.set_title('End Effector Trajectory\n' + self.filename)
-            ax.set_xlim3d(-0.75, 0)
-            ax.set_ylim3d(-0.75, 0.75)
-            ax.set_zlim3d(0, 0.75)
             ax.set_xlabel('x[m]')
             ax.set_ylabel('y[m]')
             ax.set_zlabel('z[m]')
-            ax.plot3D(x, y, z)
+            ax.plot3D(x, y, z, 'dotted')
 
             # Z axis over time
             fig = plt.figure()
             plt.plot(counter, z)
             plt.title('EEF distance in z axis [m] \n' + self.filename)
 
+            # 3D plot of the apple
+            a = self.apple_center_loc[0]
+            b = self.apple_center_loc[1]
+            c = self.apple_center_loc[2]
+
+            u = np.linspace(0, 2 * np.pi, 100)
+            v = np.linspace(0, np.pi, 100)
+            apple_radius = self.apple_diameter / 2000
+
+            x_a = (apple_radius * np.outer(np.cos(u), np.sin(v))) + a
+            y_a = (apple_radius * np.outer(np.sin(u), np.sin(v))) + b
+            z_a = (apple_radius * np.outer(np.ones(np.size(u)), np.cos(v))) + c
+
+            ax.plot_surface(x_a, y_a, z_a, rstride=4, cstride=4, color='r', linewidth=0, alpha=0.2)
+
+            # Draw Stem Vector
+            stem_vector = np.subtract(branch_coord, stem_coord)
+            stem_vector = plot_factor * stem_vector / np.linalg.norm(stem_vector)  # Normalize its magnitude
+            ax.quiver(stem_coord[0], stem_coord[1], stem_coord[2], stem_vector[0], stem_vector[1], stem_vector[2], length=1, color='green')
+            ax.text(stem_coord[0], stem_coord[1], stem_coord[2], "Stem", color='green', size=10, zorder=1)
+
+            # Draw Apple axis
+            apple_vector = np.subtract(stem_coord, calix_coord)
+            ax.quiver(calix_coord[0], calix_coord[1], calix_coord[2], apple_vector[0], apple_vector[1], apple_vector[2], length=1, color='red')
+            ax.text(calix_coord[0], calix_coord[1], calix_coord[2], "Main Axis", color='red', size=10, zorder=1)
+
+            # Make 3dplot have same aspect ratio
+            x_maxes = max([max(x), x_a.max()])
+            x_mins = min([min(x), x_a.min()])
+            y_maxes = max([max(y), y_a.max()])
+            y_mins = min([min(y), y_a.min()])
+            z_maxes = max([max(z), z_a.max()])
+            z_mins = min([min(z), z_a.min()])
+            max_range = np.array([x_maxes - x_mins, y_maxes - y_mins, z_maxes - z_mins]).max() * 0.75
+            mid_x = (x_maxes + x_mins) * 0.5
+            mid_y = (y_maxes + y_mins) * 0.5
+            mid_z = (z_maxes + z_mins) * 0.5
+            ax.set_xlim(mid_x - max_range, mid_x + max_range)
+            ax.set_ylim(mid_y - max_range, mid_y + max_range)
+            ax.set_zlim(mid_z - max_range, mid_z + max_range)
+
             # 3D plot of eef axes
+            # For explicit rotation
+            # alpha = self.alpha[-1]
+            # beta = self.beta[-1]
+            # gamma = self.gamma[-1]
+
+            # For implicit rotation
+            # note: I don't know the exat reason why the eef aligns correctly with implicit rotation
+            # https://en.wikipedia.org/wiki/Rotation_matrix
+            alpha = self.gamma[-1]
+            beta = self.beta[-1]
+            gamma = self.alpha[-1]
+
+            print(alpha, beta, gamma)
+
+            sin_a = math.sin(alpha)
+            sin_b = math.sin(beta)
+            sin_g = math.sin(gamma)
+
+            cos_a = math.cos(alpha)
+            cos_b = math.cos(beta)
+            cos_g = math.cos(gamma)
+
+            Rot_M = np.array([[cos_b*cos_g, sin_a*sin_b*cos_g-cos_a*sin_g, cos_a*sin_b*cos_g+sin_a*sin_g, 0],
+                              [cos_b*sin_g, sin_a*sin_b*sin_g+cos_a*cos_g, cos_a*sin_b*sin_g-sin_a*cos_g, 0],
+                              [-sin_b, sin_a*cos_b, cos_a*cos_b, 0],
+                              [0, 0, 0, 1]])
+
+            z_axis = np.array([[0, 0, 1, 1]]).transpose()
+            y_axis = np.array([[0, 1, 0, 1]]).transpose()
+            x_axis = np.array([[1, 0, 0, 1]]).transpose()
+
+            eef_x_vector = np.dot(Rot_M, x_axis)
+            eef_x_vector = plot_factor * eef_x_vector / np.linalg.norm(eef_x_vector)
+            u = eef_x_vector[0]
+            v = eef_x_vector[1]
+            w = eef_x_vector[2]
+
+            x = self.eef_x[-1]
+            y = self.eef_y[-1]
+            z = self.eef_z[-1]
+            ax.quiver(x, y, z, u, v, w, length=1, color='red')
+
+            eef_y_vector = np.dot(Rot_M, y_axis)
+            eef_y_vector = plot_factor * eef_y_vector / np.linalg.norm(eef_y_vector)
+            u = eef_y_vector[0]
+            v = eef_y_vector[1]
+            w = eef_y_vector[2]
+            ax.quiver(x, y, z, u, v, w, length=1, color='green')
+
+            eef_z_vector = np.dot(Rot_M, z_axis)
+            eef_z_vector = plot_factor * eef_z_vector / np.linalg.norm(eef_z_vector)
+            u = eef_z_vector[0]
+            v = eef_z_vector[1]
+            w = eef_z_vector[2]
+            ax.quiver(x, y, z, u, v, w, length=1, color='blue')
+
+
 
     def pick_points(self, plots='no'):
         """Find the EEF location during the Start and Finish of the pick
@@ -902,48 +1015,60 @@ class Experiment:
         self.travel_at_pick = delta_travel
 
     # ----------- METHODS FOR EEF POSE W.R.T APPLE ---------
-    def eef_offset(self):
-        """Measures the offset of the center of the EEF w.r.t. the apple"""
+    def apple_pose(self):
+        """Returns as numpy arrays the coordinates of calix, north pole and abcission layer"""
 
-        # STEP1: Obtain the location of the apple center
+        # STEP1: Locate csv with the ground truth of the apples
         folder = '/media/alejo/Elements/Prosser_Data/Probe/20231101_apples_coords.csv'
         data_list = pd.read_csv(folder)
 
+        array_sp = np.ones(3)
+        array_np = np.ones(3)
+        array_ab = np.ones(3)
+
         try:
             idx = data_list['Label'].tolist().index('apple' + str(self.apple_id))
+
+            # STEP2: Read coordinates from csv and convert into a numpy array
             apple_south_pole = data_list['South Pole coords'].iloc[idx]
             apple_north_pole = data_list['North Pole coords'].iloc[idx]
+            abcission_coord = data_list['Abcision coords'].iloc[idx]
 
             # Convert string of list into list
-            sp = apple_south_pole.strip('][').split(', ')
-            np = apple_north_pole.strip('][').split(', ')
+            s_pole = apple_south_pole.strip('][').split(', ')
+            n_pole = apple_north_pole.strip('][').split(', ')
+            ab = abcission_coord.strip('][').split(', ')
+            # print('Apple coords - list of strings', s_pole, n_pole, ab)
 
             # Convert list of strings into list of floats
-            float_sp = [float(x) for x in sp]
-            float_np = [float(x) for x in np]
+            float_sp = [round(float(x), 4) for x in s_pole]
+            float_np = [round(float(x), 4) for x in n_pole]
+            float_ab = [round(float(x), 4) for x in ab]
+            # print('Apple coords - list of floats', float_sp, float_np, float_ab)
 
-            print("\napple", self.apple_id, idx, float_sp)
+            # Convert list of floats into an array
+            array_sp = np.array(float_sp)
+            array_np = np.array(float_np)
+            array_ab = np.array(float_ab)
+            print('Apple coords - numpy arrays', array_sp, array_np, array_ab)
+
+            # Apple center
+            self.apple_center_loc = np.mean([array_sp, array_np], axis=0)
+            print("\napple", self.apple_id, idx, array_sp)
 
         except ValueError:
             print("Label not found")
 
-        self.apple_center_loc[0] = (float_np[0] + float_sp[0])/2
-        self.apple_center_loc[1] = (float_np[1] + float_sp[1])/2
-        self.apple_center_loc[2] = (float_np[2] + float_sp[2])/2
-
         print("Apple center", self.apple_center_loc)
 
-
-
-
+        return array_sp, array_np, array_ab
 
         # STEP2: Obtain the vector normal to the EEF
 
         # STEP3: Measure distance from apple center to normal vector
 
-
-
-    # def eef_angle(self):
+    def eef_wrt_apple(self):
+        pass
 
 
     # --------------- METHODS FOR AIR PRESSURE -------------
@@ -2160,30 +2285,29 @@ def real_experiments():
                 bag_to_csvs(location + file + ".bag")
 
             # STEP 2: Generate an experiment object for each file, and read its json file
-            experiment = Experiment(apple_id=apple_id)
-            experiment.filename = file
             json_file = open(location + file + '.json')
             json_data = json.load(json_file)
-            experiment.metadata = json_data
+            experiment = Experiment(apple_id=apple_id, metadata=json_data)
+            experiment.filename = file
             logging.debug('metadata: %s' %experiment.metadata['general'])
 
-            # STEP 3: Check conditions to continue the analysis
+            # STEP 3: Check conditions from metadata to continue with the analysis
             mode = experiment.metadata['robot']['actuation mode']
             pick = experiment.metadata['labels']['apple pick result']
             # if pick == 'a':
-            if mode == 'dual' and pick == 'a':
-            # if file == '2023111_realapple1_mode_dual_attempt_1_orientation_0_yaw_0':
+            # if mode == 'dual' and pick == 'a':
+            if file == '2023111_realapple1_mode_dual_attempt_1_orientation_0_yaw_0':
 
                 # STEP 4: Read values from 'csv'
                 read_csvs(experiment, location + file)
 
-                # STEP 5: Get different features for the experiment
+                # STEP 5: Get features for the experiment
                 experiment.get_features()
-                experiment.eef_location(plots='no')
+                experiment.eef_location(plots='yes')
                 experiment.pick_points(plots='no')
                 experiment.pick_forces()
                 experiment.pick_stiffness(plots='no')
-                experiment.eef_offset()
+                # experiment.eef_offset()
 
                 # STEP 6: Append variables of interest
                 stiffnesses.append(experiment.stiffness)
@@ -2242,16 +2366,17 @@ def real_experiments():
         plt.annotate(txt, (deltas[i], max_netForces[i]))
 
     # Histograms
-    list_to_hist(stiffnesses, 'Branch stiffness [N/m]')
+    # list_to_hist(stiffnesses, 'Branch stiffness [N/m]')
     # list_to_hist(max_normalForces, 'Max Normal Force [N]')
     # list_to_hist(max_tangentialForces, 'Max Tangential Force [N]')
-    list_to_hist(max_netForces, 'Max Net Force [N]')
+    # list_to_hist(max_netForces, 'Max Net Force [N]')
     # list_to_hist(thetas, 'Thetas [deg]')
 
     plt.show(block=False)
     plt.pause(0.001)  # Pause for interval seconds.
     input("\nhit[enter] to end.")
     plt.close('all')  # all open plots are correctly closed after each run
+
 
 def main():
 
@@ -2268,6 +2393,7 @@ def main():
     # noise_experiments_pitch(exp_type='horizontal', radius=radius, variable=variable)
     # simple_suction_experiment()
     # proxy_experiments()
+
     real_experiments()
 
     # --- Build video from pngs and a plot beside of it with a vertical line running ---
@@ -2276,6 +2402,11 @@ def main():
     # TODO: Compare results between  get_detach_values() and get_forces_at_pick()
     # TODO: Interpret moments (lever = height of the rig)
     # TODO: Script ideas
+    # TODO: Apple Pose w.r.t gripper analysis.
+    # TODO: plot apple location
+    # TODO: plot apple orientation vector
+    # TODO: plot stem vector
+
 
 
 if __name__ == '__main__':
