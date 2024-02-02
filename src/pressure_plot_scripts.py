@@ -89,9 +89,12 @@ def list_to_hist(list, x_label):
     kmeans = KMeans(n_clusters=3, random_state=0).fit(values.reshape(-1,1))
     clusters = kmeans.cluster_centers_
 
+    median = np.median(list)
+
     fig = plt.figure()
     plt.hist(values)
-    plt.title('Kmeans: ' + str(clusters))
+    # plt.title('Kmeans: ' + str(clusters))
+    plt.title('Median [mm]: ' + str(median))
     plt.xlabel(x_label)
 
 
@@ -626,6 +629,7 @@ class Experiment:
         self.eef_alpha = []
         self.eef_gamma = []
         self.eef_travel = []
+        self.offset_eef_apple = []
         self.stiffness = 0
 
         self.wrench_idx_start_pick = 0
@@ -732,7 +736,9 @@ class Experiment:
         # self.get_normal_angle()
         self.normal_and_tangent_forces()
 
-        self.get_detach_values()
+        if self.metadata['labels']['apple pick result'] != 'c':
+            self.get_detach_values()
+
         # self.check_errors()
 
     # ---------------- METHODS FOR BRANCH STIFFNESS --------------
@@ -791,7 +797,7 @@ class Experiment:
             ax.set_xlabel('x[m]')
             ax.set_ylabel('y[m]')
             ax.set_zlabel('z[m]')
-            ax.plot3D(x, y, z, 'dotted')
+            ax.plot3D(x, y, z, 'black', linewidth='0.5')
 
             # Z axis over time
             fig = plt.figure()
@@ -895,7 +901,25 @@ class Experiment:
             v = eef_z_vector[1]
             w = eef_z_vector[2]
             ax.quiver(x, y, z, u, v, w, length=1, color='blue')
+            ax.text(x, y, z, "eef", color='black', size=10, zorder=1)
 
+            # Distance between point and line
+            P = np.array(self.apple_center_loc)
+            Q = np.array([x,y,z])
+
+            PQ = np.subtract(P,Q)
+            eef_z_vector_transpose = np.transpose(eef_z_vector)
+            eef_z_vector_3dim = np.array([[eef_z_vector_transpose[0,0], eef_z_vector_transpose[0,1], eef_z_vector_transpose[0,2]]])
+            num = np.cross(PQ, eef_z_vector_3dim)
+            num = np.linalg.norm(num)
+            den = np.linalg.norm(eef_z_vector_3dim)
+
+            distance = 1000 * num/den       #convert to mm
+            distance = round(distance,2)
+
+            self.offset_eef_apple = distance
+
+            print('EEF offset: ', distance)
 
 
     def pick_points(self, plots='no'):
@@ -2263,6 +2287,7 @@ def real_experiments():
     thetas = []
     deltas= []
     apple_ids = []
+    offsets = []        # thses are all the distances between the center of the eef and the apple
 
     # STEP C: Sweep all bag files, and for each one do next
     for file in tqdm(os.listdir(location)):
@@ -2294,9 +2319,11 @@ def real_experiments():
             # STEP 3: Check conditions from metadata to continue with the analysis
             mode = experiment.metadata['robot']['actuation mode']
             pick = experiment.metadata['labels']['apple pick result']
-            # if pick == 'a':
+
+            if pick != 'c':
+            # if True:
             # if mode == 'dual' and pick == 'a':
-            if file == '2023111_realapple1_mode_dual_attempt_1_orientation_0_yaw_0':
+            # if file == '2023111_realapple18_mode_dual_attempt_1_orientation_0_yaw_0':
 
                 # STEP 4: Read values from 'csv'
                 read_csvs(experiment, location + file)
@@ -2304,9 +2331,9 @@ def real_experiments():
                 # STEP 5: Get features for the experiment
                 experiment.get_features()
                 experiment.eef_location(plots='yes')
-                experiment.pick_points(plots='no')
-                experiment.pick_forces()
-                experiment.pick_stiffness(plots='no')
+                # experiment.pick_points(plots='no')
+                # experiment.pick_forces()
+                # experiment.pick_stiffness(plots='no')
                 # experiment.eef_offset()
 
                 # STEP 6: Append variables of interest
@@ -2317,6 +2344,9 @@ def real_experiments():
                 thetas.append(experiment.theta_at_pick)
                 deltas.append(experiment.travel_at_pick)
                 apple_ids.append(experiment.apple_id)
+
+                if experiment.offset_eef_apple < 500:
+                    offsets.append(experiment.offset_eef_apple)
 
                 # STEP 7: Plots
                 # experiment.plot_only_pressure()
@@ -2371,6 +2401,8 @@ def real_experiments():
     # list_to_hist(max_tangentialForces, 'Max Tangential Force [N]')
     # list_to_hist(max_netForces, 'Max Net Force [N]')
     # list_to_hist(thetas, 'Thetas [deg]')
+    print('Offsets: ', offsets)
+    list_to_hist(offsets, 'Offset from apple')
 
     plt.show(block=False)
     plt.pause(0.001)  # Pause for interval seconds.
