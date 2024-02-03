@@ -44,9 +44,39 @@ logging_format = "[%(asctime)s - %(levelname)s] %(message)s"
 logging.basicConfig(format=logging_format, level=logging.INFO, datefmt="%H:%M:%S")
 
 
+
+def point_to_line_distance(point, origin, vector):
+    """
+
+    @param point: Point from which to measure the distance to the line
+    @param origin: Origin where the direction vector
+    @param vector: Direction vector
+    @return: distance
+    """
+
+    P = np.array(point)
+    Q = np.array(origin)
+    PQ = np.subtract(P, Q)
+
+    eef_z_vector_transpose = np.transpose(vector)
+    eef_z_vector_3dim = np.array([[eef_z_vector_transpose[0, 0], eef_z_vector_transpose[0, 1], eef_z_vector_transpose[0, 2]]])
+
+    # Distance between a line and a point:
+    # Source: https://math.libretexts.org/Bookshelves/Calculus/Calculus_(OpenStax)/12%3A_Vectors_in_Space/12.05%3A_Equations_of_Lines_and_Planes_in_Space
+    num = np.cross(PQ, eef_z_vector_3dim)
+    num = np.linalg.norm(num)
+    den = np.linalg.norm(eef_z_vector_3dim)
+
+    distance = 1000 * num / den  # convert to mm
+    distance = round(distance, 2)
+
+    return distance
+
+
 def locate_index_of_deltas(data, width=200, change=3/10000):
     """
-    CAUTION: THIS WORKS ONLY FOR A SINGLE BACK AND FORTH MOVE
+    Useful to locate 1st derivative changes in a time series.
+    CAUTION: THIS WORKS ONLY FOR A SINGLE BACK AND FORTH MOVE WHICH LOOK
     @param data:
     @param width: distance between indexes to measure the delta
     @param change: change that wants to be located
@@ -67,7 +97,7 @@ def locate_index_of_deltas(data, width=200, change=3/10000):
         if delta < - change:
             POIS_minus.append(i)    # collects all points with negative changes
 
-    # Only store the first and last points
+    # Only store first and last points
     POIS.append(POIS_minus[0])
     POIS.append(POIS_minus[-1] + width)
     POIS.append(POIS_plus[0])
@@ -83,18 +113,23 @@ def locate_index_of_deltas(data, width=200, change=3/10000):
 
 
 def list_to_hist(list, x_label):
-    """Generates histogram out of a list, and provides k-means clusters"""
+    """Generates histogram out of a list, and provides k-means clusters
+    CAUTION: Make sure your has clusters otherwise you don't need this
+    @param list:
+    @param x_label:
+    @return: none
+    """
 
     values = np.array(list)
     kmeans = KMeans(n_clusters=3, random_state=0).fit(values.reshape(-1,1))
     clusters = kmeans.cluster_centers_
 
-    median = np.median(list)
+    median = round(np.median(list), 2)
 
     fig = plt.figure()
     plt.hist(values)
     # plt.title('Kmeans: ' + str(clusters))
-    plt.title('Median [mm]: ' + str(median))
+    plt.title('Sample size: ' + str(len(list)) + ', Median: ' + str(median))
     plt.xlabel(x_label)
 
 
@@ -160,10 +195,10 @@ def ur5e_fk_dh(joint_angles):
     gamma = math.atan2(new_T[2, 1]/math.cos(beta), new_T[2, 2]/math.cos(beta))
 
     # STEP4: Extract the 3d position and orientation
-    eef_xyx = new_T[:, 3]
+    eef_xyz = new_T[:, 3]
     eef_angles = [beta, alpha, gamma]
 
-    return eef_xyx, eef_angles
+    return eef_xyz, eef_angles
 
 
 def read_json(file):
@@ -753,7 +788,7 @@ class Experiment:
         alpha = []
         gamma = []
 
-        # Forward Kinematics
+        # STEP 1: Forward Kinematics
         counter = []
         for i in range(len(self.j0_shoulder_pan_values)):
             joints = np.array([self.j0_shoulder_pan_values[i],
@@ -782,13 +817,54 @@ class Experiment:
         self.alpha = alpha
         self.gamma = gamma
 
-        # Location of the apple
+        # STEP 2: Orientation of the eef cframe
+        # note: I don't know the exact reason why the eef aligns correctly with implicit rotation,
+        # which is the reason why I swap alpha and gamma
+        # https://en.wikipedia.org/wiki/Rotation_matrix
+        alpha = self.gamma[-1]
+        beta = self.beta[-1]
+        gamma = self.alpha[-1]
+        logging.debug('EEF angles alpha: %i.2, beta: %i.2, gamma: %i.2' %(alpha, beta, gamma))
+
+        sin_a = math.sin(alpha)
+        sin_b = math.sin(beta)
+        sin_g = math.sin(gamma)
+        cos_a = math.cos(alpha)
+        cos_b = math.cos(beta)
+        cos_g = math.cos(gamma)
+
+        Rot_M = np.array(
+            [[cos_b * cos_g, sin_a * sin_b * cos_g - cos_a * sin_g, cos_a * sin_b * cos_g + sin_a * sin_g, 0],
+             [cos_b * sin_g, sin_a * sin_b * sin_g + cos_a * cos_g, cos_a * sin_b * sin_g - sin_a * cos_g, 0],
+             [-sin_b, sin_a * cos_b, cos_a * cos_b, 0],
+             [0, 0, 0, 1]])
+
+        z_axis = np.array([[0, 0, 1, 1]]).transpose()
+        y_axis = np.array([[0, 1, 0, 1]]).transpose()
+        x_axis = np.array([[1, 0, 0, 1]]).transpose()
+
+        plot_factor = 0.1  # to plot vectors with about 10cm length
+        eef_x_vector = np.dot(Rot_M, x_axis)
+        eef_x_vector = plot_factor * eef_x_vector / np.linalg.norm(eef_x_vector)
+        eef_y_vector = np.dot(Rot_M, y_axis)
+        eef_y_vector = plot_factor * eef_y_vector / np.linalg.norm(eef_y_vector)
+        eef_z_vector = np.dot(Rot_M, z_axis)
+        eef_z_vector = plot_factor * eef_z_vector / np.linalg.norm(eef_z_vector)
+
+        # STEP 3: Location of the apple
         calix_coord, stem_coord, branch_coord = self.apple_pose()
+        stem_vector = np.subtract(branch_coord, stem_coord)
+        stem_vector = plot_factor * stem_vector / np.linalg.norm(stem_vector)  # Normalize its magnitude
+        apple_vector = np.subtract(stem_coord, calix_coord)
+
+        x_last = self.eef_x[-1]
+        y_last = self.eef_y[-1]
+        z_last = self.eef_z[-1]
+        self.offset_eef_apple = point_to_line_distance(self.apple_center_loc, [x_last, y_last, z_last], eef_z_vector)
+        logging.debug('EEF offset: %i.2 ' % self.offset_eef_apple)
 
         # plots
         if plots == 'yes':
-
-            plot_factor = 0.1      # to plot vectors with about 10cm length
 
             # 3D Plot of eef trajectory
             fig = plt.figure()
@@ -820,15 +896,12 @@ class Experiment:
             ax.plot_surface(x_a, y_a, z_a, rstride=4, cstride=4, color='r', linewidth=0, alpha=0.2)
 
             # Draw Stem Vector
-            stem_vector = np.subtract(branch_coord, stem_coord)
-            stem_vector = plot_factor * stem_vector / np.linalg.norm(stem_vector)  # Normalize its magnitude
             ax.quiver(stem_coord[0], stem_coord[1], stem_coord[2], stem_vector[0], stem_vector[1], stem_vector[2], length=1, color='green')
-            ax.text(stem_coord[0], stem_coord[1], stem_coord[2], "Stem", color='green', size=10, zorder=1)
+            ax.text(stem_coord[0], stem_coord[1], stem_coord[2], "stem", color='green', size=10, zorder=1)
 
             # Draw Apple axis
-            apple_vector = np.subtract(stem_coord, calix_coord)
             ax.quiver(calix_coord[0], calix_coord[1], calix_coord[2], apple_vector[0], apple_vector[1], apple_vector[2], length=1, color='red')
-            ax.text(calix_coord[0], calix_coord[1], calix_coord[2], "Main Axis", color='red', size=10, zorder=1)
+            ax.text(calix_coord[0], calix_coord[1], calix_coord[2], "apple main axis", color='red', size=10, zorder=1)
 
             # Make 3dplot have same aspect ratio
             x_maxes = max([max(x), x_a.max()])
@@ -845,82 +918,39 @@ class Experiment:
             ax.set_ylim(mid_y - max_range, mid_y + max_range)
             ax.set_zlim(mid_z - max_range, mid_z + max_range)
 
-            # 3D plot of eef axes
-            # For explicit rotation
-            # alpha = self.alpha[-1]
-            # beta = self.beta[-1]
-            # gamma = self.gamma[-1]
-
-            # For implicit rotation
-            # note: I don't know the exat reason why the eef aligns correctly with implicit rotation
-            # https://en.wikipedia.org/wiki/Rotation_matrix
-            alpha = self.gamma[-1]
-            beta = self.beta[-1]
-            gamma = self.alpha[-1]
-
-            print(alpha, beta, gamma)
-
-            sin_a = math.sin(alpha)
-            sin_b = math.sin(beta)
-            sin_g = math.sin(gamma)
-
-            cos_a = math.cos(alpha)
-            cos_b = math.cos(beta)
-            cos_g = math.cos(gamma)
-
-            Rot_M = np.array([[cos_b*cos_g, sin_a*sin_b*cos_g-cos_a*sin_g, cos_a*sin_b*cos_g+sin_a*sin_g, 0],
-                              [cos_b*sin_g, sin_a*sin_b*sin_g+cos_a*cos_g, cos_a*sin_b*sin_g-sin_a*cos_g, 0],
-                              [-sin_b, sin_a*cos_b, cos_a*cos_b, 0],
-                              [0, 0, 0, 1]])
-
-            z_axis = np.array([[0, 0, 1, 1]]).transpose()
-            y_axis = np.array([[0, 1, 0, 1]]).transpose()
-            x_axis = np.array([[1, 0, 0, 1]]).transpose()
-
-            eef_x_vector = np.dot(Rot_M, x_axis)
-            eef_x_vector = plot_factor * eef_x_vector / np.linalg.norm(eef_x_vector)
-            u = eef_x_vector[0]
-            v = eef_x_vector[1]
-            w = eef_x_vector[2]
-
+            # Plot eef cframe
             x = self.eef_x[-1]
             y = self.eef_y[-1]
             z = self.eef_z[-1]
+
+            u = eef_x_vector[0]
+            v = eef_x_vector[1]
+            w = eef_x_vector[2]
             ax.quiver(x, y, z, u, v, w, length=1, color='red')
 
-            eef_y_vector = np.dot(Rot_M, y_axis)
-            eef_y_vector = plot_factor * eef_y_vector / np.linalg.norm(eef_y_vector)
             u = eef_y_vector[0]
             v = eef_y_vector[1]
             w = eef_y_vector[2]
             ax.quiver(x, y, z, u, v, w, length=1, color='green')
 
-            eef_z_vector = np.dot(Rot_M, z_axis)
-            eef_z_vector = plot_factor * eef_z_vector / np.linalg.norm(eef_z_vector)
             u = eef_z_vector[0]
             v = eef_z_vector[1]
             w = eef_z_vector[2]
             ax.quiver(x, y, z, u, v, w, length=1, color='blue')
+
             ax.text(x, y, z, "eef", color='black', size=10, zorder=1)
 
-            # Distance between point and line
-            P = np.array(self.apple_center_loc)
-            Q = np.array([x,y,z])
+            # Draw a line from eef towards the apple in z'direction
+            eef_location_vector = np.array([[x, y, z]]).transpose()
+            scaled_vector = np.dot(5, eef_z_vector[:3])
+            new_point = np.add(scaled_vector, eef_location_vector )
+            x1 = new_point.item(0)
+            y1 = new_point.item(1)
+            z1 = new_point.item(2)
+            ax.plot([x, x1], [y, y1], [z, z1], linestyle='dotted')
 
-            PQ = np.subtract(P,Q)
-            eef_z_vector_transpose = np.transpose(eef_z_vector)
-            eef_z_vector_3dim = np.array([[eef_z_vector_transpose[0,0], eef_z_vector_transpose[0,1], eef_z_vector_transpose[0,2]]])
-            num = np.cross(PQ, eef_z_vector_3dim)
-            num = np.linalg.norm(num)
-            den = np.linalg.norm(eef_z_vector_3dim)
-
-            distance = 1000 * num/den       #convert to mm
-            distance = round(distance,2)
-
-            self.offset_eef_apple = distance
-
-            print('EEF offset: ', distance)
-
+            text = 'offset: ' + str(self.offset_eef_apple) + 'mm'
+            ax.text((a+x)/2, (b+y)/2, (c+z)/2, text, color='black', size=10, zorder=1)
 
     def pick_points(self, plots='no'):
         """Find the EEF location during the Start and Finish of the pick
@@ -1028,8 +1058,8 @@ class Experiment:
             fig = plt.figure()
             plt.plot(self.eef_travel, new_force_list)
             plt.title('z-Force vs Net distance travelled\n' + self.filename)
-            plt.plot([min_force_loc,max_force_loc],[min_force, max_force])
-            text = 'LR Stiffness: ' + str(int(lr_stiffness.slope)) + 'N/m' + ' Rvalue:'+ str(round(lr_stiffness.rvalue,2))
+            plt.plot([min_force_loc,max_force_loc], [min_force, max_force], linestyle='dotted')
+            text = 'LR Stiffness: ' + str(int(lr_stiffness.slope)) + 'N/m' + ' (Rvalue: ' + str(round(lr_stiffness.rvalue, 2)) +')'
             plt.text(delta_travel/2, min_force + delta_force/2, text)
             plt.ylim([-15, 40])
             plt.xlabel('EEF displacement [m]')
@@ -1090,9 +1120,6 @@ class Experiment:
         # STEP2: Obtain the vector normal to the EEF
 
         # STEP3: Measure distance from apple center to normal vector
-
-    def eef_wrt_apple(self):
-        pass
 
 
     # --------------- METHODS FOR AIR PRESSURE -------------
@@ -2270,7 +2297,8 @@ def real_experiments():
     # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"     # Hard Drive B
     # folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'  # Hard Drive C
     folder = '/media/alejo/Elements/Prosser_Data/'      # External Hard Drive
-    subfolder = 'Dataset - apple picks/'
+    subfolder = 'Dataset - apple grasps/'
+    # subfolder = 'Dataset - apple picks/'
     location = folder + subfolder
 
     # --- ICRA24 accompanying video
@@ -2291,7 +2319,7 @@ def real_experiments():
 
     # STEP C: Sweep all bag files, and for each one do next
     for file in tqdm(os.listdir(location)):
-        if file.endswith('.bag'):
+        if file.endswith('.bag') and file != 'vacuum_test_.bag':
             logging.debug('------------- Filename: %s ------------' %file)
             only_name = file.split('.')[0]  # remove extension
             file = only_name
@@ -2320,89 +2348,95 @@ def real_experiments():
             mode = experiment.metadata['robot']['actuation mode']
             pick = experiment.metadata['labels']['apple pick result']
 
-            if pick != 'c':
-            # if True:
-            # if mode == 'dual' and pick == 'a':
-            # if file == '2023111_realapple18_mode_dual_attempt_1_orientation_0_yaw_0':
+            # if pick != 'c':
+            # if pick == 'c':
+            if True:
+            # if mode == 'suction':
+            # if file == '2023111_realapple1_mode_dual_attempt_1_orientation_0_yaw_0':
 
                 # STEP 4: Read values from 'csv'
                 read_csvs(experiment, location + file)
 
                 # STEP 5: Get features for the experiment
                 experiment.get_features()
-                experiment.eef_location(plots='yes')
+                experiment.eef_location(plots='no')
                 # experiment.pick_points(plots='no')
                 # experiment.pick_forces()
                 # experiment.pick_stiffness(plots='no')
-                # experiment.eef_offset()
 
                 # STEP 6: Append variables of interest
-                stiffnesses.append(experiment.stiffness)
-                max_normalForces.append(experiment.max_normalForce_at_pick)
-                max_tangentialForces.append(experiment.max_tangentialForce_at_pick)
-                max_netForces.append(experiment.max_netForce_at_pick)
-                thetas.append(experiment.theta_at_pick)
-                deltas.append(experiment.travel_at_pick)
+                # stiffnesses.append(experiment.stiffness)
+                # max_normalForces.append(experiment.max_normalForce_at_pick)
+                # max_tangentialForces.append(experiment.max_tangentialForce_at_pick)
+                # max_netForces.append(experiment.max_netForce_at_pick)
+                # thetas.append(experiment.theta_at_pick)
+                # deltas.append(experiment.travel_at_pick)
                 apple_ids.append(experiment.apple_id)
 
                 if experiment.offset_eef_apple < 500:
                     offsets.append(experiment.offset_eef_apple)
 
-                # STEP 7: Plots
+                # STEP 7: Single experiment plots
                 # experiment.plot_only_pressure()
                 # experiment.plot_only_total_force()
 
-    print('Stiffness MEAN, MEDIAN: ', round(np.mean(stiffnesses), 2), round(np.median(stiffnesses), 2))
-    print('NetForce MEAN, MEDIAN: ', round(np.mean(max_netForces), 2), round(np.median(max_netForces), 2))
-    # Confidence Intervals
-    confidence = 0.95
-    a = stiffnesses
-    c_int = st.t.interval(confidence, len(a)-1, loc=np.mean(a), scale=st.sem(a))
-    print('Stiffness Confidence Interval 95%: ', round(c_int[0],2), round(c_int[1],2))
-    a = max_netForces
-    c_int = st.t.interval(confidence, len(a)-1, loc=np.mean(a), scale=st.sem(a))
-    print('Net Force Confidence Interval 95%: ', round(c_int[0],2), round(c_int[1],2))
+    # STEP 8: Grouped experiments plots
+    if len(stiffnesses) > 1:
 
-    # Boxplots
-    fig = plt.figure()
-    plt.boxplot(stiffnesses, notch=True, meanline=True)
-    plt.title('Branch Stiffness (NormalForce / Travelled Distance) [N/m]')
-    plt.grid()
+        print('Stiffness MEAN, MEDIAN: ', round(np.mean(stiffnesses), 2), round(np.median(stiffnesses), 2))
+        print('NetForce MEAN, MEDIAN: ', round(np.mean(max_netForces), 2), round(np.median(max_netForces), 2))
+        # Confidence Intervals
+        confidence = 0.95
+        a = stiffnesses
+        c_int = st.t.interval(confidence, len(a)-1, loc=np.mean(a), scale=st.sem(a))
+        print('Stiffness Confidence Interval 95%: ', round(c_int[0],2), round(c_int[1],2))
+        a = max_netForces
+        c_int = st.t.interval(confidence, len(a)-1, loc=np.mean(a), scale=st.sem(a))
+        print('Net Force Confidence Interval 95%: ', round(c_int[0],2), round(c_int[1],2))
 
-    fig = plt.figure()
-    plt.boxplot(max_netForces, notch=True, meanline=True)
-    plt.title('Max Net Forces [N]')
-    plt.grid()
+        # Boxplots
+        fig = plt.figure()
+        plt.boxplot(stiffnesses, notch=True, meanline=True)
+        plt.title('Branch Stiffness (NormalForce / Travelled Distance) [N/m]')
+        plt.grid()
 
-    # Violinplots
-    fig = plt.figure()
-    plt.violinplot(stiffnesses, showmedians=True)
-    plt.title('Branch Stiffness (NormalForce / Travelled Distance) [N/m]')
-    plt.grid()
+        fig = plt.figure()
+        plt.boxplot(max_netForces, notch=True, meanline=True)
+        plt.title('Max Net Forces [N]')
+        plt.grid()
 
-    fig = plt.figure()
-    plt.violinplot(max_netForces, showmedians=True)
-    plt.title('Max Net Forces [N]')
-    plt.grid()
+        # Violinplots
+        fig = plt.figure()
+        plt.violinplot(stiffnesses, showmedians=True)
+        plt.title('Branch Stiffness (NormalForce / Travelled Distance) [N/m]')
+        plt.grid()
 
-    # Scatter Plots
-    fig = plt.figure()
-    plt.scatter(deltas, max_netForces)
-    plt.title('Travelled Distance Vs Net Force')
-    plt.xlabel('EEF travelled distance [m]')
-    plt.ylabel('Net Force [N]')
-    plt.grid()
-    for i, txt in enumerate(apple_ids):
-        plt.annotate(txt, (deltas[i], max_netForces[i]))
+        fig = plt.figure()
+        plt.violinplot(max_netForces, showmedians=True)
+        plt.title('Max Net Forces [N]')
+        plt.grid()
 
-    # Histograms
-    # list_to_hist(stiffnesses, 'Branch stiffness [N/m]')
-    # list_to_hist(max_normalForces, 'Max Normal Force [N]')
-    # list_to_hist(max_tangentialForces, 'Max Tangential Force [N]')
-    # list_to_hist(max_netForces, 'Max Net Force [N]')
-    # list_to_hist(thetas, 'Thetas [deg]')
-    print('Offsets: ', offsets)
-    list_to_hist(offsets, 'Offset from apple')
+        # Scatter Plots
+        fig = plt.figure()
+        plt.scatter(deltas, max_netForces)
+        plt.title('Travelled Distance Vs Net Force')
+        plt.xlabel('EEF travelled distance [m]')
+        plt.ylabel('Net Force [N]')
+        plt.grid()
+        for i, txt in enumerate(apple_ids):
+            plt.annotate(txt, (deltas[i], max_netForces[i]))
+
+        # Histograms
+        list_to_hist(stiffnesses, 'Branch stiffness [N/m]')
+        list_to_hist(max_normalForces, 'Max Normal Force [N]')
+        list_to_hist(max_tangentialForces, 'Max Tangential Force [N]')
+        list_to_hist(max_netForces, 'Max Net Force [N]')
+        list_to_hist(thetas, 'Thetas [deg]')
+        print('Apple IDs: ', apple_ids)
+        print('Offsets: ', offsets)
+
+    if len(apple_ids) > 1:
+        list_to_hist(offsets, 'Offset from apple [mm]')
 
     plt.show(block=False)
     plt.pause(0.001)  # Pause for interval seconds.
@@ -2414,7 +2448,7 @@ def main():
 
     logging.getLogger('matplotlib.font_manager').disabled = True
     # Comment out this line for all DEBUG-level messages to be suppressed
-    # logging.getLogger().setLevel(logging.DEBUG)
+    logging.getLogger().setLevel(logging.DEBUG)
 
     # --- Simply choose the desired experiment by un-commenting it ---
     # circle_plots(1,1,1)
