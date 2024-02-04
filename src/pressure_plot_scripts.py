@@ -23,6 +23,7 @@ import itertools
 
 import bagpy
 from matplotlib import pyplot as plt
+
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 from mpl_toolkits.mplot3d import Axes3D
 import pandas as pd
@@ -42,7 +43,6 @@ from plot_scripts import *
 import logging
 logging_format = "[%(asctime)s - %(levelname)s] %(message)s"
 logging.basicConfig(format=logging_format, level=logging.INFO, datefmt="%H:%M:%S")
-
 
 
 def point_to_line_distance(point, origin, vector):
@@ -852,9 +852,11 @@ class Experiment:
         eef_z_vector = plot_factor * eef_z_vector / np.linalg.norm(eef_z_vector)
 
         # STEP 3: Location of the apple
+        # stem_vector = np.ones(3)
         calix_coord, stem_coord, branch_coord = self.apple_pose()
-        stem_vector = np.subtract(branch_coord, stem_coord)
-        stem_vector = plot_factor * stem_vector / np.linalg.norm(stem_vector)  # Normalize its magnitude
+        if branch_coord.all() != stem_coord.all():      #avoid divisions by zero
+            stem_vector = np.subtract(branch_coord, stem_coord)
+            stem_vector = plot_factor * stem_vector / np.linalg.norm(stem_vector)  # Normalize its magnitude
         apple_vector = np.subtract(stem_coord, calix_coord)
 
         x_last = self.eef_x[-1]
@@ -1074,6 +1076,7 @@ class Experiment:
 
         # STEP1: Locate csv with the ground truth of the apples
         folder = '/media/alejo/Elements/Prosser_Data/Probe/20231101_apples_coords.csv'
+        folder = 'D:/Prosser_Data/Probe/20231101_apples_coords.csv'
         data_list = pd.read_csv(folder)
 
         array_sp = np.ones(3)
@@ -1104,23 +1107,18 @@ class Experiment:
             array_sp = np.array(float_sp)
             array_np = np.array(float_np)
             array_ab = np.array(float_ab)
-            print('Apple coords - numpy arrays', array_sp, array_np, array_ab)
+            logging.debug('Apple calix: %s, north pole: %s, abcission: %s' %(array_sp, array_np, array_ab))
 
             # Apple center
             self.apple_center_loc = np.mean([array_sp, array_np], axis=0)
-            print("\napple", self.apple_id, idx, array_sp)
+            logging.debug("Apple id: %i, index: %i, calix location: %s" %(self.apple_id, idx, array_sp))
 
         except ValueError:
-            print("Label not found")
+            logging.debug("Label not found in the csv file")
 
-        print("Apple center", self.apple_center_loc)
+        logging.debug("Apple center: %s" %self.apple_center_loc)
 
         return array_sp, array_np, array_ab
-
-        # STEP2: Obtain the vector normal to the EEF
-
-        # STEP3: Measure distance from apple center to normal vector
-
 
     # --------------- METHODS FOR AIR PRESSURE -------------
     def get_atmospheric_pressure(self):
@@ -2297,8 +2295,9 @@ def real_experiments():
     # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"     # Hard Drive B
     # folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'  # Hard Drive C
     folder = '/media/alejo/Elements/Prosser_Data/'      # External Hard Drive
-    subfolder = 'Dataset - apple grasps/'
-    # subfolder = 'Dataset - apple picks/'
+    folder = 'D:/Prosser_Data/'
+    # subfolder = 'Dataset - apple grasps/'
+    subfolder = 'Dataset - apple picks/'
     location = folder + subfolder
 
     # --- ICRA24 accompanying video
@@ -2313,9 +2312,9 @@ def real_experiments():
     max_tangentialForces = []
     max_netForces = []
     thetas = []
-    deltas= []
+    deltas = []
     apple_ids = []
-    offsets = []        # thses are all the distances between the center of the eef and the apple
+    offsets = []        # distances between eef center and the apple center
 
     # STEP C: Sweep all bag files, and for each one do next
     for file in tqdm(os.listdir(location)):
@@ -2348,9 +2347,9 @@ def real_experiments():
             mode = experiment.metadata['robot']['actuation mode']
             pick = experiment.metadata['labels']['apple pick result']
 
-            # if pick != 'c':
+            if pick != 'c':
             # if pick == 'c':
-            if True:
+            # if True:
             # if mode == 'suction':
             # if file == '2023111_realapple1_mode_dual_attempt_1_orientation_0_yaw_0':
 
@@ -2359,10 +2358,10 @@ def real_experiments():
 
                 # STEP 5: Get features for the experiment
                 experiment.get_features()
-                experiment.eef_location(plots='no')
-                # experiment.pick_points(plots='no')
-                # experiment.pick_forces()
-                # experiment.pick_stiffness(plots='no')
+                experiment.eef_location(plots='yes')
+                experiment.pick_points(plots='no')
+                experiment.pick_forces()
+                experiment.pick_stiffness(plots='no')
 
                 # STEP 6: Append variables of interest
                 # stiffnesses.append(experiment.stiffness)
@@ -2373,8 +2372,8 @@ def real_experiments():
                 # deltas.append(experiment.travel_at_pick)
                 apple_ids.append(experiment.apple_id)
 
-                if experiment.offset_eef_apple < 500:
-                    offsets.append(experiment.offset_eef_apple)
+                # if experiment.offset_eef_apple < 2000:
+                offsets.append(experiment.offset_eef_apple)
 
                 # STEP 7: Single experiment plots
                 # experiment.plot_only_pressure()
@@ -2438,7 +2437,9 @@ def real_experiments():
     if len(apple_ids) > 1:
         list_to_hist(offsets, 'Offset from apple [mm]')
 
-    plt.show(block=False)
+    # plt.show(block=False)
+    # plt.ion()
+    plt.show()
     plt.pause(0.001)  # Pause for interval seconds.
     input("\nhit[enter] to end.")
     plt.close('all')  # all open plots are correctly closed after each run
@@ -2448,7 +2449,7 @@ def main():
 
     logging.getLogger('matplotlib.font_manager').disabled = True
     # Comment out this line for all DEBUG-level messages to be suppressed
-    logging.getLogger().setLevel(logging.DEBUG)
+    # logging.getLogger().setLevel(logging.DEBUG)
 
     # --- Simply choose the desired experiment by un-commenting it ---
     # circle_plots(1,1,1)
@@ -2469,9 +2470,6 @@ def main():
     # TODO: Interpret moments (lever = height of the rig)
     # TODO: Script ideas
     # TODO: Apple Pose w.r.t gripper analysis.
-    # TODO: plot apple location
-    # TODO: plot apple orientation vector
-    # TODO: plot stem vector
 
 
 
