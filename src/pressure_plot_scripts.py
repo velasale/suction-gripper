@@ -588,6 +588,10 @@ class Experiment:
         self.pressure_sc3_elapsed_time = []
         self.pressure_sc3_values = []
 
+        self.sc1_value_at_engagement = 0.00
+        self.sc2_value_at_engagement = 0.00
+        self.sc3_value_at_engagement = 0.00
+
         # Topic: Gripper's ToF Sensor
         self.tof_time_stamp = []
         self.tof_elapsed_time = []
@@ -852,9 +856,16 @@ class Experiment:
         eef_z_vector = plot_factor * eef_z_vector / np.linalg.norm(eef_z_vector)
 
         # STEP 3: Location of the apple
-        # stem_vector = np.ones(3)
+        stem_vector = 0.01 * np.ones(3)
         calix_coord, stem_coord, branch_coord = self.apple_pose()
-        if branch_coord.all() != stem_coord.all():      #avoid divisions by zero
+
+        compare_coords = 'same'
+        for  i,j in zip(branch_coord, stem_coord):
+            if i != j:
+                compare_coords = 'different'
+                break
+
+        if compare_coords != 'same':          #avoid divisions by zero
             stem_vector = np.subtract(branch_coord, stem_coord)
             stem_vector = plot_factor * stem_vector / np.linalg.norm(stem_vector)  # Normalize its magnitude
         apple_vector = np.subtract(stem_coord, calix_coord)
@@ -1076,7 +1087,7 @@ class Experiment:
 
         # STEP1: Locate csv with the ground truth of the apples
         folder = '/media/alejo/Elements/Prosser_Data/Probe/20231101_apples_coords.csv'
-        folder = 'D:/Prosser_Data/Probe/20231101_apples_coords.csv'
+        # folder = 'D:/Prosser_Data/Probe/20231101_apples_coords.csv'
         data_list = pd.read_csv(folder)
 
         array_sp = np.ones(3)
@@ -1321,6 +1332,39 @@ class Experiment:
         if (pressure_at_retrieve - pressure_at_vacuum_off) > pressure_range:
             self.errors.append("Cup collapsed after retrieve")
 
+    def suction_engagement(self):
+        # Check sensor values and see whether the cup was engaged or not
+
+        # STEP 1: Find index when cups allegedly engaged with apple
+        idx=0
+        for count, event in enumerate(self.event_values):
+            if event == 'Labeling cups':
+                idx = count
+                break
+
+        time_of_index = self.event_elapsed_time[idx]
+
+        # STEP 2: Find the index but in the pressure signals, having time as ref
+        pressure_index = 0
+        for count, value in enumerate(self.pressure_sc3_elapsed_time):
+            if value > time_of_index:
+                pressure_index = count
+                break
+
+        pressure_index += 10       # safety margin
+        # STEP 2: Check sensor values at the index
+        self.sc1_value_at_engagement = self.pressure_sc1_values[pressure_index]
+        self.sc2_value_at_engagement = self.pressure_sc2_values[pressure_index]
+        self.sc3_value_at_engagement = self.pressure_sc3_values[pressure_index]
+
+        print('Elapsed time @ engagement: ', time_of_index, pressure_index)
+        print('Engagement Values: ', self.sc1_value_at_engagement, self.sc2_value_at_engagement, self.sc3_value_at_engagement)
+
+        sc_a_manual_label = self.metadata['labels']['suction cup a']
+        sc_b_manual_label = self.metadata['labels']['suction cup b']
+        sc_c_manual_label = self.metadata['labels']['suction cup c']
+        print('Manual labels: ', sc_a_manual_label, sc_b_manual_label, sc_c_manual_label)
+
     # ------------ METHODS FOR PLOTS ----------------
     def plots_stuff(self):
         """Plots wrench (forces and moments) and pressure readings"""
@@ -1470,8 +1514,8 @@ class Experiment:
         @return:
         """
 
-        FONTSIZE = 30   # Use 24 for papers
-        TICKSIZE = 30
+        FONTSIZE = 15   # Use 24 for papers
+        TICKSIZE = 15
         FIGURESIZE = (8, 6)
         lines = itertools.cycle(('dotted', 'dashed', 'dashdot'))
         colors = itertools.cycle(('orange', 'blue', 'green'))
@@ -1489,7 +1533,6 @@ class Experiment:
         suctionCup1_values = []
         suctionCup2_values = []
         suctionCup3_values = []
-
 
         for i, j in zip(self.pressure_sc1_elapsed_time, self.pressure_sc1_values):
             if i > threshold:
@@ -1529,7 +1572,7 @@ class Experiment:
             cnt += 1
 
         if type == 'many':
-
+            print(self.filename, '\n')
             fig, axes = plt.subplots(3, 1, figsize=FIGURESIZE)
             cnt = 0
             for pressure_time, pressure_value, pressure_label in zip(pressure_times, pressure_values, pressure_labels):
@@ -1549,7 +1592,6 @@ class Experiment:
                 except IndexError:
                     error_type = "data looks good"
                 # axes[cnt].suptitle(self.filename + "\n\n" + error_type)
-                print(self.filename)
 
                 title_text = "Experiment Type: " + str(self.exp_type) + \
                              ", F.P.: " + str(self.pressure) + "PSI" \
@@ -2295,7 +2337,7 @@ def real_experiments():
     # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"     # Hard Drive B
     # folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'  # Hard Drive C
     folder = '/media/alejo/Elements/Prosser_Data/'      # External Hard Drive
-    folder = 'D:/Prosser_Data/'
+    # folder = 'D:/Prosser_Data/'
     # subfolder = 'Dataset - apple grasps/'
     subfolder = 'Dataset - apple picks/'
     location = folder + subfolder
@@ -2315,6 +2357,9 @@ def real_experiments():
     deltas = []
     apple_ids = []
     offsets = []        # distances between eef center and the apple center
+    sc1_values_at_eng = []
+    sc2_values_at_eng = []
+    sc3_values_at_eng = []
 
     # STEP C: Sweep all bag files, and for each one do next
     for file in tqdm(os.listdir(location)):
@@ -2347,21 +2392,22 @@ def real_experiments():
             mode = experiment.metadata['robot']['actuation mode']
             pick = experiment.metadata['labels']['apple pick result']
 
-            if pick != 'c':
+            # if pick != 'c':
             # if pick == 'c':
-            # if True:
+            if True:
             # if mode == 'suction':
-            # if file == '2023111_realapple1_mode_dual_attempt_1_orientation_0_yaw_0':
+            # if file == '2023111_realapple2_mode_dual_attempt_1_orientation_0_yaw_0':
 
                 # STEP 4: Read values from 'csv'
                 read_csvs(experiment, location + file)
 
                 # STEP 5: Get features for the experiment
                 experiment.get_features()
-                experiment.eef_location(plots='yes')
+                experiment.eef_location(plots='no')
                 experiment.pick_points(plots='no')
                 experiment.pick_forces()
                 experiment.pick_stiffness(plots='no')
+                experiment.suction_engagement()
 
                 # STEP 6: Append variables of interest
                 # stiffnesses.append(experiment.stiffness)
@@ -2371,12 +2417,16 @@ def real_experiments():
                 # thetas.append(experiment.theta_at_pick)
                 # deltas.append(experiment.travel_at_pick)
                 apple_ids.append(experiment.apple_id)
+                if experiment.sc1_value_at_engagement < 1000:
+                    sc1_values_at_eng.append(experiment.sc1_value_at_engagement)
+                    sc2_values_at_eng.append(experiment.sc2_value_at_engagement)
+                    sc3_values_at_eng.append(experiment.sc3_value_at_engagement)
 
                 # if experiment.offset_eef_apple < 2000:
                 offsets.append(experiment.offset_eef_apple)
 
                 # STEP 7: Single experiment plots
-                # experiment.plot_only_pressure()
+                # experiment.plot_only_pressure(type='single')
                 # experiment.plot_only_total_force()
 
     # STEP 8: Grouped experiments plots
@@ -2430,16 +2480,18 @@ def real_experiments():
         list_to_hist(max_normalForces, 'Max Normal Force [N]')
         list_to_hist(max_tangentialForces, 'Max Tangential Force [N]')
         list_to_hist(max_netForces, 'Max Net Force [N]')
-        list_to_hist(thetas, 'Thetas [deg]')
         print('Apple IDs: ', apple_ids)
         print('Offsets: ', offsets)
 
     if len(apple_ids) > 1:
         list_to_hist(offsets, 'Offset from apple [mm]')
+        list_to_hist(sc1_values_at_eng, 'Pressure [KPa]')
+        list_to_hist(sc2_values_at_eng, 'Pressure [KPa]')
+        list_to_hist(sc3_values_at_eng, 'Pressure [KPa]')
 
-    # plt.show(block=False)
-    # plt.ion()
-    plt.show()
+    plt.show(block=False)
+    plt.ion()
+    # plt.show()
     plt.pause(0.001)  # Pause for interval seconds.
     input("\nhit[enter] to end.")
     plt.close('all')  # all open plots are correctly closed after each run
