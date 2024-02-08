@@ -13,6 +13,7 @@ import numpy as np
 import scipy
 from scipy.ndimage import gaussian_filter, median_filter
 import scipy.stats as st
+from scipy.stats import norm
 
 
 ######## 3rd parties Imports ########
@@ -112,26 +113,45 @@ def locate_index_of_deltas(data, width=200, change=3/10000):
     return idx_1, idx_2
 
 
-def list_to_hist(list, x_label):
+def list_to_hist(list, x_label, plot_norm=False):
     """Generates histogram out of a list, and provides k-means clusters
     CAUTION: Make sure your has clusters otherwise you don't need this
     @param list:
     @param x_label:
+    @param plot_norm: adds a plot of the normal distribution fit
     @return: none
     """
 
-    values = np.array(list)
-    kmeans = KMeans(n_clusters=3, random_state=0).fit(values.reshape(-1,1))
-    clusters = kmeans.cluster_centers_
+    if len(list) > 0:
 
-    median = round(np.median(list), 2)
+        # Step 1: Convert data into a numpy array
+        values = np.array(list)
+        kmeans = KMeans(n_clusters=3, random_state=0).fit(values.reshape(-1,1))
+        clusters = kmeans.cluster_centers_
 
-    fig = plt.figure()
-    plt.hist(values)
-    # plt.title('Kmeans: ' + str(clusters))
-    plt.title('Sample size: ' + str(len(list)) + ', Median: ' + str(median))
-    plt.xlabel(x_label)
+        # Step 2: Get some features from the data
+        median = round(np.median(list), 2)
 
+        # Step 3: PLot histogram
+        fig = plt.figure()
+        plt.title('Sample size: ' + str(len(list)) + ', Median: ' + str(median))
+        plt.xlabel(x_label)
+
+
+        # Step 4: Fit a normal distribution
+        # Source: https://stackoverflow.com/questions/20011122/fitting-a-normal-distribution-to-1d-data
+        if plot_norm == True:
+            plt.hist(values, density=True)  # density True for normalized curves
+            mu, std = norm.fit(values)
+            xmin, xmax = plt.xlim()
+            x = np.linspace(xmin, xmax, 100)
+            p = norm.pdf(x, mu, std)
+            plt.plot(x, p, 'k', linewidth=2)
+        else:
+            plt.hist(values)
+
+    else:
+        print('no data')
 
 def DH_T(i, thetas, alphas, a_links, d_offsets):
     """
@@ -1086,8 +1106,8 @@ class Experiment:
         """Returns as numpy arrays the coordinates of calix, north pole and abcission layer"""
 
         # STEP1: Locate csv with the ground truth of the apples
-        folder = '/media/alejo/Elements/Prosser_Data/Probe/20231101_apples_coords.csv'
-        # folder = 'D:/Prosser_Data/Probe/20231101_apples_coords.csv'
+        # folder = '/media/alejo/Elements/Prosser_Data/Probe/20231101_apples_coords.csv'
+        folder = 'D:/Prosser_Data/Probe/20231101_apples_coords.csv'
         data_list = pd.read_csv(folder)
 
         array_sp = np.ones(3)
@@ -1332,7 +1352,7 @@ class Experiment:
         if (pressure_at_retrieve - pressure_at_vacuum_off) > pressure_range:
             self.errors.append("Cup collapsed after retrieve")
 
-    def suction_engagement(self):
+    def suction_engagement(self, vacuum_thr=60):
         # Check sensor values and see whether the cup was engaged or not
 
         # STEP 1: Find index when cups allegedly engaged with apple
@@ -1357,13 +1377,32 @@ class Experiment:
         self.sc2_value_at_engagement = self.pressure_sc2_values[pressure_index]
         self.sc3_value_at_engagement = self.pressure_sc3_values[pressure_index]
 
-        print('Elapsed time @ engagement: ', time_of_index, pressure_index)
-        print('Engagement Values: ', self.sc1_value_at_engagement, self.sc2_value_at_engagement, self.sc3_value_at_engagement)
+        logging.debug('Elapsed time @ engagement: %.2f sec (index %i)' % (time_of_index, pressure_index))
+        logging.debug('Engagement Values: %.1f, %.1f, %.1f' % (self.sc1_value_at_engagement, self.sc2_value_at_engagement, self.sc3_value_at_engagement))
+
+        # STEP 3: Set labels accodring to the vacuum threshold
+        sc_a_sensor_label = 'no'
+        sc_b_sensor_label = 'no'
+        sc_c_sensor_label = 'no'
+        if self.sc1_value_at_engagement < vacuum_thr:
+            sc_a_sensor_label = 'yes'
+        if self.sc2_value_at_engagement < vacuum_thr:
+            sc_b_sensor_label = 'yes'
+        if self.sc3_value_at_engagement < vacuum_thr:
+            sc_c_sensor_label = 'yes'
 
         sc_a_manual_label = self.metadata['labels']['suction cup a']
         sc_b_manual_label = self.metadata['labels']['suction cup b']
         sc_c_manual_label = self.metadata['labels']['suction cup c']
-        print('Manual labels: ', sc_a_manual_label, sc_b_manual_label, sc_c_manual_label)
+        logging.debug('Manual labels: %s, %s, %s' %(sc_a_manual_label, sc_b_manual_label, sc_c_manual_label))
+
+        if sc_a_sensor_label != sc_a_manual_label or sc_b_sensor_label != sc_b_manual_label or sc_c_sensor_label != sc_c_manual_label:
+            print('warning, correct labels')
+            print(self.filename)
+            print('Engagement Values: %.1f, %.1f, %.1f' % (self.sc1_value_at_engagement, self.sc2_value_at_engagement, self.sc3_value_at_engagement))
+            print('Manual labels: %s, %s, %s' %(sc_a_manual_label, sc_b_manual_label, sc_c_manual_label))
+
+
 
     # ------------ METHODS FOR PLOTS ----------------
     def plots_stuff(self):
@@ -2337,9 +2376,9 @@ def real_experiments():
     # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"     # Hard Drive B
     # folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'  # Hard Drive C
     folder = '/media/alejo/Elements/Prosser_Data/'      # External Hard Drive
-    # folder = 'D:/Prosser_Data/'
-    # subfolder = 'Dataset - apple grasps/'
-    subfolder = 'Dataset - apple picks/'
+    folder = 'D:/Prosser_Data/'
+    subfolder = 'Dataset - apple grasps/'
+    # subfolder = 'Dataset - apple picks/'
     location = folder + subfolder
 
     # --- ICRA24 accompanying video
@@ -2400,13 +2439,12 @@ def real_experiments():
 
                 # STEP 4: Read values from 'csv'
                 read_csvs(experiment, location + file)
-
                 # STEP 5: Get features for the experiment
                 experiment.get_features()
                 experiment.eef_location(plots='no')
-                experiment.pick_points(plots='no')
-                experiment.pick_forces()
-                experiment.pick_stiffness(plots='no')
+                # experiment.pick_points(plots='no')
+                # experiment.pick_forces()
+                # experiment.pick_stiffness(plots='no')
                 experiment.suction_engagement()
 
                 # STEP 6: Append variables of interest
@@ -2485,9 +2523,9 @@ def real_experiments():
 
     if len(apple_ids) > 1:
         list_to_hist(offsets, 'Offset from apple [mm]')
-        list_to_hist(sc1_values_at_eng, 'Pressure [KPa]')
-        list_to_hist(sc2_values_at_eng, 'Pressure [KPa]')
-        list_to_hist(sc3_values_at_eng, 'Pressure [KPa]')
+        list_to_hist(sc1_values_at_eng, 'scA - Pressure [KPa]')
+        list_to_hist(sc2_values_at_eng, 'scB - Pressure [KPa]')
+        list_to_hist(sc3_values_at_eng, 'scC - Pressure [KPa]')
 
     plt.show(block=False)
     plt.ion()
