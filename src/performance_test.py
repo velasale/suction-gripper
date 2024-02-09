@@ -124,8 +124,8 @@ def proxy_picks(gripper):
 
     # --- Experiment Parameters ---
     n_samples = 10  # starting positions to start gripper's pose
-    # yaws = [0, 60]
-    # offsets = [5 / 1000, 10 / 1000, 15 / 1000, 20 / 1000]
+    yaws = [0, 60]
+    offsets = [5 / 1000, 10 / 1000, 15 / 1000, 20 / 1000]
     n_reps = 1  # number of repetitions at each configuration
 
     # --- Uncomment if you need other poses
@@ -154,7 +154,7 @@ def proxy_picks(gripper):
     apples_to_pick = len(gripper.x_coord)
 
     # --- Sample points on a sphere around the apple
-    for sample in range(4, apples_to_pick):
+    for sample in range(0, apples_to_pick):
 
         gripper.sample = sample
 
@@ -221,7 +221,7 @@ def proxy_picks(gripper):
                     # --- Open Valve (apply vacuum)
                     print("\n... Applying vacuum")
                     gripper.publish_event("Vacuum On")
-                    service_call("openValve")
+                    service_call("openValve")               # See *.ino file for more details
 
                     # --- Approach Apple
                     print("\n... Approaching apple")
@@ -655,7 +655,7 @@ class RoboticGripper():
 
         return success
 
-    def apply_offset(self, x_offset=0, y_offset=0, z_offset=0, Y_offset=0):
+    def apply_offset(self, x_offset=0, y_offset=0, z_offset=0, YAW_offset=0):
 
         # Save the noise commands
         self.position_noise = [x_offset, y_offset, z_offset]
@@ -691,7 +691,7 @@ class RoboticGripper():
         q[3] = cur_pose_ezframe.pose.orientation.w
 
         e = euler_from_quaternion(q)
-        new_yaw = e[2] - math.radians(Y_offset)
+        new_yaw = e[2] - math.radians(YAW_offset)
 
         q = quaternion_from_euler(e[0], e[1], new_yaw)
         cur_pose_ezframe.pose.orientation.x = q[0]
