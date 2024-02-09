@@ -124,14 +124,14 @@ def proxy_picks(gripper):
 
     # --- Experiment Parameters ---
     n_samples = 10  # starting positions to start gripper's pose
-    yaws = [0, 60]
-    offsets = [5 / 1000, 10 / 1000, 15 / 1000, 20 / 1000]
+    # yaws = [0, 60]
+    # offsets = [5 / 1000, 10 / 1000, 15 / 1000, 20 / 1000]
     n_reps = 1  # number of repetitions at each configuration
 
     # --- Uncomment if you need other poses
-    # yaws = [0]
+    yaws = [0]
     # offsets = [5/1000, 10/1000]
-    # offsets = [0 / 1000]
+    offsets = [0 / 1000]
 
     cart_noises = [0, 5/1000, 10/1000, 15/1000, 20/1000]
     ang_noises = [0, 5, 10, 15, 20]
