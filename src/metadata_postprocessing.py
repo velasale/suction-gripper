@@ -256,15 +256,17 @@ def icra24_analysis():
     # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"
     # folder = '/home/alejo/Documents/research/data/suction_gripper/'
     # --- Lab's laptop ----
-    folder = '/home/alejo/Dropbox/03 Temporal/data/suction_gripper/'
+    folder = '/home/alejo/Dropbox/03 Temporal/03 Research/data/suction_gripper/'
     # dataset = "MEDIUM_STIFFNESS/"
     dataset = ''
 
     # ------ Create or Read DataFrame with all the json files ------
+    try:
+        df = pd.read_csv(folder + 'suction_gripper_df.csv', index_col=0)
+    except FileNotFoundError:
+        df = df_from_jsons(folder, dataset)
+        df.to_csv(folder + 'suction_gripper_df.csv')
 
-    # df = df_from_jsons(folder, dataset)
-    # df.to_csv('suction_gripper_df.csv')
-    df = pd.read_csv('../data/suction_gripper_df.csv', index_col=0)
     print(df.dtypes)
 
     # ------ Plot results
@@ -353,14 +355,11 @@ def icra24_analysis():
                          'stiffness', ['1_low_stiffness', '2_medium_stiffness', '3_high_stiffness'], ['Low Stiffness', 'Medium Stiffness', 'High Stiffness'],
                          'yaw', [-15, 45], ['nabla', 'delta'])
 
-
-
     # --- x_axis: # cups        series: Stiffness       filter: low_strength
     df_categorical_stats(df[low_strength_filter], 'result', 'Good Pick',
                          'cups engaged', [0, 1, 2, 3], [0, 1, 2, 3],
                          'stiffness', ['1_low_stiffness', '2_medium_stiffness', '3_high_stiffness'],
                          ['low', 'medium', 'high'])
-
     plt.show()
 
 
