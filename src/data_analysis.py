@@ -2372,9 +2372,9 @@ def proxy_experiments():
 def real_experiments():
 
     # STEP A: Data Location
-    # folder = '/home/alejo/gripper_ws/src/suction-gripper/data/'   # Default Hard Drive
-    # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"     # Hard Drive B
-    # folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'  # Hard Drive C
+    # folder = '/home/alejo/gripper_ws/src/suction-gripper/data/'   # ArmFarm laptop - Default Hard Drive
+    # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"     # ArmFarm laptop - Hard Drive B
+    # folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'  # ArmFarm laptop - Hard Drive C
     folder = '/media/alejo/Elements/Prosser_Data/'      # External Hard Drive
     folder = 'D:/Prosser_Data/'
     subfolder = 'Dataset - apple grasps/'
@@ -2560,7 +2560,6 @@ def main():
     # TODO: Interpret moments (lever = height of the rig)
     # TODO: Script ideas
     # TODO: Apple Pose w.r.t gripper analysis.
-
 
 
 if __name__ == '__main__':

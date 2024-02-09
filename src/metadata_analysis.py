@@ -260,7 +260,7 @@ def icra24_analysis():
     # dataset = "MEDIUM_STIFFNESS/"
     dataset = ''
 
-    # ------ Create or Read DataFrame with all the json files ------
+    # ------ Read or Build DataFrame with all the json files ------
     try:
         df = pd.read_csv(folder + 'suction_gripper_df.csv', index_col=0)
     except FileNotFoundError:
