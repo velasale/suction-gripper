@@ -129,7 +129,7 @@ def proxy_picks(gripper):
     n_reps = 1  # number of repetitions at each configuration
 
     # --- Uncomment if you need other poses
-    yaws = [0]
+    yaws = [60]
     # offsets = [5/1000, 10/1000]
     offsets = [0 / 1000]
 
@@ -154,7 +154,7 @@ def proxy_picks(gripper):
     apples_to_pick = len(gripper.x_coord)
 
     # --- Sample points on a sphere around the apple
-    for sample in range(0, apples_to_pick):
+    for sample in range(4, apples_to_pick):
 
         gripper.sample = sample
 
@@ -229,10 +229,17 @@ def proxy_picks(gripper):
                     move = gripper.move_normal(gripper.APPROACH, speed_factor=0.1, condition=True)
                     # todo: should we stop saving rosbag to avoid wasting space during labeling?
 
-                    # --- Label the cups that were engaged with apple
-                    print("\n... Label how did the suction cups engaged")
-                    gripper.publish_event("Labeling cups")
-                    gripper.label_cups()
+                    # --- Label cup engagement
+                    if gripper.ACTUATION_MODE != 'fingers':
+                        print("\n... Label how did the suction cups engaged")
+                        gripper.publish_event("Labeling cups")
+                        gripper.label_cups()
+
+                    # --- Close Fingers
+                    if gripper.ACTUATION_MODE != 'suction':
+                        input('Hit Enter to close the fingers')
+                        gripper.publish_event("Closing fingers")
+                        service_call("closeFingers")
 
                     # --- Retrieve
                     print("\n... Picking Apple")
@@ -245,11 +252,19 @@ def proxy_picks(gripper):
                     gripper.label_pick()
                     # todo: should we stop saving rosbag to avoid wasting space during labeling?
 
-                    # --- Close Valve (stop vacuum)
-                    print("\n... Stop vacuum")
-                    gripper.publish_event("Vacuum Off")
-                    service_call("closeValve")
-                    time.sleep(0.05)
+                    # --- Open Fingers
+                    if gripper.ACTUATION_MODE != 'suction':
+                        input('Hit Enter to open the fingers')
+                        gripper.publish_event("Opening fingers")
+                        service_call("openFingers")
+                        time.sleep(0.05)
+
+                    # --- Close Valve
+                    if gripper.ACTUATION_MODE != 'fingers':
+                        print("\n... Stop vacuum")
+                        gripper.publish_event("Vacuum Off")
+                        service_call("closeValve")
+                        time.sleep(0.05)
 
                     # Stop Recording Rosbag file
                     stop_rosbag(command, rosbag_process)
