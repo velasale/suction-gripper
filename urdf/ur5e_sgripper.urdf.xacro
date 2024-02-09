@@ -57,7 +57,7 @@
     <joint name="world_joint" type="fixed">
     <parent link="small_table" />
     <child link = "base_link" />
-    <origin xyz="0.255 0.357 0.858" rpy="0.0 0.0 3.1416" />
+    <origin xyz="0.35 0.357 0.858" rpy="0.0 0.0 3.1416" />
     </joint>
 
 

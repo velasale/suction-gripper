@@ -54,7 +54,7 @@
 
       <!-- Step 4: Launch ROS Serial -->
       <node pkg="rosserial_python" type="serial_node.py" name="rosserial" output="screen">
-        <param name="port" value="/dev/ttyACM0" />
+        <param name="port" value="/dev/ttyACM1" />
         <param name="baud" value="250000" doc="baudrate for Arduino Zero"/>
         <param name="baud" value="57600" />
       </node>
