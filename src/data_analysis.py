@@ -114,7 +114,7 @@ def locate_index_of_deltas(data, width=200, change=3/10000):
     return idx_1, idx_2
 
 
-def list_to_hist(list, x_label, plot_norm=False):
+def list_to_hist(list, x_label, plot_norm=True):
     """Generates histogram out of a list, and provides k-means clusters
     CAUTION: Make sure your has clusters otherwise you don't need this
     @param list:
@@ -142,6 +142,7 @@ def list_to_hist(list, x_label, plot_norm=False):
         # Step 4: Fit a normal distribution
         # Source: https://stackoverflow.com/questions/20011122/fitting-a-normal-distribution-to-1d-data
         if plot_norm == True:
+
             plt.hist(values, density=True)  # density True for normalized curves
             mu, std = norm.fit(values)
             xmin, xmax = plt.xlim()
@@ -1170,8 +1171,8 @@ class Experiment:
         """Returns as numpy arrays the coordinates of calix, north pole and abcission layer"""
 
         # STEP1: Locate csv with the ground truth of the apples
-        # folder = '/media/alejo/Elements/Prosser_Data/Probe/20231101_apples_coords.csv'
-        folder = 'D:/Prosser_Data/Probe/20231101_apples_coords.csv'
+        folder = '/media/alejo/Elements/Prosser_Data/Probe/20231101_apples_coords.csv'
+        # folder = 'D:/Prosser_Data/Probe/20231101_apples_coords.csv'
         data_list = pd.read_csv(folder)
 
         array_sp = np.ones(3)
@@ -1892,7 +1893,7 @@ class Experiment:
         # out.release()
 
 
-#----------------------- FUNCTIONS FOR EACH TYPE OF EXPERIMENT ANALYSIS -----------------#
+# ----------------------- FUNCTIONS FOR EACH TYPE OF EXPERIMENT ANALYSIS -----------------
 def noise_experiments(exp_type="vertical"):
 
     plt.figure()
@@ -2376,14 +2377,14 @@ def proxy_experiments():
 def real_experiments():
 
     # STEP A: Data Location
+    # TODO: detect machine
     # folder = '/home/alejo/gripper_ws/src/suction-gripper/data/'   # ArmFarm laptop - Default Hard Drive
     # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"     # ArmFarm laptop - Hard Drive B
     # folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'  # ArmFarm laptop - Hard Drive C
     folder = '/media/alejo/Elements/Prosser_Data/'      # External Hard Drive
-    folder = 'D:/Prosser_Data/'
-    subfolder = 'Dataset - apple grasps/'
+    # folder = 'D:/Prosser_Data/'
+    # subfolder = 'Dataset - apple grasps/'
     # subfolder = 'Dataset - apple picks/'
-    location = folder + subfolder
 
     # --- ICRA24 accompanying video
     # file = '20230731_proxy_sample_6_yaw_45_rep_0_stiff_low_force_low'
@@ -2405,71 +2406,79 @@ def real_experiments():
     sc3_values_at_eng = []
 
     # STEP C: Sweep all bag files, and for each one do next
-    for file in tqdm(os.listdir(location)):
-        if file.endswith('.bag') and file != 'vacuum_test_.bag':
-            logging.debug('------------- Filename: %s ------------' %file)
-            only_name = file.split('.')[0]  # remove extension
-            file = only_name
+    subfolders= ['Dataset - apple grasps/', 'Dataset - apple picks/']
+    # subfolders = ['Dataset - apple grasps/']
+    # subfolders = ['Dataset - apple picks/']
 
-            # Extract apple's id
-            apple_id = file.split('apple')[1]
-            apple_id = int(apple_id.split('_')[0])
-            logging.debug('Apple %i' %apple_id)
+    for subfolder in subfolders:
 
-            # STEP 1: Turn bag into csvs if needed
-            if os.path.isdir(location + file):
-                logging.debug('csvs were already generated')
-                pass
-            else:
-                logging.debug('make sure to import ros_scripts.py')
-                bag_to_csvs(location + file + ".bag")
+        location = folder + subfolder
+        for file in tqdm(os.listdir(location)):
+            if file.endswith('.bag') and file != 'vacuum_test_.bag':
+                logging.debug('------------- Filename: %s ------------' %file)
+                only_name = file.split('.')[0]  # remove extension
+                file = only_name
 
-            # STEP 2: Generate an experiment object for each file, and read its json file
-            json_file = open(location + file + '.json')
-            json_data = json.load(json_file)
-            experiment = Experiment(apple_id=apple_id, metadata=json_data)
-            experiment.filename = file
-            logging.debug('metadata: %s' %experiment.metadata['general'])
+                # Extract apple's id
+                apple_id = file.split('apple')[1]
+                apple_id = int(apple_id.split('_')[0])
+                logging.debug('Apple %i' %apple_id)
 
-            # STEP 3: Check conditions from metadata to continue with the analysis
-            mode = experiment.metadata['robot']['actuation mode']
-            pick = experiment.metadata['labels']['apple pick result']
+                # STEP 1: Turn bag into csvs if needed
+                if os.path.isdir(location + file):
+                    logging.debug('csvs were already generated')
+                    pass
+                else:
+                    logging.debug('make sure to import ros_scripts.py')
+                    bag_to_csvs(location + file + ".bag")
 
-            # if pick != 'c':
-            # if pick == 'c':
-            if True:
-            # if mode == 'suction':
-            # if file == '2023111_realapple2_mode_dual_attempt_1_orientation_0_yaw_0':
+                # STEP 2: Generate an experiment object for each file, and read its json file
+                json_file = open(location + file + '.json')
+                json_data = json.load(json_file)
+                experiment = Experiment(apple_id=apple_id, metadata=json_data)
+                experiment.filename = file
+                logging.debug('metadata: %s' %experiment.metadata['general'])
 
-                # STEP 4: Read values from 'csv'
-                read_csvs(experiment, location + file)
-                # STEP 5: Get features for the experiment
-                experiment.get_features()
-                experiment.eef_location(plots='no')
-                # experiment.pick_points(plots='no')
-                # experiment.pick_forces()
-                # experiment.pick_stiffness(plots='no')
-                experiment.suction_engagement()
+                # STEP 3: Check conditions from metadata to continue with the analysis
+                mode = experiment.metadata['robot']['actuation mode']
+                pick = experiment.metadata['labels']['apple pick result']
 
-                # STEP 6: Append variables of interest
-                # stiffnesses.append(experiment.stiffness)
-                # max_normalForces.append(experiment.max_normalForce_at_pick)
-                # max_tangentialForces.append(experiment.max_tangentialForce_at_pick)
-                # max_netForces.append(experiment.max_netForce_at_pick)
-                # thetas.append(experiment.theta_at_pick)
-                # deltas.append(experiment.travel_at_pick)
-                apple_ids.append(experiment.apple_id)
-                if experiment.sc1_value_at_engagement < 1000:
-                    sc1_values_at_eng.append(experiment.sc1_value_at_engagement)
-                    sc2_values_at_eng.append(experiment.sc2_value_at_engagement)
-                    sc3_values_at_eng.append(experiment.sc3_value_at_engagement)
+                # if pick != 'c':
+                # if pick == 'c':
+                if True:
+                # if mode == 'suction':
+                # if file == '2023111_realapple2_mode_dual_attempt_1_orientation_0_yaw_0':
 
-                # if experiment.offset_eef_apple < 2000:
-                offsets.append(experiment.offset_eef_apple)
+                    # STEP 4: Read values from 'csv'
+                    read_csvs(experiment, location + file)
 
-                # STEP 7: Single experiment plots
-                # experiment.plot_only_pressure(type='single')
-                # experiment.plot_only_total_force()
+                    # STEP 5: Get features for the experiment
+                    experiment.get_features()
+                    experiment.eef_location(plots='no')
+                    # experiment.pick_points(plots='no')
+                    # experiment.pick_forces()
+                    # experiment.pick_stiffness(plots='no')
+                    experiment.suction_engagement()
+
+                    # STEP 6: Append variables of interest
+                    # stiffnesses.append(experiment.stiffness)
+                    # max_normalForces.append(experiment.max_normalForce_at_pick)
+                    # max_tangentialForces.append(experiment.max_tangentialForce_at_pick)
+                    # max_netForces.append(experiment.max_netForce_at_pick)
+                    # thetas.append(experiment.theta_at_pick)
+                    # deltas.append(experiment.travel_at_pick)
+                    apple_ids.append(experiment.apple_id)
+                    if experiment.sc1_value_at_engagement < 150:        # @ Corvallis the pressure is ~120KPa
+                        sc1_values_at_eng.append(experiment.sc1_value_at_engagement)
+                        sc2_values_at_eng.append(experiment.sc2_value_at_engagement)
+                        sc3_values_at_eng.append(experiment.sc3_value_at_engagement)
+
+                    if experiment.offset_eef_apple < 100:
+                        offsets.append(experiment.offset_eef_apple)
+
+                    # STEP 7: Single experiment plots
+                    # experiment.plot_only_pressure(type='single')
+                    # experiment.plot_only_total_force()
 
     # STEP 8: Grouped experiments plots
     if len(stiffnesses) > 1:
@@ -2527,9 +2536,9 @@ def real_experiments():
 
     if len(apple_ids) > 1:
         list_to_hist(offsets, 'Offset from apple [mm]')
-        list_to_hist(sc1_values_at_eng, 'scA - Pressure [KPa]')
-        list_to_hist(sc2_values_at_eng, 'scB - Pressure [KPa]')
-        list_to_hist(sc3_values_at_eng, 'scC - Pressure [KPa]')
+        fig, axs = plt.subplots(nrows=1, ncols=3)
+        axs[0].boxplot(sc1_values_at_eng, sc2_values_at_eng, sc3_values_at_eng)
+
 
     plt.show(block=False)
     plt.ion()
