@@ -46,6 +46,7 @@ logging_format = "[%(asctime)s - %(levelname)s] %(message)s"
 logging.basicConfig(format=logging_format, level=logging.INFO, datefmt="%H:%M:%S")
 
 
+# ------------------------ HANDY FUNCTIONS -----------------------------------------
 def point_to_line_distance(point, origin, vector):
     """
 
@@ -153,6 +154,18 @@ def list_to_hist(list, x_label, plot_norm=False):
     else:
         print('no data')
 
+
+def relative_values(original_list, reference_value):
+    "Subtracts a value from all the elements of a list. Handy for converting time stamps"
+
+    relative_list = [None] * len(original_list)
+    for i in range(len(original_list)):
+        relative_list[i] = original_list[i] - reference_value
+
+    return relative_list
+
+
+# ------------------------ FORWARD KINEMATICS FUNCTIONS -------------------------------
 def DH_T(i, thetas, alphas, a_links, d_offsets):
     """
     Forward Kinematics Denavit Hartenberg transformations
@@ -221,6 +234,7 @@ def ur5e_fk_dh(joint_angles):
     return eef_xyz, eef_angles
 
 
+# ----------------------- FILE HANDLING FUNCTIONS ------------------------------------
 def read_json(file):
     """Creates a list of experiments as objects. It then reads their respective json file and adds the metadata as
     attributes to each one of them"""
@@ -295,77 +309,6 @@ def read_json(file):
     return experiment
 
 
-def relative_values(original_list, reference_value):
-    "Subtracts a value from all the elements of a list. Handy for converting time stamps"
-
-    relative_list = [None] * len(original_list)
-    for i in range(len(original_list)):
-        relative_list[i] = original_list[i] - reference_value
-
-    return relative_list
-
-
-def read_csvs(experiment, folder):
-    """Opens the csvs associated to each experiment and saves it as lists"""
-
-    # Sweep the csvs of each experiment
-    for file in os.listdir(folder):
-        if file.endswith('.csv'):
-            data_list = pd.read_csv(folder + "/" + file)
-
-            if file == "gripper-pressure.csv":
-                experiment.pressure_time_stamp = data_list.iloc[:, 0].tolist()
-                experiment.pressure_values = data_list.iloc[:, 1].tolist()
-                # Convert to kPa (1000 Pa) which is more standard than hPa (100 Pa)
-                experiment.pressure_values = np.divide(experiment.pressure_values, 10)
-
-            if file == "gripper-pressure-sc1.csv":
-                experiment.pressure_sc1_time_stamp = data_list.iloc[:, 0].tolist()
-                experiment.pressure_sc1_values = data_list.iloc[:, 1].tolist()
-                # Convert to kPa (1000 Pa) which is more standard than hPa (100 Pa)
-                experiment.pressure_sc1_values = np.divide(experiment.pressure_sc1_values, 10)
-
-            if file == "gripper-pressure-sc2.csv":
-                experiment.pressure_sc2_time_stamp = data_list.iloc[:, 0].tolist()
-                experiment.pressure_sc2_values = data_list.iloc[:, 1].tolist()
-                # Convert to kPa (1000 Pa) which is more standard than hPa (100 Pa)
-                experiment.pressure_sc2_values = np.divide(experiment.pressure_sc2_values, 10)
-
-            if file == "gripper-pressure-sc3.csv":
-                experiment.pressure_sc3_time_stamp = data_list.iloc[:, 0].tolist()
-                experiment.pressure_sc3_values = data_list.iloc[:, 1].tolist()
-                # Convert to kPa (1000 Pa) which is more standard than hPa (100 Pa)
-                experiment.pressure_sc3_values = np.divide(experiment.pressure_sc3_values, 10)
-
-            if file == "rench.csv":
-                experiment.wrench_time_stamp = data_list.iloc[:, 0].tolist()
-                experiment.wrench_xforce_values = data_list.iloc[:, 5].tolist()
-                experiment.wrench_yforce_values = data_list.iloc[:, 6].tolist()
-                experiment.wrench_zforce_values = data_list.iloc[:, 7].tolist()
-                experiment.wrench_xtorque_values = data_list.iloc[:, 8].tolist()
-                experiment.wrench_ytorque_values = data_list.iloc[:, 9].tolist()
-                experiment.wrench_ztorque_values = data_list.iloc[:, 10].tolist()
-
-            if file == "xperiment_steps.csv":
-                experiment.event_time_stamp = data_list.iloc[:, 0].tolist()
-                experiment.event_values = data_list.iloc[:, 1].tolist()
-
-            if file == "oint_states.csv":
-                experiment.joint_time_stamp = data_list.iloc[:, 0].tolist()
-                experiment.j0_shoulder_pan_values = data_list.iloc[:, 8].tolist()
-                experiment.j1_shoulder_lift_values = data_list.iloc[:, 7].tolist()
-                experiment.j2_elbow_values = data_list.iloc[:, 6].tolist()
-                experiment.j3_wrist1_values = data_list.iloc[:, 9].tolist()
-                experiment.j4_wrist2_values = data_list.iloc[:, 10].tolist()
-                experiment.j5_wrist3_values = data_list.iloc[:, 11].tolist()
-
-            if file == "gripper-distance.csv":
-                experiment.tof_time_stamp = data_list.iloc[:, 0].tolist()
-                experiment.tof_values = data_list.iloc[:, 1].tolist()
-
-    return experiment
-
-
 def find_file(type, radius, pressure, noise, rep, pitch, surface):
     """"""
 
@@ -431,6 +374,68 @@ def find_file(type, radius, pressure, noise, rep, pitch, surface):
     return file, only_filename
 
 
+def read_csvs(experiment, folder):
+    """Opens the csvs associated to each experiment and saves it as lists"""
+
+    # Sweep the csvs of each experiment
+    for file in os.listdir(folder):
+        if file.endswith('.csv'):
+            data_list = pd.read_csv(folder + "/" + file)
+
+            if file == "gripper-pressure.csv":
+                experiment.pressure_time_stamp = data_list.iloc[:, 0].tolist()
+                experiment.pressure_values = data_list.iloc[:, 1].tolist()
+                # Convert to kPa (1000 Pa) which is more standard than hPa (100 Pa)
+                experiment.pressure_values = np.divide(experiment.pressure_values, 10)
+
+            if file == "gripper-pressure-sc1.csv":
+                experiment.pressure_sc1_time_stamp = data_list.iloc[:, 0].tolist()
+                experiment.pressure_sc1_values = data_list.iloc[:, 1].tolist()
+                # Convert to kPa (1000 Pa) which is more standard than hPa (100 Pa)
+                experiment.pressure_sc1_values = np.divide(experiment.pressure_sc1_values, 10)
+
+            if file == "gripper-pressure-sc2.csv":
+                experiment.pressure_sc2_time_stamp = data_list.iloc[:, 0].tolist()
+                experiment.pressure_sc2_values = data_list.iloc[:, 1].tolist()
+                # Convert to kPa (1000 Pa) which is more standard than hPa (100 Pa)
+                experiment.pressure_sc2_values = np.divide(experiment.pressure_sc2_values, 10)
+
+            if file == "gripper-pressure-sc3.csv":
+                experiment.pressure_sc3_time_stamp = data_list.iloc[:, 0].tolist()
+                experiment.pressure_sc3_values = data_list.iloc[:, 1].tolist()
+                # Convert to kPa (1000 Pa) which is more standard than hPa (100 Pa)
+                experiment.pressure_sc3_values = np.divide(experiment.pressure_sc3_values, 10)
+
+            if file == "rench.csv":
+                experiment.wrench_time_stamp = data_list.iloc[:, 0].tolist()
+                experiment.wrench_xforce_values = data_list.iloc[:, 5].tolist()
+                experiment.wrench_yforce_values = data_list.iloc[:, 6].tolist()
+                experiment.wrench_zforce_values = data_list.iloc[:, 7].tolist()
+                experiment.wrench_xtorque_values = data_list.iloc[:, 8].tolist()
+                experiment.wrench_ytorque_values = data_list.iloc[:, 9].tolist()
+                experiment.wrench_ztorque_values = data_list.iloc[:, 10].tolist()
+
+            if file == "xperiment_steps.csv":
+                experiment.event_time_stamp = data_list.iloc[:, 0].tolist()
+                experiment.event_values = data_list.iloc[:, 1].tolist()
+
+            if file == "oint_states.csv":
+                experiment.joint_time_stamp = data_list.iloc[:, 0].tolist()
+                experiment.j0_shoulder_pan_values = data_list.iloc[:, 8].tolist()
+                experiment.j1_shoulder_lift_values = data_list.iloc[:, 7].tolist()
+                experiment.j2_elbow_values = data_list.iloc[:, 6].tolist()
+                experiment.j3_wrist1_values = data_list.iloc[:, 9].tolist()
+                experiment.j4_wrist2_values = data_list.iloc[:, 10].tolist()
+                experiment.j5_wrist3_values = data_list.iloc[:, 11].tolist()
+
+            if file == "gripper-distance.csv":
+                experiment.tof_time_stamp = data_list.iloc[:, 0].tolist()
+                experiment.tof_values = data_list.iloc[:, 1].tolist()
+
+    return experiment
+
+
+# ----------------------- PLOT RELATED FUNCTIONS -------------------------------------
 def suction_plots(var, type, x_noises, z_noises, mean_values, std_values, pressure, pitch, radius, trends='false'):
 
     FONTSIZE = 24
@@ -555,7 +560,66 @@ def circle_plots(x_noises, z_noises, radius, x_forces, z_forces, pressure):
     plt.show()
 
 
-#todo: create class Experiment and then Class Apple_Pick_Experiment
+def plot_and_video():
+    """Method to run a vertical line on a plot and a video"""
+
+    # --- Provide File ---
+
+    # --- Default Hard Drive ---
+    # folder = '/home/alejo/gripper_ws/src/suction-gripper/data/'
+    # --- Hard Drive B ---
+    folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"
+    # --- Hard Drive C ---
+    folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'
+
+    location = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/DATASET5/'
+    filename = 'horizontal_#7_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_26.46_pitch_45.0_rep_1'
+    # Sample with 0deg tilt and 0 mm offset:
+    filename = 'horizontal_#0_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_0.0_pitch_0.0_rep_1'
+    # Sample with 0deg tilt and 18.9mm offset:
+    filename = 'horizontal_#5_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_18.9_pitch_0.0_rep_1'
+    # Sample with 15deg tilt and 18.9mm offset
+    filename = 'horizontal_#5_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_18.9_pitch_15.0_rep_3'
+    # Sample with 30deg tilt and 18.9mm offset
+    filename = 'horizontal_#5_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_18.9_pitch_45.0_rep_1'
+    # Sample with 45deg tilt and 26.5mm offsrt
+    # filename = 'horizontal_#7_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_26.46_pitch_45.0_rep_1'
+
+    # --- ICRA24 accompanying video
+    # subfolder = "LOW_STIFFNESS/"
+    subfolder = ''
+    location = folder + subfolder
+    filename = '20230731_proxy_sample_6_yaw_45_rep_0_stiff_low_force_low'
+    filename = '20230922_realapple3_attempt_1_orientation_0_yaw_0'
+
+    filename = '20230922_realapple1_attempt_1_orientation_0_yaw_0'
+    filename = '20230922_realapple2_attempt_1_orientation_0_yaw_0'
+
+    # --- Prosser2
+    location = '/media/alejo/Elements/Prosser_Data/Dataset - apple picks/'
+    filename = '2023111_realapple24_mode_dual_attempt_1_orientation_0_yaw_0'
+
+    # --- 3. Create Experiment Object
+    experiment = Experiment()
+
+    # --- 4. Assign json dictionary as property of the experiment
+    json_file = open(location + filename + '.json')
+    json_data = json.load(json_file)
+    experiment.metadata = json_data
+    print(experiment.metadata['general'])
+
+    # --- 4. Read values from 'csv'
+    read_csvs(experiment, location + filename)
+
+    # --- 5. Get different features for the experiment
+    experiment.get_features()
+
+    # 6. Plot each experiment if needed
+    running_plot_and_video(location, filename, experiment)
+    plt.show()
+
+
+# ----------------------- MAIN CLASS FOR EXPERIMENTS ------------------------------------
 class Experiment:
     """Class to define an Experiment as an Object. Each experiment has properties from its json file.
     """
@@ -1402,8 +1466,6 @@ class Experiment:
             print('Engagement Values: %.1f, %.1f, %.1f' % (self.sc1_value_at_engagement, self.sc2_value_at_engagement, self.sc3_value_at_engagement))
             print('Manual labels: %s, %s, %s' %(sc_a_manual_label, sc_b_manual_label, sc_c_manual_label))
 
-
-
     # ------------ METHODS FOR PLOTS ----------------
     def plots_stuff(self):
         """Plots wrench (forces and moments) and pressure readings"""
@@ -1830,6 +1892,7 @@ class Experiment:
         # out.release()
 
 
+#----------------------- FUNCTIONS FOR EACH TYPE OF EXPERIMENT ANALYSIS -----------------#
 def noise_experiments(exp_type="vertical"):
 
     plt.figure()
@@ -2242,65 +2305,6 @@ def simple_suction_experiment():
     axis[0].set_ylabel('Pressure [hPa]')
     plt.suptitle('Min Vacuum with different Feeding Pressures (FP)')
     plt.ylim([250, 300])
-    plt.show()
-
-
-def plot_and_video():
-    """Method to run a vertical line on a plot and a video"""
-
-    # --- Provide File ---
-
-    # --- Default Hard Drive ---
-    # folder = '/home/alejo/gripper_ws/src/suction-gripper/data/'
-    # --- Hard Drive B ---
-    folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"
-    # --- Hard Drive C ---
-    folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'
-
-    location = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/DATASET5/'
-    filename = 'horizontal_#7_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_26.46_pitch_45.0_rep_1'
-    # Sample with 0deg tilt and 0 mm offset:
-    filename = 'horizontal_#0_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_0.0_pitch_0.0_rep_1'
-    # Sample with 0deg tilt and 18.9mm offset:
-    filename = 'horizontal_#5_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_18.9_pitch_0.0_rep_1'
-    # Sample with 15deg tilt and 18.9mm offset
-    filename = 'horizontal_#5_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_18.9_pitch_15.0_rep_3'
-    # Sample with 30deg tilt and 18.9mm offset
-    filename = 'horizontal_#5_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_18.9_pitch_45.0_rep_1'
-    # Sample with 45deg tilt and 26.5mm offsrt
-    # filename = 'horizontal_#7_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_26.46_pitch_45.0_rep_1'
-
-    # --- ICRA24 accompanying video
-    # subfolder = "LOW_STIFFNESS/"
-    subfolder = ''
-    location = folder + subfolder
-    filename = '20230731_proxy_sample_6_yaw_45_rep_0_stiff_low_force_low'
-    filename = '20230922_realapple3_attempt_1_orientation_0_yaw_0'
-
-    filename = '20230922_realapple1_attempt_1_orientation_0_yaw_0'
-    filename = '20230922_realapple2_attempt_1_orientation_0_yaw_0'
-
-    # --- Prosser2
-    location = '/media/alejo/Elements/Prosser_Data/Dataset - apple picks/'
-    filename = '2023111_realapple24_mode_dual_attempt_1_orientation_0_yaw_0'
-
-    # --- 3. Create Experiment Object
-    experiment = Experiment()
-
-    # --- 4. Assign json dictionary as property of the experiment
-    json_file = open(location + filename + '.json')
-    json_data = json.load(json_file)
-    experiment.metadata = json_data
-    print(experiment.metadata['general'])
-
-    # --- 4. Read values from 'csv'
-    read_csvs(experiment, location + filename)
-
-    # --- 5. Get different features for the experiment
-    experiment.get_features()
-
-    # 6. Plot each experiment if needed
-    running_plot_and_video(location, filename, experiment)
     plt.show()
 
 
