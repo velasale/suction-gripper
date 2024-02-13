@@ -2468,12 +2468,16 @@ def real_experiments():
                     # thetas.append(experiment.theta_at_pick)
                     # deltas.append(experiment.travel_at_pick)
                     apple_ids.append(experiment.apple_id)
-                    if experiment.sc1_value_at_engagement < 150:        # @ Corvallis the pressure is ~120KPa
+
+                    air_pres_thr = 60       # @ Corvallis, atmospheric air pressure ~115kPa
+                    if experiment.sc1_value_at_engagement < air_pres_thr:
                         sc1_values_at_eng.append(experiment.sc1_value_at_engagement)
+                    if experiment.sc2_value_at_engagement < air_pres_thr:
                         sc2_values_at_eng.append(experiment.sc2_value_at_engagement)
+                    if experiment.sc3_value_at_engagement < air_pres_thr:
                         sc3_values_at_eng.append(experiment.sc3_value_at_engagement)
 
-                    if experiment.offset_eef_apple < 100:
+                    if experiment.offset_eef_apple < 100:       # Record of the offset between eef and apple
                         offsets.append(experiment.offset_eef_apple)
 
                     # STEP 7: Single experiment plots
@@ -2536,9 +2540,14 @@ def real_experiments():
 
     if len(apple_ids) > 1:
         list_to_hist(offsets, 'Offset from apple [mm]')
-        fig, axs = plt.subplots(nrows=1, ncols=3)
-        axs[0].boxplot(sc1_values_at_eng, sc2_values_at_eng, sc3_values_at_eng)
-
+        list_to_hist(sc1_values_at_eng, 'ScA - Pressure [kPa]')
+        list_to_hist(sc2_values_at_eng, 'ScB - Pressure [kPa]')
+        list_to_hist(sc3_values_at_eng, 'ScC - Pressure [kPa]')
+        # fig = plt.figure()
+        # df = pd.DataFrame(np.array(([sc1_values_at_eng, sc2_values_at_eng, sc3_values_at_eng])).transpose(), columns=['scA', 'scB', 'scC'])
+        # df.boxplot(column=['scA', 'scB', 'scC'])
+        # plt.xlabel('Suction cup')
+        # plt.ylabel('Air pressure [kPa]')
 
     plt.show(block=False)
     plt.ion()
