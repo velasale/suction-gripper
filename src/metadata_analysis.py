@@ -199,7 +199,7 @@ def df_categorical_stats(df, cat_name, cat_value, x_filter_name, x_filter_values
     TICKSIZE = 14
     plt.figure(figsize=(5, 4), dpi=80)
     plt.rc('font', family='serif')      # Font similar to Latex
-    plt.grid()
+    # plt.grid()
     plt.ylim([0, 105])
     marker = itertools.cycle(('o', '*', 'x', '+', '.', 'o', '*'))
     line_styles = itertools.cycle(('dotted', 'dashed', 'dashdot',  (0, (3, 3, 1, 3, 1, 3)), (0, (1, 1))))
@@ -255,8 +255,8 @@ def icra24_analysis():
     # ------ Dataset Location ------
     # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"
     # folder = '/home/alejo/Documents/research/data/suction_gripper/'
-    # --- Lab's laptop ----
-    folder = '/home/alejo/Dropbox/03 Temporal/03 Research/data/suction_gripper/'
+    # folder = '/home/alejo/Dropbox/03 Temporal/03 Research/data/suction_gripper/'        # ArmFarm laptop - Ubuntu
+    folder = 'C:/Users/avela/Dropbox/03 Temporal/03 Research/data/suction_gripper/'     # Personal Laptop - windows
     # dataset = "MEDIUM_STIFFNESS/"
     dataset = ''
 
