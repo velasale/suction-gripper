@@ -32,9 +32,9 @@ const byte enablePinA = 8;
 const byte enablePinB = 13;
 
 const int stepsPerRevolution = 2000;  // change this to fit the number of steps per revolution
-const int steps = 1475;               // 1400 (70-80mm)    1475(80-90mm)
+const int steps = 1400;               // 1400 (70-80mm)    1475(80-90mm)
 const int stepSpeed = 20;
-const int distCalib = 100;             // Prototype (70-80mm): 85 - 25 = 60    Prototype (80-90mm): 80 - 25 = 55
+const int distCalib = 55;             // Prototype (70-80mm): 85 - 25 = 60    Prototype (80-90mm): 80 - 25 = 55
 
 // initialize the stepper library on pins 8 through 11:
 Stepper myStepper(stepsPerRevolution, 9, 10, 11, 12);
