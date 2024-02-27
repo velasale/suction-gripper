@@ -2407,8 +2407,8 @@ def real_experiments():
 
     # STEP C: Sweep all bag files, and for each one do next
     subfolders= ['Dataset - apple grasps/', 'Dataset - apple picks/']
-    # subfolders = ['Dataset - apple grasps/']
-    # subfolders = ['Dataset - apple picks/']
+    subfolders = ['Dataset - apple grasps/']
+    subfolders = ['Dataset - apple picks/']
 
     for subfolder in subfolders:
 
@@ -2469,7 +2469,7 @@ def real_experiments():
                     # deltas.append(experiment.travel_at_pick)
                     apple_ids.append(experiment.apple_id)
 
-                    air_pres_thr = 60       # @ Corvallis, atmospheric air pressure ~115kPa
+                    air_pres_thr = 120       # @ Corvallis, atmospheric air pressure ~115kPa
                     if experiment.sc1_value_at_engagement < air_pres_thr:
                         sc1_values_at_eng.append(experiment.sc1_value_at_engagement)
                     if experiment.sc2_value_at_engagement < air_pres_thr:
@@ -2543,11 +2543,12 @@ def real_experiments():
         list_to_hist(sc1_values_at_eng, 'ScA - Pressure [kPa]')
         list_to_hist(sc2_values_at_eng, 'ScB - Pressure [kPa]')
         list_to_hist(sc3_values_at_eng, 'ScC - Pressure [kPa]')
-        # fig = plt.figure()
-        # df = pd.DataFrame(np.array(([sc1_values_at_eng, sc2_values_at_eng, sc3_values_at_eng])).transpose(), columns=['scA', 'scB', 'scC'])
-        # df.boxplot(column=['scA', 'scB', 'scC'])
-        # plt.xlabel('Suction cup')
-        # plt.ylabel('Air pressure [kPa]')
+
+        fig = plt.figure()
+        df = pd.DataFrame(np.array(([sc1_values_at_eng, sc2_values_at_eng, sc3_values_at_eng])).transpose(), columns=['scA', 'scB', 'scC'])
+        df.boxplot(column=['scA', 'scB', 'scC'])
+        plt.xlabel('Suction cup')
+        plt.ylabel('Air pressure [kPa]')
 
     plt.show(block=False)
     plt.ion()
@@ -2555,6 +2556,95 @@ def real_experiments():
     plt.pause(0.001)  # Pause for interval seconds.
     input("\nhit[enter] to end.")
     plt.close('all')  # all open plots are correctly closed after each run
+
+
+def mark10_experiments():
+    # Step 1 - Location
+    folder = '/home/alejo/Downloads/Mark10_experiments-20240227T171746Z-001/Mark10_experiments/experiment1_orthogonalLoad/'
+
+    # Step 2 - Sweep all diameters
+    diameters = [70, 75, 80]
+    steps_list = [1285, 1300, 1325, 1350, 1375, 1400, 1425]
+
+    for diameter in diameters:
+        location = folder
+        prefix = 'finger_load_' + str(diameter) + 'mm'
+
+        stepses = []
+        max_forces = []
+
+        for steps in steps_list:
+            sufix = str(steps) + 'steps.xlsx'
+
+            max_ortho = 'Nan'
+
+            for file in sorted(os.listdir(location)):
+                if file.startswith(prefix) and file.endswith(sufix):
+                    print(file)
+
+                    # Step 3: Open file and turn into dataframe
+                    trial_df = pd.read_excel(location + file, index_col=0)
+                    max_ortho = max(trial_df['Load [N]'])
+
+                    stepses.append(steps)
+                    max_forces.append(max_ortho)
+
+        print(stepses)
+        print(max_forces)
+        plt.plot(stepses, max_forces, 'o-', label=(str(diameter)+'mm'))
+    plt.grid()
+    plt.legend()
+    plt.xlabel('steps')
+    plt.ylabel('Force [N]')
+    plt.title('Normal Force from each finger [N]')
+    plt.show()
+
+
+
+def mark10_pull_experiments():
+    # Step 1 - Location
+    folder = '/home/alejo/Downloads/Mark10_experiments-20240227T171746Z-001/Mark10_experiments/experiment2_pullingLoad_medSpring_medMagnet/'
+
+    # Step 2 - Sweep all diameters
+    steps_list = [1285, 1300, 1325, 1350, 1375, 1400, 1425]
+
+    location = folder
+
+    stepses = []
+    max_forces = []
+
+    for steps in steps_list:
+        prefix = 'pull_load_fakeApple_' + str(steps)
+
+        sufix = str(steps) + 'steps.xlsx'
+
+        for file in sorted(os.listdir(location)):
+            if file.startswith(prefix):
+                print(file)
+
+                # # Step 3: Open file and turn into dataframe
+                trial_df = pd.read_excel(location + file, index_col=0)
+
+                plt.plot(trial_df['Travel [mm]'], trial_df['Load [N]'])
+                plt.title(file)
+                plt.grid()
+                plt.show()
+
+                # max_ortho = max(trial_df['Load [N]'])
+                #
+                # stepses.append(steps)
+                # max_forces.append(max_ortho)
+
+    # print(stepses)
+    # print(max_forces)
+    # plt.plot(stepses, max_forces, 'o-', label=(str(diameter)+'mm'))
+    # plt.grid()
+    # plt.legend()
+    # plt.xlabel('steps')
+    # plt.ylabel('Force [N]')
+    # plt.title('Normal Force from each finger [N]')
+    # plt.show()
+
 
 
 def main():
@@ -2585,5 +2675,6 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    # main()
+    mark10_pull_experiments()
 
