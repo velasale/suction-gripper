@@ -237,8 +237,10 @@ def df_categorical_stats(df, cat_name, cat_value, x_filter_name, x_filter_values
 
         plt.plot(x_filter_values, values, color=next(line_colors), marker=next(marker), markersize=10, linewidth=3, linestyle=next(line_styles), label=("offset: " + str(label)))
         plt.gca().yaxis.set_major_formatter(mtick.PercentFormatter(xmax=100.0))
-        plt.ylabel('Two or three cups engaged', fontsize=FONTSIZE)
-        # plt.ylabel('Good Apple picks [%]', fontsize=14)
+        if cat_value == '2 or 3':
+            plt.ylabel('Two or three cups engaged', fontsize=FONTSIZE)
+        if cat_value == 'Good Pick':
+            plt.ylabel('Good apple picks [%]', fontsize=FONTSIZE)   # Use this
         plt.xticks(x_filter_values, x_filter_ticks, fontsize=FONTSIZE)
         plt.yticks(fontsize=FONTSIZE)
         plt.xlabel(x_filter_name, fontsize=FONTSIZE)
