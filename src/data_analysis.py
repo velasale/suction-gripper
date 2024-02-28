@@ -38,7 +38,7 @@ import pyautogui
 from tqdm import tqdm
 
 ######## Self developed imports ########
-# from ros_scripts import *
+from ros_scripts import *
 from plot_scripts import *
 
 import logging
@@ -853,7 +853,7 @@ class Experiment:
         # self.get_steady_vacuum()
 
         # -------- Wrench Features ------------
-        self.filter_wrench(30)
+        self.filter_wrench(50)
         self.get_relative_values()
 
         # Normal and Tangential Forces
@@ -1608,7 +1608,7 @@ class Experiment:
                     axis[i, 2].text(event, 0, label, rotation=90, color='black')
                     axis[i, 2].set_xlabel("Elapsed Time [sec]")
 
-    def plot_only_pressure(self, type='single'):
+    def plot_only_pressure(self, type='single_plot'):
         """
         Plots only pressure readings
         @param type: 'single' to have the three suction cup plots in a single figure
@@ -1616,9 +1616,14 @@ class Experiment:
         @return:
         """
 
-        FONTSIZE = 15   # Use 24 for papers
-        TICKSIZE = 15
+        icra24_figure5_fonts = 22
+
+        FONTSIZE = icra24_figure5_fonts  # Use 24 for papers
+        TICKSIZE = icra24_figure5_fonts
         FIGURESIZE = (8, 6)
+        # FIGURESIZE = (13, 5)  # Fig5 ICRA24
+
+
         lines = itertools.cycle(('dotted', 'dashed', 'dashdot'))
         colors = itertools.cycle(('orange', 'blue', 'green'))
         # text_locations = itertools.cycle((0, 6, 12, 0, 6, 12))
@@ -1657,20 +1662,22 @@ class Experiment:
         event_y = self.event_values
 
         # --- Condition the Event's labels a bit for the paper purposes
-        # picking_time = 10.597
-        picking_time = 22.9
+        picking_time = 10.597
+        # picking_time = 22.9
         cnt = 0
         flag = 0
         for i, j in zip(event_x, event_y):
             if j == 'Labeling cups':                # Renames label
                 event_y[cnt] = 'Cup engagement'
-            if j == 'Labeling apple pick' or j == 'Vacuum On':          # Deletes label
+            if j == 'Labeling apple pick': #or j == 'Vacuum On':          # Deletes label
                 event_x.pop(cnt)
                 event_y.pop(cnt)
             if (i > picking_time) and (flag == 0):
                 event_y.insert(cnt, 'Apple Picked')
                 event_x.insert(cnt, picking_time)
                 flag = 1
+            if j == 'Retrieve':
+                event_y[cnt] = 'pull back'
             cnt += 1
 
         if type == 'many':
@@ -1712,7 +1719,7 @@ class Experiment:
                 plt.suptitle(title_text)
                 cnt += 1
 
-        elif type == 'single':
+        elif type == 'single_plot':
 
             plt.figure(figsize=FIGURESIZE)
             plt.rc('font', family='serif')
@@ -1720,7 +1727,7 @@ class Experiment:
 
             # Plot pressure signals
             for pressure_time, pressure_value, pressure_label in zip(pressure_times, pressure_values, pressure_labels):
-                plt.plot(pressure_time, pressure_value, linewidth=4, label=pressure_label, linestyle=next(lines), color=next(colors))
+                plt.plot(pressure_time, pressure_value, linewidth=2, label=pressure_label, linestyle=next(lines), color=next(colors))
                 cnt += 1
 
             # Plot experiment events for reference
@@ -1732,6 +1739,8 @@ class Experiment:
             plt.ylabel("Pressure [kPa]", fontsize=FONTSIZE)
             plt.ylim([0, 110])
             # plt.xlim([0, 25])
+            plt.xlim([0, 16])       # Fig.5 ICRA24
+            plt.xlim([0,30])        # Fig.8 ICRA24
             plt.yticks(fontsize=TICKSIZE)
             plt.xticks(fontsize=TICKSIZE)
             plt.grid()
@@ -1741,9 +1750,12 @@ class Experiment:
     def plot_only_total_force(self):
         """Plots only force readings (forces and moments)"""
 
-        FONTSIZE = 30           # Use 24 for papers
-        TICKSIZE = 30
+        icra24_figure5_fonts = 22
+
+        FONTSIZE = icra24_figure5_fonts           # Use 24 for papers
+        TICKSIZE = icra24_figure5_fonts
         FIGURESIZE = (8, 6)
+        # FIGURESIZE = (13, 5)  # Fig5 ICRA24
 
         plt.figure(figsize=FIGURESIZE)
 
@@ -1765,20 +1777,22 @@ class Experiment:
         event_y = self.event_values
 
         # --- Condition the Event's labels a bit for the paper purposes
-        # picking_time = 10.597
-        picking_time = 22.9
+        picking_time = 10.597       # Fig5. ICRA24
+        # picking_time = 22.9
         cnt = 0
         flag = 0
         for i, j in zip(event_x, event_y):
             if j == 'Labeling cups':                # Renames label for ICRA'24 paper
                 event_y[cnt] = 'Cup engagement'
-            if j == 'Labeling apple pick' or j =='Vacuum On':          # Delete this label
+            if j == 'Labeling apple pick': # or j =='Vacuum On':          # Delete this label
                 event_x.pop(cnt)
                 event_y.pop(cnt)
             if (i > picking_time) and (flag == 0):  # Adds label for ICRA'24 paper
                 event_y.insert(cnt, 'Apple Picked')
                 event_x.insert(cnt, picking_time)
                 flag = 1
+            if j == 'Retrieve':
+                event_y[cnt] = 'pull back'
             cnt += 1
 
         max_sumforce_val = self.max_detach_sumforce
@@ -1786,15 +1800,18 @@ class Experiment:
 
         plt.plot(force_time, sumforce_values, linewidth=2, color='red')
         plt.annotate('Max Force: ' + str(round(max_sumforce_val, 1)), xy=(max_sumforce_time, max_sumforce_val),
-                            xycoords='data', xytext=(max_sumforce_time + 0, max_sumforce_val + 2.2),
+                            xycoords='data', xytext=(max_sumforce_time + 0, max_sumforce_val + 1.5),
                             va='top', ha='right', arrowprops=dict(facecolor='orange', shrink=0), fontsize=FONTSIZE)
 
         for event, label in zip(event_x, event_y):
-            plt.axvline(x=event, color='black', linestyle='dotted', linewidth=1.5)
-            plt.text(event, 0.5, label.lower(), rotation=45, color='black', fontsize=FONTSIZE)
+            plt.axvline(x=event, color='black', linestyle='--', linewidth=1.5)
+            # plt.text(event, 0.5, label.lower(), rotation=45, color='black', fontsize=FONTSIZE)
+            plt.text(event, 2, label.lower(), rotation=45, color='black', fontsize=FONTSIZE)   # Fig.5 ICRA24
             plt.xlabel("Elapsed Time [sec]", fontsize=FONTSIZE)
             plt.ylabel("Force [N]", fontsize=FONTSIZE)
-            plt.ylim([-5, 40])
+            # plt.ylim([-5, 40])
+            plt.ylim([0, 10])       # Limits for Fig.5 ICRA24
+
 
         # --- Add error in the title if there was any ---
         try:
@@ -1814,9 +1831,11 @@ class Experiment:
         plt.grid()
         plt.xticks(size=TICKSIZE)
         plt.yticks(size=TICKSIZE)
-        plt.title(self.filename + "\n" + error_type, fontsize=8)
-        plt.suptitle(title_text)
-        plt.xlim([0, 100])
+        # plt.title(self.filename + "\n" + error_type, fontsize=8)
+        # plt.suptitle(title_text)
+        # plt.xlim([0, 100])
+        plt.xlim([0, 16])       # Fig.5 ICRA24
+        plt.xlim([0,30])        # Fig.8 ICRA24
         # plt.tight_layout()
 
     def plot_only_pressure_animated(self, location, filename):
@@ -2313,15 +2332,17 @@ def proxy_experiments():
 
     # STEP A: Data Location
     # folder = '/home/alejo/gripper_ws/src/suction-gripper/data/'   # Default Hard Drive
-    # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"     # Hard Drive B
-    # folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'  # Hard Drive C
-    folder = '/media/alejo/Elements/Prosser_Data/'  # External Hard Drive
+
+    folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"     # Fig.5 ICRA24
+
+    folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'  # Hard Drive C
+    # folder = '/media/alejo/Elements/Prosser_Data/'  # External Hard Drive
 
     # subfolder = 'MEDIUM_STIFFNESS/'
-    # subfolder = 'HIGH_STIFFNESS/'
+    subfolder = 'HIGH_STIFFNESS/'       # Fig5 ICRA24
     # subfolder = 'LOW_STIFFNESS/'
-    subfolder = 'Dataset - apple picks/'
-    # subfolder = ''
+    # subfolder = 'Dataset - apple picks/'
+    subfolder = ''
 
     location = folder + subfolder
 
@@ -2331,9 +2352,9 @@ def proxy_experiments():
     # file = '2023082_proxy_sample_5_yaw_45_rep_0_stiff_high_force_low'
 
     # --- ICRA24 paper plots
-    file = '2023083_proxy_sample_5_yaw_45_rep_1_stiff_high_force_low'
-    # file = '2023096_realapple5_attempt3'
-    # file = '2023096_realapple6_attempt5' # nice plots
+    file = '2023083_proxy_sample_5_yaw_45_rep_1_stiff_high_force_low'   # Fig5. ICRA24
+    file = '2023096_realapple5_attempt3'
+    file = '2023096_realapple6_attempt5'            # Fig8. ICRA24
     # file = '2023096_realapple3_attempt1'
     # file = '2023083_proxy_sample_0_yaw_45_rep_1_stiff_low_force_low'
     # file = '20230922_realapple3_attempt_1_orientation_0_yaw_0'
@@ -2345,6 +2366,7 @@ def proxy_experiments():
     # file = '20230922_realapple2_attempt_1_orientation_0_yaw_0'
 
 
+
     # --- 2. Turn bag into csvs if needed
     if os.path.isdir(location + file):
         # print("csvs already created")
@@ -2353,12 +2375,10 @@ def proxy_experiments():
         bag_to_csvs(location + file + ".bag")
 
     # --- 3. Create Experiment Object
-    experiment = Experiment()
-
-    # --- 4. Assign json dictionary as property of the experiment
     json_file = open(location + file + '.json')
     json_data = json.load(json_file)
-    experiment.metadata = json_data
+    metadata = json_data
+    experiment = Experiment(metadata=metadata)
 
     print(experiment.metadata['general'])
 
@@ -2661,9 +2681,9 @@ def main():
     variable = 'pressure'  # switch between force, pressure and zforce
     # noise_experiments_pitch(exp_type='horizontal', radius=radius, variable=variable)
     # simple_suction_experiment()
-    # proxy_experiments()
+    proxy_experiments()
 
-    real_experiments()
+    # real_experiments()
 
     # --- Build video from pngs and a plot beside of it with a vertical line running ---
     # plot_and_video()
@@ -2675,6 +2695,6 @@ def main():
 
 
 if __name__ == '__main__':
-    # main()
-    mark10_pull_experiments()
+    main()
+    # mark10_pull_experiments()
 
