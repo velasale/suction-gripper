@@ -1616,12 +1616,12 @@ class Experiment:
         @return:
         """
 
-        icra24_figure5_fonts = 22
+        icra24_figure5_fonts = 24
 
-        FONTSIZE = icra24_figure5_fonts  # Use 24 for papers
+        FONTSIZE = icra24_figure5_fonts
         TICKSIZE = icra24_figure5_fonts
-        FIGURESIZE = (8, 6)
-        # FIGURESIZE = (13, 5)  # Fig5 ICRA24
+        # FIGURESIZE = (8, 6)
+        FIGURESIZE = (13, 5)  # Fig5 ICRA24
 
 
         lines = itertools.cycle(('dotted', 'dashed', 'dashdot'))
@@ -1732,7 +1732,7 @@ class Experiment:
 
             # Plot experiment events for reference
             for event, label in zip(event_x, event_y):
-                plt.axvline(x=event, color='black', linestyle='dotted', linewidth=1.5)
+                plt.axvline(x=event, color='black', linestyle='--', linewidth=1.5)
                 plt.text(event, 5, label.lower(), rotation=45, color='black', fontsize=TICKSIZE)
 
             plt.xlabel("Elapsed Time [sec]", fontsize=FONTSIZE)
@@ -1740,22 +1740,22 @@ class Experiment:
             plt.ylim([0, 110])
             # plt.xlim([0, 25])
             plt.xlim([0, 16])       # Fig.5 ICRA24
-            plt.xlim([0,30])        # Fig.8 ICRA24
+            # plt.xlim([0,30])        # Fig.8 ICRA24
             plt.yticks(fontsize=TICKSIZE)
             plt.xticks(fontsize=TICKSIZE)
             plt.grid()
             plt.legend(fontsize=FONTSIZE)
-            # plt.tight_layout()
+            plt.tight_layout()
 
     def plot_only_total_force(self):
         """Plots only force readings (forces and moments)"""
 
-        icra24_figure5_fonts = 22
+        icra24_figure5_fonts = 24
 
         FONTSIZE = icra24_figure5_fonts           # Use 24 for papers
         TICKSIZE = icra24_figure5_fonts
         FIGURESIZE = (8, 6)
-        # FIGURESIZE = (13, 5)  # Fig5 ICRA24
+        FIGURESIZE = (13, 5)  # Fig5 ICRA24
 
         plt.figure(figsize=FIGURESIZE)
 
@@ -1835,8 +1835,8 @@ class Experiment:
         # plt.suptitle(title_text)
         # plt.xlim([0, 100])
         plt.xlim([0, 16])       # Fig.5 ICRA24
-        plt.xlim([0,30])        # Fig.8 ICRA24
-        # plt.tight_layout()
+        # plt.xlim([0,30])        # Fig.8 ICRA24
+        plt.tight_layout()
 
     def plot_only_pressure_animated(self, location, filename):
         """Plots wrench (forces and moments) and pressure readings
@@ -2335,14 +2335,14 @@ def proxy_experiments():
 
     folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"     # Fig.5 ICRA24
 
-    folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'  # Hard Drive C
+    # folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'  # Hard Drive C
     # folder = '/media/alejo/Elements/Prosser_Data/'  # External Hard Drive
 
     # subfolder = 'MEDIUM_STIFFNESS/'
     subfolder = 'HIGH_STIFFNESS/'       # Fig5 ICRA24
     # subfolder = 'LOW_STIFFNESS/'
     # subfolder = 'Dataset - apple picks/'
-    subfolder = ''
+    # subfolder = ''
 
     location = folder + subfolder
 
@@ -2353,8 +2353,8 @@ def proxy_experiments():
 
     # --- ICRA24 paper plots
     file = '2023083_proxy_sample_5_yaw_45_rep_1_stiff_high_force_low'   # Fig5. ICRA24
-    file = '2023096_realapple5_attempt3'
-    file = '2023096_realapple6_attempt5'            # Fig8. ICRA24
+    # file = '2023096_realapple5_attempt3'
+    # file = '2023096_realapple6_attempt5'            # Fig8. ICRA24
     # file = '2023096_realapple3_attempt1'
     # file = '2023083_proxy_sample_0_yaw_45_rep_1_stiff_low_force_low'
     # file = '20230922_realapple3_attempt_1_orientation_0_yaw_0'
