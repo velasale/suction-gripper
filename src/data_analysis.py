@@ -38,7 +38,7 @@ import pyautogui
 from tqdm import tqdm
 
 ######## Self developed imports ########
-from ros_scripts import *
+# from ros_scripts import *
 from plot_scripts import *
 
 import logging
@@ -2611,60 +2611,110 @@ def mark10_experiments():
 
         print(stepses)
         print(max_forces)
-        plt.plot(stepses, max_forces, 'o-', label=(str(diameter)+'mm'))
+        plt.plot(stepses, max_forces, 'o-', label=('diameter ' + str(diameter)+'mm'))
     plt.grid()
-    plt.legend()
-    plt.xlabel('steps')
+
+    plt.xlabel('Stepper motor steps')
     plt.ylabel('Force [N]')
     plt.title('Normal Force from each finger [N]')
-    plt.show()
 
+    # Plot the apple bruising threshold
+    thr_press = 0.29e6    # Pa (Li et al. 2016)
+    finger_width = 20   # mm
+    thr_force = thr_press * (10 ** 2)/1e6
+    print(thr_force)
+    plt.hlines(y=thr_force, xmin=1285, xmax=1425, linestyles='--', lw=2, label='Apple Bruising threshold')
+    plt.legend()
+
+    plt.show()
 
 
 def mark10_pull_experiments():
     # Step 1 - Location
     folder = '/home/alejo/Downloads/Mark10_experiments-20240227T171746Z-001/Mark10_experiments/experiment2_pullingLoad_medSpring_medMagnet/'
 
-    # Step 2 - Sweep all diameters
-    steps_list = [1285, 1300, 1325, 1350, 1375, 1400, 1425]
+    # Step 2 - Sweep all modes
+    modes = ['Suction cups', 'Fingers', 'Dual']
+    tags = ['V', 'F', 'VF']
+    steps_list = [1285, 1300, 1325, 1350, 1375, 1400]
 
     location = folder
 
     stepses = []
     max_forces = []
 
-    for steps in steps_list:
-        prefix = 'pull_load_fakeApple_' + str(steps)
+    good_picks = []
+    suction_picks = []
 
-        sufix = str(steps) + 'steps.xlsx'
+    for mode, tag in zip(modes, tags):
+        stepses = []
+        mean_max_forces = []
+        sdv_max_forces = []
+        for steps in steps_list:
+            max_forces = []
+            for rep in range(3):
+                prefix = 'pull_load_fakeApple_' + str(steps) + 'steps_rep' + str(rep) + '_' + tag + '_'
+                max_pull = 'Nan'
+                for file in sorted(os.listdir(location)):
+                    if file.startswith(prefix):
+                        print(file)
 
-        for file in sorted(os.listdir(location)):
-            if file.startswith(prefix):
-                print(file)
+                        # Step 3: Open file and turn into dataframe
+                        trial_df = pd.read_excel(location + file, index_col=0)
 
-                # # Step 3: Open file and turn into dataframe
-                trial_df = pd.read_excel(location + file, index_col=0)
+                        # plt.plot(trial_df['Travel [mm]'], trial_df['Load [N]'])
+                        # plt.title(file)
+                        # plt.grid()
+                        # plt.show()
 
-                plt.plot(trial_df['Travel [mm]'], trial_df['Load [N]'])
-                plt.title(file)
-                plt.grid()
-                plt.show()
+                        max_pull = abs(min(trial_df['Load [N]']))
+                        print(max_pull)
+                        max_forces.append(max_pull)
 
-                # max_ortho = max(trial_df['Load [N]'])
-                #
-                # stepses.append(steps)
-                # max_forces.append(max_ortho)
+                        # Keep track of successful pick values
+                        if file.endswith('apple_picked).xlsx'):
+                            good_picks.append(max_pull)
 
-    # print(stepses)
-    # print(max_forces)
-    # plt.plot(stepses, max_forces, 'o-', label=(str(diameter)+'mm'))
-    # plt.grid()
-    # plt.legend()
-    # plt.xlabel('steps')
-    # plt.ylabel('Force [N]')
-    # plt.title('Normal Force from each finger [N]')
-    # plt.show()
+                        if tag == 'V':
+                            suction_picks.append(max_pull)
 
+            stepses.append(steps)
+            mean_max_forces.append(abs(np.mean(max_forces)))
+            sdv_max_forces.append(abs(np.std(max_forces)))
+
+        print(stepses)
+        print(mean_max_forces)
+
+        # Plot each mode series with a band gap
+        if tag == 'V':
+            mean_suction_force = np.mean(suction_picks)
+            sdv_suction_force = np.std(suction_picks)
+            lows = np.subtract(mean_suction_force, sdv_suction_force)
+            highs = np.add(mean_suction_force, sdv_suction_force)
+            plt.hlines(y=mean_suction_force, xmin=1285, xmax=1400, linestyles='-', lw=1, label='Suction cup force [N]')
+            plt.fill_between(steps_list, lows, highs, alpha=.2)
+
+        else:
+            lows = np.add(mean_max_forces, sdv_max_forces)
+            highs = np.subtract(mean_max_forces, sdv_max_forces)
+            plt.plot(stepses, mean_max_forces, 'o-', label=mode)
+            plt.fill_between(stepses, lows, highs, alpha=.2)
+
+    # Plot the force at which the magnet releases
+    mean_pick_force = np.mean(good_picks)
+    sdv_pick_force = np.std(good_picks)
+    lows = np.subtract(mean_pick_force, sdv_pick_force)
+    highs = np.add(mean_pick_force, sdv_pick_force)
+    plt.hlines(y=mean_pick_force, xmin=1285, xmax=1400, linestyles='--', lw=1, label='Magnet release force [N]', color='red')
+    plt.fill_between(stepses, lows, highs, color = 'red', alpha=.2)
+
+
+    plt.grid()
+    plt.legend()
+    plt.xlabel('Stepper motor steps')
+    plt.ylabel('Force [N]')
+    plt.title('Gripper pulling force at different modes [N]')
+    plt.show()
 
 
 def main():
@@ -2695,6 +2745,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
-    # mark10_pull_experiments()
+    # main()
+    mark10_pull_experiments()
+    # mark10_experiments()
 
