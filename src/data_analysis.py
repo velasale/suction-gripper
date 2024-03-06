@@ -2631,12 +2631,13 @@ def mark10_experiments():
 
 def mark10_pull_experiments():
     # Step 1 - Location
-    folder = '/home/alejo/Downloads/Mark10_experiments-20240227T171746Z-001/Mark10_experiments/experiment2_pullingLoad_medSpring_medMagnet/'
+    folder = '/home/alejo/Downloads/experiment3_pullingLoad_fixedApple-20240306T200850Z-001/experiment3_pullingLoad_fixedApple/'
 
     # Step 2 - Sweep all modes
     modes = ['Suction cups', 'Fingers', 'Dual']
     tags = ['V', 'F', 'VF']
-    steps_list = [1285, 1300, 1325, 1350, 1375, 1400]
+    # steps_list = [1285, 1300, 1325, 1350, 1375, 1400]
+    steps_list = [1325, 1350, 1375, 1400]
 
     location = folder
 
@@ -2652,8 +2653,9 @@ def mark10_pull_experiments():
         sdv_max_forces = []
         for steps in steps_list:
             max_forces = []
-            for rep in range(3):
-                prefix = 'pull_load_fakeApple_' + str(steps) + 'steps_rep' + str(rep) + '_' + tag + '_'
+            for rep in range(8):
+                # prefix = 'pull_load_fixedApple_' + str(steps) + 'steps_rep' + str(rep) + '_' + tag + '_'
+                prefix = 'pull_load_fixedApple_' + str(steps) + 'steps_rep' + str(rep) + '_' + tag + '.'
                 max_pull = 'Nan'
                 for file in sorted(os.listdir(location)):
                     if file.startswith(prefix):
@@ -2691,7 +2693,8 @@ def mark10_pull_experiments():
             sdv_suction_force = np.std(suction_picks)
             lows = np.subtract(mean_suction_force, sdv_suction_force)
             highs = np.add(mean_suction_force, sdv_suction_force)
-            plt.hlines(y=mean_suction_force, xmin=1285, xmax=1400, linestyles='-', lw=1, label='Suction cup force [N]')
+            # plt.hlines(y=mean_suction_force, xmin=1285, xmax=1400, linestyles='-', lw=1, label='Suction cup force [N]')
+            plt.hlines(y=mean_suction_force, xmin=1325, xmax=1400, linestyles='-', lw=1, label='Suction cup force [N]')
             plt.fill_between(steps_list, lows, highs, alpha=.2)
 
         else:
@@ -2705,7 +2708,9 @@ def mark10_pull_experiments():
     sdv_pick_force = np.std(good_picks)
     lows = np.subtract(mean_pick_force, sdv_pick_force)
     highs = np.add(mean_pick_force, sdv_pick_force)
-    plt.hlines(y=mean_pick_force, xmin=1285, xmax=1400, linestyles='--', lw=1, label='Magnet release force [N]', color='red')
+    # plt.hlines(y=mean_pick_force, xmin=1285, xmax=1400, linestyles='--', lw=1, label='Magnet release force [N]', color='red')
+    plt.hlines(y=mean_pick_force, xmin=1325, xmax=1400, linestyles='--', lw=1, label='Magnet release force [N]',
+               color='red')
     plt.fill_between(stepses, lows, highs, color = 'red', alpha=.2)
 
 
