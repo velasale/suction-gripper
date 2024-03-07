@@ -114,6 +114,32 @@ def locate_index_of_deltas(data, width=200, change=3/10000):
     return idx_1, idx_2
 
 
+def locate_index_of_deltas_v2(data, intercept=0.5):
+    """
+    Useful to locate in square signals, the index where the signal intersects a certain value
+    """
+
+    POIS_plus = []
+    POIS_minus = []
+    POIS = []
+
+    previous = data[0]
+
+    for i in range(len(data)):
+
+        if (previous < intercept) and (data[i] > intercept):
+            POIS_plus.append(i)     # collects all points with positive changes
+        if (previous > intercept) and (data[i] < intercept):
+            POIS_minus.append(i)    # collects all points with negative changes
+
+        previous = data[i]
+
+
+    print('\nPOIs: ', POIS_plus, POIS_minus,'\n')
+
+    return POIS_plus, POIS_minus
+
+
 def list_to_hist(list, x_label, plot_norm=True):
     """Generates histogram out of a list, and provides k-means clusters
     CAUTION: Make sure your has clusters otherwise you don't need this
@@ -2578,9 +2604,13 @@ def real_experiments():
     plt.close('all')  # all open plots are correctly closed after each run
 
 
-def mark10_experiments():
+def orthogonal_load_cell_experiments():
     # Step 1 - Location
-    folder = '/home/alejo/Downloads/Mark10_experiments-20240227T171746Z-001/Mark10_experiments/experiment1_orthogonalLoad/'
+    # folder = '/home/alejo/Downloads/Mark10_experiments-20240227T171746Z-001/Mark10_experiments/experiment1_orthogonalLoad/'
+    folder = 'C:/Users/avela/Dropbox/03 Temporal/03 Research/data/Mark10_experiments/'      # Personal Laptop
+    subfolder = 'experiment1_orthogonalLoad/'
+
+    folder = folder + subfolder
 
     # Step 2 - Sweep all diameters
     diameters = [70, 75, 80]
@@ -2591,7 +2621,8 @@ def mark10_experiments():
         prefix = 'finger_load_' + str(diameter) + 'mm'
 
         stepses = []
-        max_forces = []
+        mean_max_forces = []
+        std_max_forces = []
 
         for steps in steps_list:
             sufix = str(steps) + 'steps.xlsx'
@@ -2604,14 +2635,39 @@ def mark10_experiments():
 
                     # Step 3: Open file and turn into dataframe
                     trial_df = pd.read_excel(location + file, index_col=0)
+
+                    # Step 4: Check for POI's
                     max_ortho = max(trial_df['Load [N]'])
+                    pois_pos, pois_neg = locate_index_of_deltas_v2(trial_df['Load [N]'].tolist(), max_ortho*0.8)
+                    cycles = len(pois_pos)
+                    print('Number of cycles: ', cycles)
+
+                    # Step 5: Take the max values from each cycle
+                    max_vals = []
+                    n_points = trial_df.shape[0]
+                    for i in range(cycles):
+                        if i == cycles:
+                            max_val = max(trial_df['Load [N]'][pois_pos[i]:pois_neg[i]])
+                        else:
+                            max_val = max(trial_df['Load [N]'][pois_pos[i]:n_points])
+                        max_vals.append(max_val)
+
+                    print('Max values', max_vals)
+
+                    mean_max = np.mean(max_vals)
+                    std_max = np.std(max_vals)
 
                     stepses.append(steps)
-                    max_forces.append(max_ortho)
+                    mean_max_forces.append(mean_max)
+                    std_max_forces.append(std_max)
+
 
         print(stepses)
-        print(max_forces)
-        plt.plot(stepses, max_forces, 'o-', label=('diameter ' + str(diameter)+'mm'))
+        print(mean_max_forces)
+        lows = np.subtract(mean_max_forces, std_max_forces)
+        highs = np.add(mean_max_forces, std_max_forces)
+        plt.plot(stepses, mean_max_forces, 'o-', label=('diameter ' + str(diameter)+'mm'))
+        plt.fill_between(stepses, lows, highs, alpha=.2)
     plt.grid()
 
     plt.xlabel('Stepper motor steps')
@@ -2625,6 +2681,7 @@ def mark10_experiments():
     print(thr_force)
     plt.hlines(y=thr_force, xmin=1285, xmax=1425, linestyles='--', lw=2, label='Apple Bruising threshold')
     plt.legend()
+    plt.ylim([0, 35])
 
     plt.show()
 
@@ -2632,6 +2689,11 @@ def mark10_experiments():
 def mark10_pull_experiments():
     # Step 1 - Location
     folder = '/home/alejo/Downloads/experiment3_pullingLoad_fixedApple-20240306T200850Z-001/experiment3_pullingLoad_fixedApple/'
+    folder = 'C:/Users/avela/Dropbox/03 Temporal/03 Research/data/Mark10_experiments/'  # Personal Laptop
+    # subfolder = 'experiment2_pullingLoad_medSpring_medMagnet/'
+    subfolder = 'experiment3_pullingLoad_fixedApple/'
+
+    folder = folder + subfolder
 
     # Step 2 - Sweep all modes
     modes = ['Suction cups', 'Fingers', 'Dual']
@@ -2653,13 +2715,13 @@ def mark10_pull_experiments():
         sdv_max_forces = []
         for steps in steps_list:
             max_forces = []
-            for rep in range(8):
-                # prefix = 'pull_load_fixedApple_' + str(steps) + 'steps_rep' + str(rep) + '_' + tag + '_'
+            for rep in range(4):
+                # prefix = 'pull_load_fakeApple_' + str(steps) + 'steps_rep' + str(rep) + '_' + tag + '_'
                 prefix = 'pull_load_fixedApple_' + str(steps) + 'steps_rep' + str(rep) + '_' + tag + '.'
                 max_pull = 'Nan'
                 for file in sorted(os.listdir(location)):
                     if file.startswith(prefix):
-                        print(file)
+                        print('\nFile: ', file)
 
                         # Step 3: Open file and turn into dataframe
                         trial_df = pd.read_excel(location + file, index_col=0)
@@ -2670,7 +2732,7 @@ def mark10_pull_experiments():
                         # plt.show()
 
                         max_pull = abs(min(trial_df['Load [N]']))
-                        print(max_pull)
+                        print('Max pull force: ', max_pull)
                         max_forces.append(max_pull)
 
                         # Keep track of successful pick values
@@ -2684,11 +2746,13 @@ def mark10_pull_experiments():
             mean_max_forces.append(abs(np.mean(max_forces)))
             sdv_max_forces.append(abs(np.std(max_forces)))
 
+        print('\n', mode)
         print(stepses)
         print(mean_max_forces)
 
         # Plot each mode series with a band gap
         if tag == 'V':
+            print('Suction Pick Forces:', suction_picks)
             mean_suction_force = np.mean(suction_picks)
             sdv_suction_force = np.std(suction_picks)
             lows = np.subtract(mean_suction_force, sdv_suction_force)
@@ -2709,12 +2773,12 @@ def mark10_pull_experiments():
     lows = np.subtract(mean_pick_force, sdv_pick_force)
     highs = np.add(mean_pick_force, sdv_pick_force)
     # plt.hlines(y=mean_pick_force, xmin=1285, xmax=1400, linestyles='--', lw=1, label='Magnet release force [N]', color='red')
-    plt.hlines(y=mean_pick_force, xmin=1325, xmax=1400, linestyles='--', lw=1, label='Magnet release force [N]',
-               color='red')
+    plt.hlines(y=mean_pick_force, xmin=1325, xmax=1400, linestyles='--', lw=1, label='Magnet release force [N]', color='red')
     plt.fill_between(stepses, lows, highs, color = 'red', alpha=.2)
 
 
     plt.grid()
+    plt.ylim([0, 35])
     plt.legend()
     plt.xlabel('Stepper motor steps')
     plt.ylabel('Force [N]')
@@ -2751,6 +2815,6 @@ def main():
 
 if __name__ == '__main__':
     # main()
-    mark10_pull_experiments()
-    # mark10_experiments()
+    # mark10_pull_experiments()
+    orthogonal_load_cell_experiments()
 
