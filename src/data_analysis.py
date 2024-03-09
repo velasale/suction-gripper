@@ -2691,6 +2691,9 @@ def mark10_pull_experiments():
     folder = '/home/alejo/Downloads/Mark10_experiments-20240309T010320Z-001/Mark10_experiments/'    # ArmFarm laptop
     # folder = 'C:/Users/avela/Dropbox/03 Temporal/03 Research/data/Mark10_experiments/'  # Personal Laptop
 
+    tag = ''
+    steps = 0
+    rep = 0
     # Step 2 - Sweep all modes
 
     # --- Fake Apple / Pull-back trials at 0 degrees ---
@@ -2707,10 +2710,11 @@ def mark10_pull_experiments():
 
     # ---- Fixed Apple-string / Pull-back trials at different angles ----  (delta_15_dual_rep1)
     subfolder = 'experiment4_pullingLoad_fixedApple_angled/'
-    exp_prefix = 'delta_' + str(angle) + '_' + (mode) + '_rep' + str(rep)
-    tags = ['suction', 'finger', 'dual']
-    steps_list = [1400]
+    exp_prefix = 'delta_' + str(steps) + '_' + (tag) + '_rep' + str(rep)
+    tags = ['suction', 'fingers', 'dual']
     angles = [0, 15, 30, 45]
+    steps_list = angles
+    reps = 6
 
 
     modes = ['Suction cups', 'Fingers', 'Dual']
@@ -2728,8 +2732,12 @@ def mark10_pull_experiments():
         sdv_max_forces = []
         for steps in steps_list:
             max_forces = []
-            for rep in range(4):
+
+            # Gather data from all repetitions of the same trial combination
+            for rep in range(reps):
+                exp_prefix = 'delta_' + str(steps) + '_' + (tag) + '_rep' + str(rep)
                 prefix = exp_prefix
+                # print(prefix)
                 max_pull = 'Nan'
                 for file in sorted(os.listdir(location)):
                     if file.startswith(prefix):
@@ -2778,7 +2786,7 @@ def mark10_pull_experiments():
             plt.plot(stepses, mean_max_forces, 'o-', label=mode)
             plt.fill_between(stepses, lows, highs, alpha=.2)
 
-    # Plot the force at which the magnet releases
+    # Note: Just for Expriment 2 -- Plot the force at which the magnet releases
     mean_pick_force = np.mean(good_picks)
     sdv_pick_force = np.std(good_picks)
     lows = np.subtract(mean_pick_force, sdv_pick_force)
@@ -2786,9 +2794,9 @@ def mark10_pull_experiments():
     plt.hlines(y=mean_pick_force, xmin=min(steps_list), xmax=max(steps_list), linestyles='--', lw=1, label='Magnet release force [N]', color='red')
     plt.fill_between(stepses, lows, highs, color = 'red', alpha=.2)
 
-
     plt.grid()
     plt.ylim([0, 35])
+    plt.ylim([0, 70])
     plt.legend()
     plt.xlabel('Stepper motor steps')
     plt.ylabel('Force [N]')
@@ -2825,6 +2833,6 @@ def main():
 
 if __name__ == '__main__':
     # main()
-    # mark10_pull_experiments()
-    orthogonal_load_cell_experiments()
+    mark10_pull_experiments()
+    # orthogonal_load_cell_experiments()
 
