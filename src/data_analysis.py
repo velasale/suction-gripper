@@ -2688,20 +2688,33 @@ def orthogonal_load_cell_experiments():
 
 def mark10_pull_experiments():
     # Step 1 - Location
-    folder = '/home/alejo/Downloads/experiment3_pullingLoad_fixedApple-20240306T200850Z-001/experiment3_pullingLoad_fixedApple/'
-    folder = 'C:/Users/avela/Dropbox/03 Temporal/03 Research/data/Mark10_experiments/'  # Personal Laptop
-    # subfolder = 'experiment2_pullingLoad_medSpring_medMagnet/'
-    subfolder = 'experiment3_pullingLoad_fixedApple/'
-
-    folder = folder + subfolder
+    folder = '/home/alejo/Downloads/Mark10_experiments-20240309T010320Z-001/Mark10_experiments/'    # ArmFarm laptop
+    # folder = 'C:/Users/avela/Dropbox/03 Temporal/03 Research/data/Mark10_experiments/'  # Personal Laptop
 
     # Step 2 - Sweep all modes
+
+    # --- Fake Apple / Pull-back trials at 0 degrees ---
+    subfolder = 'experiment2_pullingLoad_medSpring_medMagnet/'
+    exp_prefix = 'pull_load_fakeApple_' + str(steps) + 'steps_rep' + str(rep) + '_' + tag + '_'
     modes = ['Suction cups', 'Fingers', 'Dual']
     tags = ['V', 'F', 'VF']
-    # steps_list = [1285, 1300, 1325, 1350, 1375, 1400]
+    steps_list = [1285, 1300, 1325, 1350, 1375, 1400]
+
+    # --- Fixed Apple / Pull-back trials at 0 degrees ----
+    subfolder = 'experiment3_pullingLoad_fixedApple/'
+    exp_prefix = 'pull_load_fixedApple_' + str(steps) + 'steps_rep' + str(rep) + '_' + tag + '.'
+    modes = ['Suction cups', 'Fingers', 'Dual']
+    tags = ['V', 'F', 'VF']
     steps_list = [1325, 1350, 1375, 1400]
 
-    location = folder
+    # ---- Fixed Apple-string / Pull-back trials at different angles ----
+    subfolder = 'experiment4_pullingLoad_fixedApple_angled/'
+    modes = ['Suction cups', 'Fingers', 'Dual']
+    steps_list = [1400]
+    angles = [0, 15, 30, 45]
+
+
+    location = folder + subfolder
 
     stepses = []
     max_forces = []
@@ -2716,8 +2729,7 @@ def mark10_pull_experiments():
         for steps in steps_list:
             max_forces = []
             for rep in range(4):
-                # prefix = 'pull_load_fakeApple_' + str(steps) + 'steps_rep' + str(rep) + '_' + tag + '_'
-                prefix = 'pull_load_fixedApple_' + str(steps) + 'steps_rep' + str(rep) + '_' + tag + '.'
+                prefix = exp_prefix
                 max_pull = 'Nan'
                 for file in sorted(os.listdir(location)):
                     if file.startswith(prefix):
@@ -2757,8 +2769,7 @@ def mark10_pull_experiments():
             sdv_suction_force = np.std(suction_picks)
             lows = np.subtract(mean_suction_force, sdv_suction_force)
             highs = np.add(mean_suction_force, sdv_suction_force)
-            # plt.hlines(y=mean_suction_force, xmin=1285, xmax=1400, linestyles='-', lw=1, label='Suction cup force [N]')
-            plt.hlines(y=mean_suction_force, xmin=1325, xmax=1400, linestyles='-', lw=1, label='Suction cup force [N]')
+            plt.hlines(y=mean_suction_force, xmin=min(steps_list), xmax=max(steps_list), linestyles='-', lw=1, label='Suction cup force [N]')
             plt.fill_between(steps_list, lows, highs, alpha=.2)
 
         else:
@@ -2772,8 +2783,7 @@ def mark10_pull_experiments():
     sdv_pick_force = np.std(good_picks)
     lows = np.subtract(mean_pick_force, sdv_pick_force)
     highs = np.add(mean_pick_force, sdv_pick_force)
-    # plt.hlines(y=mean_pick_force, xmin=1285, xmax=1400, linestyles='--', lw=1, label='Magnet release force [N]', color='red')
-    plt.hlines(y=mean_pick_force, xmin=1325, xmax=1400, linestyles='--', lw=1, label='Magnet release force [N]', color='red')
+    plt.hlines(y=mean_pick_force, xmin=min(steps_list), xmax=max(steps_list), linestyles='--', lw=1, label='Magnet release force [N]', color='red')
     plt.fill_between(stepses, lows, highs, color = 'red', alpha=.2)
 
 
