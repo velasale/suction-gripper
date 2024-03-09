@@ -2694,26 +2694,26 @@ def mark10_pull_experiments():
     # Step 2 - Sweep all modes
 
     # --- Fake Apple / Pull-back trials at 0 degrees ---
-    subfolder = 'experiment2_pullingLoad_medSpring_medMagnet/'
-    exp_prefix = 'pull_load_fakeApple_' + str(steps) + 'steps_rep' + str(rep) + '_' + tag + '_'
-    modes = ['Suction cups', 'Fingers', 'Dual']
-    tags = ['V', 'F', 'VF']
-    steps_list = [1285, 1300, 1325, 1350, 1375, 1400]
+    # subfolder = 'experiment2_pullingLoad_medSpring_medMagnet/'
+    # exp_prefix = 'pull_load_fakeApple_' + str(steps) + 'steps_rep' + str(rep) + '_' + tag + '_'
+    # tags = ['V', 'F', 'VF']
+    # steps_list = [1285, 1300, 1325, 1350, 1375, 1400]
 
     # --- Fixed Apple / Pull-back trials at 0 degrees ----
-    subfolder = 'experiment3_pullingLoad_fixedApple/'
-    exp_prefix = 'pull_load_fixedApple_' + str(steps) + 'steps_rep' + str(rep) + '_' + tag + '.'
-    modes = ['Suction cups', 'Fingers', 'Dual']
-    tags = ['V', 'F', 'VF']
-    steps_list = [1325, 1350, 1375, 1400]
+    # subfolder = 'experiment3_pullingLoad_fixedApple/'
+    # exp_prefix = 'pull_load_fixedApple_' + str(steps) + 'steps_rep' + str(rep) + '_' + tag + '.'
+    # tags = ['V', 'F', 'VF']
+    # steps_list = [1325, 1350, 1375, 1400]
 
-    # ---- Fixed Apple-string / Pull-back trials at different angles ----
+    # ---- Fixed Apple-string / Pull-back trials at different angles ----  (delta_15_dual_rep1)
     subfolder = 'experiment4_pullingLoad_fixedApple_angled/'
-    modes = ['Suction cups', 'Fingers', 'Dual']
+    exp_prefix = 'delta_' + str(angle) + '_' + (mode) + '_rep' + str(rep)
+    tags = ['suction', 'finger', 'dual']
     steps_list = [1400]
     angles = [0, 15, 30, 45]
 
 
+    modes = ['Suction cups', 'Fingers', 'Dual']
     location = folder + subfolder
 
     stepses = []
