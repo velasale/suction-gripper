@@ -2688,8 +2688,8 @@ def orthogonal_load_cell_experiments():
 
 def mark10_pull_experiments():
     # Step 1 - Location
-    folder = '/home/alejo/Downloads/Mark10_experiments-20240309T010320Z-001/Mark10_experiments/'    # ArmFarm laptop
-    # folder = 'C:/Users/avela/Dropbox/03 Temporal/03 Research/data/Mark10_experiments/'  # Personal Laptop
+    # folder = '/home/alejo/Downloads/Mark10_experiments-20240309T010320Z-001/Mark10_experiments/'    # ArmFarm laptop
+    folder = 'C:/Users/avela/Dropbox/03 Temporal/03 Research/data/Mark10_experiments/'  # Personal Laptop
 
     tag = ''
     steps = 0
@@ -2714,7 +2714,7 @@ def mark10_pull_experiments():
     tags = ['suction', 'fingers', 'dual']
     angles = [0, 15, 30, 45]
     steps_list = angles
-    reps = 6
+    reps = 10
 
 
     modes = ['Suction cups', 'Fingers', 'Dual']
@@ -2786,19 +2786,21 @@ def mark10_pull_experiments():
             plt.plot(stepses, mean_max_forces, 'o-', label=mode)
             plt.fill_between(stepses, lows, highs, alpha=.2)
 
-    # Note: Just for Expriment 2 -- Plot the force at which the magnet releases
-    mean_pick_force = np.mean(good_picks)
-    sdv_pick_force = np.std(good_picks)
-    lows = np.subtract(mean_pick_force, sdv_pick_force)
-    highs = np.add(mean_pick_force, sdv_pick_force)
-    plt.hlines(y=mean_pick_force, xmin=min(steps_list), xmax=max(steps_list), linestyles='--', lw=1, label='Magnet release force [N]', color='red')
-    plt.fill_between(stepses, lows, highs, color = 'red', alpha=.2)
+    # Note: Just for Experiment 2 -- Plot the force at which the magnet releases
+    if len(good_picks) > 0:
+        mean_pick_force = np.mean(good_picks)
+        sdv_pick_force = np.std(good_picks)
+        lows = np.subtract(mean_pick_force, sdv_pick_force)
+        highs = np.add(mean_pick_force, sdv_pick_force)
+        plt.hlines(y=mean_pick_force, xmin=min(steps_list), xmax=max(steps_list), linestyles='--', lw=1, label='Magnet release force [N]', color='red')
+        plt.fill_between(stepses, lows, highs, color='red', alpha=.2)
 
     plt.grid()
     plt.ylim([0, 35])
     plt.ylim([0, 70])
     plt.legend()
     plt.xlabel('Stepper motor steps')
+    plt.xlabel('Angle [deg]')
     plt.ylabel('Force [N]')
     plt.title('Gripper pulling force at different modes [N]')
     plt.show()
