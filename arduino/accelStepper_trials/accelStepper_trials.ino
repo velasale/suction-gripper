@@ -1,5 +1,6 @@
 #include <AccelStepper.h>
 #include <elapsedMillis.h>
+#include <Keyboard.h>
 
 #define Serial SerialUSB    //This trick is meant for the Aduino Zero board
 #define MotorInterfaceType 4
@@ -17,17 +18,21 @@ const int steps = 30 * 50;
 const int pos1 = 50 * 100;
 const int pos2 = 60 * 100;
 
+
+
 elapsedMillis printTime;
 
 
 void setup() {
 
   Serial.begin(9600);
+  Keyboard.begin();
   
   // put your setup code here, to run once:
 
   stepper.setMaxSpeed(800);       // steps/second
   stepper.setAcceleration(600);
+//  stepper.run();
   
 }
 
@@ -35,9 +40,55 @@ void setup() {
 
 void loop() {
 
-  motorSteps(800,2000,0);
-  motorSteps(800,2000,pos1);
-  motorSteps(200,600,pos2);
+  int flag = 0;
+
+  if (Serial.read() == 'u'){
+    digitalWrite(enablePinA, HIGH);
+    digitalWrite(enablePinB, HIGH);  
+
+    Serial.println("Moving up");
+
+    while (flag == 0){    
+
+//      motorSteps2(800,2000,-pos1);  
+      motorSteps2(800,2000,-pos2);    
+    
+      if (stepper.currentPosition() == -pos2){
+        flag = 1;
+        Serial.println("Finished moving up");
+        }
+      }  
+
+       
+    digitalWrite(enablePinA, LOW);
+    digitalWrite(enablePinB, LOW);  
+
+  }
+
+
+  if (Serial.read() == 'd'){
+    digitalWrite(enablePinA, HIGH);
+    digitalWrite(enablePinB, HIGH);  
+
+      Serial.println("Moving down");
+  
+      while (flag == 0){    
+        
+        motorSteps2(800,2000,0);
+        
+      
+        if (stepper.currentPosition() == 0){
+          flag = 1;
+          Serial.println("Finished moving down");
+          }
+        }   
+  
+    
+    digitalWrite(enablePinA, LOW);
+    digitalWrite(enablePinB, LOW);  
+  
+    }
+  
   
 }
 
@@ -67,23 +118,17 @@ void motorSteps(int g_speed, int g_accel, int g_pos){
 
 void motorSteps2(int g_speed, int g_accel, int g_pos){
   // Works
-  
-  digitalWrite(enablePinA, HIGH);
-  digitalWrite(enablePinB, HIGH);  
+   
 
-     
-  delay(10);  
-
-  stepper.setMaxSpeed(g_speed);
-  stepper.setAcceleration(g_accel);
+  stepper.setSpeed(g_speed);
   stepper.moveTo(g_pos);
   
-    Serial.print(" ");
-    Serial.println(stepper.currentPosition());
+ 
+  if (stepper.currentPosition() != g_pos){
+    stepper.runSpeedToPosition();
+    
+  }  
   
-  digitalWrite(enablePinA, LOW);
-  digitalWrite(enablePinB, LOW);  
-  delay(1000);
   
 }
 

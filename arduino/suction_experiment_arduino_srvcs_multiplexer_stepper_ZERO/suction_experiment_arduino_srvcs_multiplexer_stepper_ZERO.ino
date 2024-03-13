@@ -32,8 +32,8 @@ const byte enablePinA = 8;
 const byte enablePinB = 13;
 
 const int stepsPerRevolution = 2000;  // change this to fit the number of steps per revolution
-const int steps = 1400;               // 1400 (70-80mm)    1475(80-90mm)
-const int stepSpeed = 20;
+const int steps = 1400;               // 1475 (70-80mm)    1475(80-90mm)  //For the Mark-10 I tested for every 25 steps
+const int stepSpeed = 20;             // 20
 const int distCalib = 55;             // Prototype (70-80mm): 85 - 25 = 60    Prototype (80-90mm): 80 - 25 = 55
 
 // initialize the stepper library on pins 8 through 11:
