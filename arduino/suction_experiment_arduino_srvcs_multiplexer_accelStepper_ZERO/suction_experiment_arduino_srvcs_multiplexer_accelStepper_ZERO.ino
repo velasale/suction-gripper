@@ -306,14 +306,41 @@ bool openValve() {
 
 
 bool openFingers() {
-  motorSteps(800,2000,0); 
+  digitalWrite(enablePinA, HIGH);
+  digitalWrite(enablePinB, HIGH);  
+
+  int flag = 0;
+  
+  while (flag == 0){    
+        
+    motorSteps2(800,2000,0);
+        
+    if (stepper.currentPosition() == 0){
+      flag = 1;
+    }
+  }   
+      
+  digitalWrite(enablePinA, LOW);
+  digitalWrite(enablePinB, LOW);  
 }
 
 
 bool closeFingers() {  
-  motorSteps(800,2000,0);
-  motorSteps(800,2000,pos1);
-  motorSteps(200,600,pos2);
+  digitalWrite(enablePinA, HIGH);
+  digitalWrite(enablePinB, HIGH);  
+
+  int flag = 0;
+  while (flag == 0){    
+
+    motorSteps2(800,400,-pos2);    
+      
+    if (stepper.currentPosition() == -pos2){
+      flag = 1;
+    }
+  }  
+       
+  digitalWrite(enablePinA, LOW);
+  digitalWrite(enablePinB, LOW);    
 }
 
 
@@ -331,20 +358,17 @@ void pcaselect(uint8_t i) {
 
 
 
-void motorSteps(int g_speed, int g_accel, int g_pos){
+void motorSteps2(int g_speed, int g_accel, int g_pos){
   // Works
   
-  digitalWrite(enablePinA, HIGH);
-  digitalWrite(enablePinB, HIGH);  
-
-  stepper.setMaxSpeed(g_speed);       // steps/second
-  stepper.setAcceleration(g_accel);  
-  delay(10);  
-  
-  stepper.runToNewPosition(g_pos);
+  stepper.setSpeed(g_speed);
+  stepper.setAcceleration(g_accel);
+  stepper.moveTo(g_pos);
+   
+  if (stepper.currentPosition() != g_pos){
+    stepper.runSpeedToPosition();
     
-  digitalWrite(enablePinA, LOW);
-  digitalWrite(enablePinB, LOW);  
-  delay(1000);
+  }  
+  
   
 }
