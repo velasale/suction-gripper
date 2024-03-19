@@ -19,7 +19,7 @@ const byte enablePinA = 8;
 const byte enablePinB = 13;
 /*--- Travel steps ---*/
 const int steps = 25;                         // 200steps = 1rev = 8mm,  25steps = 1/8rev = 1mm, 5steps = 0.2mm
-const int distance = 60 * (200 / 8);          // 60mm * (1rev / 8mm * 200 steps / 1rev) = 1500 
+const int distance = 58 * (200 / 8);          // 60mm * (1rev / 8mm * 200 steps / 1rev) = 1500 
 const int clamp_distance = 15 * (200 / 8);    // 10mm * (1rev / 8mm * 200 steps / 1rev)
 //const int clamp_distance = 30 * (200 / 8);  // 10mm * (1rev / 8mm * 200 steps / 1rev)
 const int initial_distance = distance - clamp_distance;
@@ -27,9 +27,11 @@ int target;
 /*--- Travel speed ---*/
 /* If using the L298N driver, speed should be within these ranges:
 /* AccelStepper speeds:  450 < x < 1100   */
-/* Stepper speeds:       140 < x < 330    */
-const int close_speed = 140;               // s/re = 2000 --
-const int open_speed = 330; 
+/* Stepper speeds:       140 < x < 340    */
+const int closing_speed = 240;               // s/re = 2000 --
+
+const int closing_speed_fast = 340;
+const int opening_speed = 330; 
 
 
 
@@ -52,6 +54,8 @@ void setup() {
   pinMode(enablePinB, OUTPUT);
   delay(10); 
 
+//  digitalWrite(enablePinA, HIGH);
+//  digitalWrite(enablePinB, HIGH);    
  
 }
 
@@ -66,14 +70,14 @@ void loop() {
   if (key == 'u'){
     Serial.println("");
     Serial.println("Moving up");
-    motorSteps(open_speed, initial_distance);
+    motorSteps(closing_speed_fast, initial_distance);
     delay(100);  
-    motorSteps(close_speed, clamp_distance);  
+    motorSteps(closing_speed, clamp_distance);  
   }
   if (key == 'd'){
     Serial.println("");
     Serial.println("Moving down");    
-    motorSteps(open_speed,-distance);         
+    motorSteps(opening_speed,-distance);         
   }
 
 
@@ -81,12 +85,12 @@ void loop() {
   if (key == 'w'){
     Serial.println("");
     Serial.println("Moving one step up");    
-    motorSteps(close_speed, steps);      
+    motorSteps(closing_speed, steps);      
   }
   if (key == 's'){
     Serial.println("");
     Serial.println("Moving one step up");
-    motorSteps(close_speed, - steps);  
+    motorSteps(closing_speed, - steps);  
   }
   
 
