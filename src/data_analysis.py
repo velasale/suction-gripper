@@ -2608,24 +2608,29 @@ def orthogonal_load_cell_experiments():
     # Step 1 - Location
     # folder = '/home/alejo/Downloads/Mark10_experiments-20240227T171746Z-001/Mark10_experiments/experiment1_orthogonalLoad/'
     folder = 'C:/Users/avela/Dropbox/03 Temporal/03 Research/data/Mark10_experiments/'      # Personal Laptop
-    subfolder = 'experiment1_orthogonalLoad/'
+
+    # subfolder = 'experiment1_orthogonalLoad/'
+    subfolder = 'experiment6_orthogonalLoad_accelStepper/'
 
     folder = folder + subfolder
 
     # Step 2 - Sweep all diameters
     diameters = [70, 75, 80]
-    steps_list = [1285, 1300, 1325, 1350, 1375, 1400, 1425]
+    # steps_list = [1285, 1300, 1325, 1350, 1375, 1400, 1425]
+    nut_travel_list = [52, 54, 56, 58, 60]
 
     for diameter in diameters:
         location = folder
-        prefix = 'finger_load_' + str(diameter) + 'mm'
+        prefix = 'finger_load_apple_' + str(diameter) + 'mm'
 
-        stepses = []
+        nut_travel_distances = []
         mean_max_forces = []
         std_max_forces = []
 
-        for steps in steps_list:
-            sufix = str(steps) + 'steps.xlsx'
+        for nut_travel in nut_travel_list:
+            # sufix = str(steps) + 'steps.xlsx'
+
+            sufix = str(nut_travel) + 'mm.xlsx'
 
             max_ortho = 'Nan'
 
@@ -2657,20 +2662,19 @@ def orthogonal_load_cell_experiments():
                     mean_max = np.mean(max_vals)
                     std_max = np.std(max_vals)
 
-                    stepses.append(steps)
+                    nut_travel_distances.append(nut_travel)
                     mean_max_forces.append(mean_max)
                     std_max_forces.append(std_max)
 
-
-        print(stepses)
+        print(nut_travel_distances)
         print(mean_max_forces)
         lows = np.subtract(mean_max_forces, std_max_forces)
         highs = np.add(mean_max_forces, std_max_forces)
-        plt.plot(stepses, mean_max_forces, 'o-', label=('diameter ' + str(diameter)+'mm'))
-        plt.fill_between(stepses, lows, highs, alpha=.2)
+        plt.plot(nut_travel_distances, mean_max_forces, 'o-', label=('diameter ' + str(diameter)+'mm'))
+        plt.fill_between(nut_travel_distances, lows, highs, alpha=.2)
     plt.grid()
 
-    plt.xlabel('Stepper motor steps')
+    plt.xlabel('Nut travel distance [mm]')
     plt.ylabel('Force [N]')
     plt.title('Normal Force from each finger [N]')
 
@@ -2679,14 +2683,15 @@ def orthogonal_load_cell_experiments():
     finger_width = 20   # mm
     thr_force = thr_press * (10 ** 2)/1e6
     print(thr_force)
-    plt.hlines(y=thr_force, xmin=1285, xmax=1425, linestyles='--', lw=2, label='Apple Bruising threshold')
+    # plt.hlines(y=thr_force, xmin=1285, xmax=1425, linestyles='--', lw=2, label='Apple Bruising threshold')
+    plt.hlines(y=thr_force, xmin=52, xmax=60, linestyles='--', lw=2, label='Apple Bruising threshold')
     plt.legend()
     plt.ylim([0, 35])
 
     plt.show()
 
 
-def mark10_pull_experiments():
+def mark10_pullback_experiments():
     # Step 1 - Location
     # folder = '/home/alejo/Downloads/Mark10_experiments-20240309T010320Z-001/Mark10_experiments/'    # ArmFarm laptop
     folder = 'C:/Users/avela/Dropbox/03 Temporal/03 Research/data/Mark10_experiments/'  # Personal Laptop
@@ -2709,14 +2714,21 @@ def mark10_pull_experiments():
     # steps_list = [1325, 1350, 1375, 1400]
 
     # ---- Fixed Apple-string / Pull-back trials at different angles ----  (delta_15_dual_rep1)
-    subfolder = 'experiment4_pullingLoad_fixedApple_angled/'
-    exp_prefix = 'delta_' + str(steps) + '_' + (tag) + '_rep' + str(rep)
+    # subfolder = 'experiment4_pullingLoad_fixedApple_angled/'
+    # exp_prefix = 'delta_' + str(steps) + '_' + (tag) + '_rep' + str(rep)
+    # tags = ['suction', 'fingers', 'dual']
+    # angles = [0, 15, 30, 45]
+    # steps_list = angles
+
+    # ---- Fixed Apple-string / Pull-back trials at different angles ----  (delta_15_dual_rep1)
+    subfolder = 'experiment5_pullingLoad_fixedApple_distanced/'
+    exp_prefix = tag + '_dist_' + str(steps) + '_rep' + str(rep)
     tags = ['suction', 'fingers', 'dual']
-    angles = [0, 15, 30, 45]
+    angles = [0, 2, 4, 6, 8, 10, 12, 15, 18, 21, 24, 27, 30]
     steps_list = angles
+
+
     reps = 10
-
-
     modes = ['Suction cups', 'Fingers', 'Dual']
     location = folder + subfolder
 
@@ -2735,9 +2747,11 @@ def mark10_pull_experiments():
 
             # Gather data from all repetitions of the same trial combination
             for rep in range(reps):
-                exp_prefix = 'delta_' + str(steps) + '_' + (tag) + '_rep' + str(rep)
+                # exp_prefix = 'delta_' + str(steps) + '_' + (tag) + '_rep' + str(rep)
+                exp_prefix = tag + '_dist_' + str(steps) + '_rep' + str(rep)
+
                 prefix = exp_prefix
-                # print(prefix)
+
                 max_pull = 'Nan'
                 for file in sorted(os.listdir(location)):
                     if file.startswith(prefix):
@@ -2746,13 +2760,14 @@ def mark10_pull_experiments():
                         # Step 3: Open file and turn into dataframe
                         trial_df = pd.read_excel(location + file, index_col=0)
 
+                        # # Plot time series
                         # plt.plot(trial_df['Travel [mm]'], trial_df['Load [N]'])
                         # plt.title(file)
                         # plt.grid()
                         # plt.show()
 
                         max_pull = abs(min(trial_df['Load [N]']))
-                        print('Max pull force: ', max_pull)
+                        # print('Max pull force: ', max_pull)
                         max_forces.append(max_pull)
 
                         # Keep track of successful pick values
@@ -2762,6 +2777,7 @@ def mark10_pull_experiments():
                         if tag == 'V':
                             suction_picks.append(max_pull)
 
+            print(max_forces)
             stepses.append(steps)
             mean_max_forces.append(abs(np.mean(max_forces)))
             sdv_max_forces.append(abs(np.std(max_forces)))
@@ -2795,12 +2811,17 @@ def mark10_pull_experiments():
         plt.hlines(y=mean_pick_force, xmin=min(steps_list), xmax=max(steps_list), linestyles='--', lw=1, label='Magnet release force [N]', color='red')
         plt.fill_between(stepses, lows, highs, color='red', alpha=.2)
 
+    # Plot median force
+    plt.hlines(y=16, xmin=0, xmax=30, linestyles='--', lw=2, label='Median Detachment Force', color='k')
+    # Plot suction force
+    plt.hlines(y=12, xmin=0, xmax=30, linestyles='--', lw=2, label='Average Suction Force')
+
     plt.grid()
     plt.ylim([0, 35])
     plt.ylim([0, 70])
     plt.legend()
     plt.xlabel('Stepper motor steps')
-    plt.xlabel('Angle [deg]')
+    plt.xlabel('z-Offset [mm]')
     plt.ylabel('Force [N]')
     plt.title('Gripper pulling force at different modes [N]')
     plt.show()
@@ -2835,6 +2856,6 @@ def main():
 
 if __name__ == '__main__':
     # main()
-    mark10_pull_experiments()
+    mark10_pullback_experiments()
     # orthogonal_load_cell_experiments()
 
