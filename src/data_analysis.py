@@ -2721,11 +2721,18 @@ def mark10_pullback_experiments():
     # steps_list = angles
 
     # ---- Fixed Apple-string / Pull-back trials at different angles ----  (delta_15_dual_rep1)
-    subfolder = 'experiment5_pullingLoad_fixedApple_distanced/'
-    exp_prefix = tag + '_dist_' + str(steps) + '_rep' + str(rep)
+    # subfolder = 'experiment5_pullingLoad_fixedApple_distanced/'
+    # exp_prefix = tag + '_dist_' + str(steps) + '_rep' + str(rep)
+    # tags = ['suction', 'fingers', 'dual']
+    # angles = [0, 2, 4, 6, 8, 10, 12, 15, 18, 21, 24, 27, 30]
+    # steps_list = angles
+
+    # ---- Fixed Apple-string / Pull-back trials at different speeds ----  (delta_15_dual_rep1)
+    subfolder = 'experiment8_pullBack_fixedApple_fingerSpeed/'
+    exp_prefix = 'exp(pullBack)_mode(' + tag + ')_dist(58)_speed(' + str(steps) + ')_rep' + str(rep)
     tags = ['suction', 'fingers', 'dual']
-    angles = [0, 2, 4, 6, 8, 10, 12, 15, 18, 21, 24, 27, 30]
-    steps_list = angles
+    speeds = [140, 190, 240, 290, 340]
+    steps_list = speeds
 
 
     reps = 10
@@ -2748,7 +2755,8 @@ def mark10_pullback_experiments():
             # Gather data from all repetitions of the same trial combination
             for rep in range(reps):
                 # exp_prefix = 'delta_' + str(steps) + '_' + (tag) + '_rep' + str(rep)
-                exp_prefix = tag + '_dist_' + str(steps) + '_rep' + str(rep)
+                # exp_prefix = tag + '_dist_' + str(steps) + '_rep' + str(rep)
+                exp_prefix = 'exp(pullBack)_mode(' + tag + ')_dist(58)_speed(' + str(steps) + ')_rep' + str(rep)
 
                 prefix = exp_prefix
 
@@ -2812,16 +2820,16 @@ def mark10_pullback_experiments():
         plt.fill_between(stepses, lows, highs, color='red', alpha=.2)
 
     # Plot median force
-    plt.hlines(y=16, xmin=0, xmax=30, linestyles='--', lw=2, label='Median Detachment Force', color='k')
+    plt.hlines(y=16, xmin=140, xmax=340, linestyles='--', lw=2, label='Median Detachment Force', color='k')
     # Plot suction force
-    plt.hlines(y=12, xmin=0, xmax=30, linestyles='--', lw=2, label='Average Suction Force')
+    plt.hlines(y=12, xmin=140, xmax=340, linestyles='--', lw=2, label='Average Suction Force')
 
     plt.grid()
     plt.ylim([0, 35])
     plt.ylim([0, 70])
     plt.legend()
-    plt.xlabel('Stepper motor steps')
-    plt.xlabel('z-Offset [mm]')
+    plt.xlabel('Stepper motor speed [rpm]?')
+    # plt.xlabel('z-Offset [mm]')
     plt.ylabel('Force [N]')
     plt.title('Gripper pulling force at different modes [N]')
     plt.show()
