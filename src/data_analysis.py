@@ -2713,26 +2713,42 @@ def mark10_pullback_experiments():
     # tags = ['V', 'F', 'VF']
     # steps_list = [1325, 1350, 1375, 1400]
 
-    # ---- Fixed Apple-string / Pull-back trials at different angles ----  (delta_15_dual_rep1)
-    # subfolder = 'experiment4_pullingLoad_fixedApple_angled/'
-    # exp_prefix = 'delta_' + str(steps) + '_' + (tag) + '_rep' + str(rep)
-    # tags = ['suction', 'fingers', 'dual']
-    # angles = [0, 15, 30, 45]
-    # steps_list = angles
+    # ---- ANGLES ----
+    subfolder = 'experiment10_pullBack_angled/'
+    exp_prefix = 'exp(pullBack)_mode(' + tag + ')_angle(' + str(steps) + ')_rep' + str(rep)
+    tags = ['suction', 'fingers', 'dual']
+    angles = [0, 15, 30, 45]
+    steps_list = angles
 
-    # ---- Fixed Apple-string / Pull-back trials at different angles ----  (delta_15_dual_rep1)
+
+    # ---- EQUATOR OFFSET ----
     # subfolder = 'experiment5_pullingLoad_fixedApple_distanced/'
     # exp_prefix = tag + '_dist_' + str(steps) + '_rep' + str(rep)
     # tags = ['suction', 'fingers', 'dual']
     # angles = [0, 2, 4, 6, 8, 10, 12, 15, 18, 21, 24, 27, 30]
     # steps_list = angles
 
-    # ---- Fixed Apple-string / Pull-back trials at different speeds ----  (delta_15_dual_rep1)
-    subfolder = 'experiment8_pullBack_fixedApple_fingerSpeed/'
-    exp_prefix = 'exp(pullBack)_mode(' + tag + ')_dist(58)_speed(' + str(steps) + ')_rep' + str(rep)
-    tags = ['suction', 'fingers', 'dual']
-    speeds = [140, 190, 240, 290, 340]
-    steps_list = speeds
+    # ---- CLAMPING SPEED ----
+    # subfolder = 'experiment8_pullBack_fixedApple_fingerSpeed/'
+    # exp_prefix = 'exp(pullBack)_mode(' + tag + ')_dist(58)_speed(' + str(steps) + ')_rep' + str(rep)
+    # tags = ['suction', 'fingers', 'dual']
+    # speeds = [140, 190, 240, 290, 340]
+    # steps_list = speeds
+
+    # ---- NUT TRAVEL DISTANCE ----
+    # subfolder = 'experiment7_pullBack_fixedApple_fingerDistance/'
+    # exp_prefix = 'exp(pullBack)_mode(' + tag + ')_distance(' + str(steps) + ')_rep' + str(rep)
+    # tags = ['suction', 'fingers', 'dual']
+    # travels = [52, 54, 56, 58]
+    # steps_list = travels
+
+    # ---- EQUATOR OFFSET ----
+    # subfolder = 'experiment9_pullBack_fixedApple_equatorOffset/'
+    # exp_prefix = 'exp(pullBack)_mode(' + tag + ')_offset(' + str(steps) + ')_rep' + str(rep)
+    # tags = ['suction', 'fingers', 'dual']
+    # offsets = [0, 5, 10, 15, 20]
+    # steps_list = offsets
+
 
 
     reps = 10
@@ -2756,7 +2772,15 @@ def mark10_pullback_experiments():
             for rep in range(reps):
                 # exp_prefix = 'delta_' + str(steps) + '_' + (tag) + '_rep' + str(rep)
                 # exp_prefix = tag + '_dist_' + str(steps) + '_rep' + str(rep)
-                exp_prefix = 'exp(pullBack)_mode(' + tag + ')_dist(58)_speed(' + str(steps) + ')_rep' + str(rep)
+                # exp_prefix = 'exp(pullBack)_mode(' + tag + ')_dist(58)_speed(' + str(steps) + ')_rep' + str(rep)
+                # exp_prefix = 'exp(pullBack)_mode(' + tag + ')_distance(' + str(steps) + ')_rep' + str(rep)
+
+                # if steps < 10:
+                #     exp_prefix = 'exp(pullBack)_mode(' + tag + ')_offset(0' + str(steps) + ')_rep' + str(rep)
+                # else:
+                #     exp_prefix = 'exp(pullBack)_mode(' + tag + ')_offset(' + str(steps) + ')_rep' + str(rep)
+
+                exp_prefix = 'exp(pullBack)_mode(' + tag + ')_angle(' + str(steps) + ')_rep' + str(rep)
 
                 prefix = exp_prefix
 
@@ -2819,17 +2843,21 @@ def mark10_pullback_experiments():
         plt.hlines(y=mean_pick_force, xmin=min(steps_list), xmax=max(steps_list), linestyles='--', lw=1, label='Magnet release force [N]', color='red')
         plt.fill_between(stepses, lows, highs, color='red', alpha=.2)
 
+    xmin = min(steps_list)
+    xmax = max(steps_list)
     # Plot median force
-    plt.hlines(y=16, xmin=140, xmax=340, linestyles='--', lw=2, label='Median Detachment Force', color='k')
+    plt.hlines(y=16, xmin=xmin, xmax=xmax, linestyles='--', lw=2, label='Median Detachment Force', color='k')
     # Plot suction force
-    plt.hlines(y=12, xmin=140, xmax=340, linestyles='--', lw=2, label='Average Suction Force')
+    plt.hlines(y=12, xmin=xmin, xmax=xmax, linestyles='--', lw=2, label='Average Suction Force')
 
     plt.grid()
-    plt.ylim([0, 35])
+    # plt.ylim([0, 35])
     plt.ylim([0, 70])
     plt.legend()
-    plt.xlabel('Stepper motor speed [rpm]?')
+    # plt.xlabel('Stepper motor speed [rpm]?')
     # plt.xlabel('z-Offset [mm]')
+    # plt.xlabel('nut travel distance [mm]')
+    plt.xlabel('equator offset [mm]')
     plt.ylabel('Force [N]')
     plt.title('Gripper pulling force at different modes [N]')
     plt.show()
