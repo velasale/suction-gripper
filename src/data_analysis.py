@@ -722,7 +722,7 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel):
                         if file.endswith('apple_picked).xlsx'):
                             good_picks.append(max_pull)
 
-                        if tag == 'V':
+                        if tag == 'V' or tag == 'suction':
                             suction_picks.append(max_pull)
 
             print(max_forces)
@@ -735,15 +735,16 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel):
         print(mean_max_forces)
 
         # Plot each mode series with a band gap
-        if tag == 'V':
+        if tag == 'suction' or tag == 'V':
+
             print('Suction Pick Forces:', suction_picks)
             mean_suction_force = np.mean(suction_picks)
             sdv_suction_force = np.std(suction_picks)
             lows = np.subtract(mean_suction_force, sdv_suction_force)
             highs = np.add(mean_suction_force, sdv_suction_force)
-            plt.hlines(y=mean_suction_force, xmin=min(steps_list), xmax=max(steps_list), linestyles='-', lw=1,
+            plt.hlines(y=mean_suction_force, xmin=xmin, xmax=xmax, linestyles='-', lw=1,
                        label='Suction cup force [N]')
-            plt.fill_between(steps_list, lows, highs, alpha=.2)
+            plt.fill_between(variable_list, lows, highs, alpha=.2)
 
         else:
             if len(max_forces) > 0:
@@ -768,7 +769,7 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel):
     plt.hlines(y=12, xmin=xmin, xmax=xmax, linestyles='--', lw=2, label='Average Suction Force')
 
     plt.grid()
-    plt.ylim([0, 50])
+    plt.ylim([10, 15])
     plt.legend()
     plt.xlabel(xlabel)
     plt.ylabel('Force [N]')
