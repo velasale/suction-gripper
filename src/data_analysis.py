@@ -646,6 +646,135 @@ def plot_and_video():
     plt.show()
 
 
+def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel):
+
+    # Axes limits
+    xmin = min(variable_list)
+    xmax = max(variable_list)
+    colors = ['blue', 'green', 'red']
+
+    # Experiment number
+    exp_number = location.split('/experiment')[1]
+    exp_number = int(exp_number.split('_')[0])
+    print('Experiment number: ', exp_number)
+
+    # Lists to keep track of stuff
+    stepses = []
+    good_picks = []
+    suction_picks = []
+
+    # Create figure
+    fig = plt.figure()
+    exp_prefix = 'loremipsum'
+
+    for mode, tag, color in zip(gripper_modes, tags, colors):
+        print('\nMode: ', mode)
+        stepses = []
+        mean_max_forces = []
+        sdv_max_forces = []
+
+        for steps in variable_list:
+
+            max_forces = []
+
+            # Gather data from all repetitions of the same trial combination
+            for rep in range(1, reps+1):
+
+                # exp_prefix = 'delta_' + str(steps) + '_' + (tag) + '_rep' + str(rep)
+                # exp_prefix = tag + '_dist_' + str(steps) + '_rep' + str(rep)
+
+                if exp_number == 8:
+                    exp_prefix = 'exp(pullBack)_mode(' + tag + ')_dist(58)_speed(' + str(steps) + ')_rep' + str(rep)
+
+                if exp_number == 7:
+                    exp_prefix = 'exp(pullBack)_mode(' + tag + ')_distance(' + str(steps) + ')_rep' + str(rep)
+
+                if exp_number == 9:
+                    if steps < 10:
+                        exp_prefix = 'exp(pullBack)_mode(' + tag + ')_offset(0' + str(steps) + ')_rep' + str(rep)
+                    else:
+                        exp_prefix = 'exp(pullBack)_mode(' + tag + ')_offset(' + str(steps) + ')_rep' + str(rep)
+
+                if exp_number == 10:
+                    exp_prefix = 'exp(pullBack)_mode(' + tag + ')_angle(' + str(steps) + ')_rep' + str(rep)
+
+                max_pull = 'Nan'
+
+                for file in sorted(os.listdir(location)):
+
+                    if file.startswith(exp_prefix):
+                        print('\nFile: ', file)
+
+                        # Step 3: Open file and turn into dataframe
+                        trial_df = pd.read_excel(location + file, index_col=0)
+
+                        # # Plot time series
+                        # plt.plot(trial_df['Travel [mm]'], trial_df['Load [N]'])
+                        # plt.title(file)
+                        # plt.grid()
+                        # plt.show()
+
+                        max_pull = abs(min(trial_df['Load [N]']))
+                        # print('Max pull force: ', max_pull)
+                        max_forces.append(max_pull)
+
+                        # Keep track of successful pick values
+                        if file.endswith('apple_picked).xlsx'):
+                            good_picks.append(max_pull)
+
+                        if tag == 'V':
+                            suction_picks.append(max_pull)
+
+            print(max_forces)
+            stepses.append(steps)
+            mean_max_forces.append(abs(np.mean(max_forces)))
+            sdv_max_forces.append(abs(np.std(max_forces)))
+
+        print('\n', mode)
+        print(stepses)
+        print(mean_max_forces)
+
+        # Plot each mode series with a band gap
+        if tag == 'V':
+            print('Suction Pick Forces:', suction_picks)
+            mean_suction_force = np.mean(suction_picks)
+            sdv_suction_force = np.std(suction_picks)
+            lows = np.subtract(mean_suction_force, sdv_suction_force)
+            highs = np.add(mean_suction_force, sdv_suction_force)
+            plt.hlines(y=mean_suction_force, xmin=min(steps_list), xmax=max(steps_list), linestyles='-', lw=1,
+                       label='Suction cup force [N]')
+            plt.fill_between(steps_list, lows, highs, alpha=.2)
+
+        else:
+            if len(max_forces) > 0:
+                lows = np.add(mean_max_forces, sdv_max_forces)
+                highs = np.subtract(mean_max_forces, sdv_max_forces)
+                plt.plot(stepses, mean_max_forces, 'o-', label=mode, color=color)
+                plt.fill_between(stepses, lows, highs, alpha=.2, color=color)
+
+    # Note: Just for Experiment 2 -- Plot the force at which the magnet releases
+    if len(good_picks) > 0:
+        mean_pick_force = np.mean(good_picks)
+        sdv_pick_force = np.std(good_picks)
+        lows = np.subtract(mean_pick_force, sdv_pick_force)
+        highs = np.add(mean_pick_force, sdv_pick_force)
+        plt.hlines(y=mean_pick_force, xmin=xmin, xmax=xmax, linestyles='--', lw=1,
+                   label='Magnet release force [N]', color='red')
+        plt.fill_between(stepses, lows, highs, color='red', alpha=.2)
+
+    # Plot median detachment force
+    plt.hlines(y=16, xmin=xmin, xmax=xmax, linestyles='--', lw=2, label='Median Detachment Force', color='k')
+    # Plot suction force
+    plt.hlines(y=12, xmin=xmin, xmax=xmax, linestyles='--', lw=2, label='Average Suction Force')
+
+    plt.grid()
+    plt.ylim([0, 50])
+    plt.legend()
+    plt.xlabel(xlabel)
+    plt.ylabel('Force [N]')
+    plt.title('Gripper pulling force [N] vs ' + xlabel)
+
+
 # ----------------------- MAIN CLASS FOR EXPERIMENTS ------------------------------------
 class Experiment:
     """Class to define an Experiment as an Object. Each experiment has properties from its json file.
@@ -2692,14 +2821,11 @@ def orthogonal_load_cell_experiments():
 
 
 def mark10_pullback_experiments():
+
     # Step 1 - Location
     # folder = '/home/alejo/Downloads/Mark10_experiments-20240309T010320Z-001/Mark10_experiments/'    # ArmFarm laptop
     folder = 'C:/Users/avela/Dropbox/03 Temporal/03 Research/data/Mark10_experiments/'  # Personal Laptop
 
-    tag = ''
-    steps = 0
-    rep = 0
-    # Step 2 - Sweep all modes
 
     # --- Fake Apple / Pull-back trials at 0 degrees ---
     # subfolder = 'experiment2_pullingLoad_medSpring_medMagnet/'
@@ -2713,13 +2839,6 @@ def mark10_pullback_experiments():
     # tags = ['V', 'F', 'VF']
     # steps_list = [1325, 1350, 1375, 1400]
 
-    # ---- ANGLES ----
-    subfolder = 'experiment10_pullBack_angled/'
-    exp_prefix = 'exp(pullBack)_mode(' + tag + ')_angle(' + str(steps) + ')_rep' + str(rep)
-    tags = ['suction', 'fingers', 'dual']
-    angles = [0, 15, 30, 45]
-    steps_list = angles
-
 
     # ---- EQUATOR OFFSET ----
     # subfolder = 'experiment5_pullingLoad_fixedApple_distanced/'
@@ -2729,137 +2848,41 @@ def mark10_pullback_experiments():
     # steps_list = angles
 
     # ---- CLAMPING SPEED ----
-    # subfolder = 'experiment8_pullBack_fixedApple_fingerSpeed/'
-    # exp_prefix = 'exp(pullBack)_mode(' + tag + ')_dist(58)_speed(' + str(steps) + ')_rep' + str(rep)
-    # tags = ['suction', 'fingers', 'dual']
-    # speeds = [140, 190, 240, 290, 340]
-    # steps_list = speeds
+    mark10_plots(folder + 'experiment8_pullBack_fixedApple_fingerSpeed/',
+                 ['suction', 'fingers', 'dual'],
+                 ['Suction cups', 'Fingers', 'Dual'],
+                 [140, 190, 240, 290, 340],
+                 10,
+                 'Nut-Travel speed [rpm]'
+                 )
 
     # ---- NUT TRAVEL DISTANCE ----
-    # subfolder = 'experiment7_pullBack_fixedApple_fingerDistance/'
-    # exp_prefix = 'exp(pullBack)_mode(' + tag + ')_distance(' + str(steps) + ')_rep' + str(rep)
-    # tags = ['suction', 'fingers', 'dual']
-    # travels = [52, 54, 56, 58]
-    # steps_list = travels
+    mark10_plots(folder + 'experiment7_pullBack_fixedApple_fingerDistance/',
+                 ['suction', 'fingers', 'dual'],
+                 ['Suction cups', 'Fingers', 'Dual'],
+                 [52, 54, 56, 58],
+                 10,
+                 'Nut-Travel distance [mm]'
+                 )
 
     # ---- EQUATOR OFFSET ----
-    # subfolder = 'experiment9_pullBack_fixedApple_equatorOffset/'
-    # exp_prefix = 'exp(pullBack)_mode(' + tag + ')_offset(' + str(steps) + ')_rep' + str(rep)
-    # tags = ['suction', 'fingers', 'dual']
-    # offsets = [0, 5, 10, 15, 20]
-    # steps_list = offsets
+    mark10_plots(folder + 'experiment9_pullBack_fixedApple_equatorOffset/',
+                 ['suction', 'fingers', 'dual'],
+                 ['Suction cups', 'Fingers', 'Dual'],
+                 [0, 5, 10, 15, 20],
+                 10,
+                 'Equator Offset [mm]'
+                 )
 
+    # ---- ANGLES ----
+    mark10_plots(folder + 'experiment10_pullBack_angled/',
+                 ['suction', 'fingers', 'dual'],
+                 ['Suction cups', 'Fingers', 'Dual'],
+                 [0, 15, 30, 45],
+                 10,
+                 'Angle between pulling force and gripper [deg]'
+                 )
 
-
-    reps = 10
-    modes = ['Suction cups', 'Fingers', 'Dual']
-    location = folder + subfolder
-
-    stepses = []
-    max_forces = []
-
-    good_picks = []
-    suction_picks = []
-
-    for mode, tag in zip(modes, tags):
-        stepses = []
-        mean_max_forces = []
-        sdv_max_forces = []
-        for steps in steps_list:
-            max_forces = []
-
-            # Gather data from all repetitions of the same trial combination
-            for rep in range(reps):
-                # exp_prefix = 'delta_' + str(steps) + '_' + (tag) + '_rep' + str(rep)
-                # exp_prefix = tag + '_dist_' + str(steps) + '_rep' + str(rep)
-                # exp_prefix = 'exp(pullBack)_mode(' + tag + ')_dist(58)_speed(' + str(steps) + ')_rep' + str(rep)
-                # exp_prefix = 'exp(pullBack)_mode(' + tag + ')_distance(' + str(steps) + ')_rep' + str(rep)
-
-                # if steps < 10:
-                #     exp_prefix = 'exp(pullBack)_mode(' + tag + ')_offset(0' + str(steps) + ')_rep' + str(rep)
-                # else:
-                #     exp_prefix = 'exp(pullBack)_mode(' + tag + ')_offset(' + str(steps) + ')_rep' + str(rep)
-
-                exp_prefix = 'exp(pullBack)_mode(' + tag + ')_angle(' + str(steps) + ')_rep' + str(rep)
-
-                prefix = exp_prefix
-
-                max_pull = 'Nan'
-                for file in sorted(os.listdir(location)):
-                    if file.startswith(prefix):
-                        print('\nFile: ', file)
-
-                        # Step 3: Open file and turn into dataframe
-                        trial_df = pd.read_excel(location + file, index_col=0)
-
-                        # # Plot time series
-                        # plt.plot(trial_df['Travel [mm]'], trial_df['Load [N]'])
-                        # plt.title(file)
-                        # plt.grid()
-                        # plt.show()
-
-                        max_pull = abs(min(trial_df['Load [N]']))
-                        # print('Max pull force: ', max_pull)
-                        max_forces.append(max_pull)
-
-                        # Keep track of successful pick values
-                        if file.endswith('apple_picked).xlsx'):
-                            good_picks.append(max_pull)
-
-                        if tag == 'V':
-                            suction_picks.append(max_pull)
-
-            print(max_forces)
-            stepses.append(steps)
-            mean_max_forces.append(abs(np.mean(max_forces)))
-            sdv_max_forces.append(abs(np.std(max_forces)))
-
-        print('\n', mode)
-        print(stepses)
-        print(mean_max_forces)
-
-        # Plot each mode series with a band gap
-        if tag == 'V':
-            print('Suction Pick Forces:', suction_picks)
-            mean_suction_force = np.mean(suction_picks)
-            sdv_suction_force = np.std(suction_picks)
-            lows = np.subtract(mean_suction_force, sdv_suction_force)
-            highs = np.add(mean_suction_force, sdv_suction_force)
-            plt.hlines(y=mean_suction_force, xmin=min(steps_list), xmax=max(steps_list), linestyles='-', lw=1, label='Suction cup force [N]')
-            plt.fill_between(steps_list, lows, highs, alpha=.2)
-
-        else:
-            lows = np.add(mean_max_forces, sdv_max_forces)
-            highs = np.subtract(mean_max_forces, sdv_max_forces)
-            plt.plot(stepses, mean_max_forces, 'o-', label=mode)
-            plt.fill_between(stepses, lows, highs, alpha=.2)
-
-    # Note: Just for Experiment 2 -- Plot the force at which the magnet releases
-    if len(good_picks) > 0:
-        mean_pick_force = np.mean(good_picks)
-        sdv_pick_force = np.std(good_picks)
-        lows = np.subtract(mean_pick_force, sdv_pick_force)
-        highs = np.add(mean_pick_force, sdv_pick_force)
-        plt.hlines(y=mean_pick_force, xmin=min(steps_list), xmax=max(steps_list), linestyles='--', lw=1, label='Magnet release force [N]', color='red')
-        plt.fill_between(stepses, lows, highs, color='red', alpha=.2)
-
-    xmin = min(steps_list)
-    xmax = max(steps_list)
-    # Plot median force
-    plt.hlines(y=16, xmin=xmin, xmax=xmax, linestyles='--', lw=2, label='Median Detachment Force', color='k')
-    # Plot suction force
-    plt.hlines(y=12, xmin=xmin, xmax=xmax, linestyles='--', lw=2, label='Average Suction Force')
-
-    plt.grid()
-    # plt.ylim([0, 35])
-    plt.ylim([0, 70])
-    plt.legend()
-    # plt.xlabel('Stepper motor speed [rpm]?')
-    # plt.xlabel('z-Offset [mm]')
-    # plt.xlabel('nut travel distance [mm]')
-    plt.xlabel('equator offset [mm]')
-    plt.ylabel('Force [N]')
-    plt.title('Gripper pulling force at different modes [N]')
     plt.show()
 
 
