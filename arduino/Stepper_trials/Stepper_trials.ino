@@ -19,21 +19,18 @@ const byte enablePinA = 8;
 const byte enablePinB = 13;
 /*--- Travel steps ---*/
 const int steps = 25;                         // 200steps = 1rev = 8mm,  25steps = 1/8rev = 1mm, 5steps = 0.2mm
-const int distance = 58 * (200 / 8);          // 60mm * (1rev / 8mm * 200 steps / 1rev) = 1500 
+const int distance = 58* (200 / 8);          // 60mm * (1rev / 8mm * 200 steps / 1rev) = 1500 
 const int clamp_distance = 15 * (200 / 8);    // 10mm * (1rev / 8mm * 200 steps / 1rev)
 //const int clamp_distance = 30 * (200 / 8);  // 10mm * (1rev / 8mm * 200 steps / 1rev)
 const int initial_distance = distance - clamp_distance;
 int target;
 /*--- Travel speed ---*/
 /* If using the L298N driver, speed should be within these ranges:
-/* AccelStepper speeds:  450 < x < 1100   */
-/* Stepper speeds:       140 < x < 340    */
-const int closing_speed = 240;               // s/re = 2000 --
-
+/* AccelStepper speeds:  450 < x < 1100   units: steps/sec */
+/* Stepper speeds:       140 < x < 340    units: rev/min */
+const int closing_speed = 240;       
 const int closing_speed_fast = 340;
 const int opening_speed = 330; 
-
-
 
 
 void setup() {
