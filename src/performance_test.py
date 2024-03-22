@@ -36,7 +36,7 @@ from visualization_msgs.msg import Marker, MarkerArray
 import cv2
 
 ## --- Self developed imports
-from pressure_plot_scripts import *
+from data_analysis import *
 from ros_scripts import *
 from plot_scripts import *
 
@@ -80,7 +80,7 @@ def draw_cross_hair():
 
 
 def plot_vacuum(filename):
-    """Simply plots vacuum using methods and functions from pressure_plot_scripts.py"""
+    """Simply plots vacuum using methods and functions from data_analysis.py"""
 
     bag_to_csvs(filename + ".bag")
     metadata = read_json(filename + ".json")
@@ -131,7 +131,7 @@ def proxy_picks(gripper):
     # --- Uncomment if you need other poses
     yaws = [60]
     # offsets = [5/1000, 10/1000]
-    offsets = [0 / 1000]
+    # offsets = [0 / 1000]
 
     cart_noises = [0, 5/1000, 10/1000, 15/1000, 20/1000]
     ang_noises = [0, 5, 10, 15, 20]
@@ -154,7 +154,7 @@ def proxy_picks(gripper):
     apples_to_pick = len(gripper.x_coord)
 
     # --- Sample points on a sphere around the apple
-    for sample in range(0, apples_to_pick):
+    for sample in range(0, apples_to_pick-1):
 
         gripper.sample = sample
 
@@ -357,7 +357,7 @@ class RoboticGripper():
         # ---- Apple Proxy Parameters
         # Medium Force z = 1.05
         # 1st Bushing y = -0.49    2nd Bushing y = -0.69
-        self.apple_pose = [-0.69, -0.275, +1.05, 0.00, 0.00, 0.00]
+        self.apple_pose = [-0.69, -0.275, +1.07, 0.00, 0.00, 0.00]
         self.stem_pose = [-0.49, -0.30, +1.28, 0.00, 0.00, 0.00]
         self.APPLE_DIAMETER = 80 / 1000  # units [m]
         self.APPLE_HEIGHT = 70 / 1000  # units [m]

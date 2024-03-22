@@ -769,7 +769,7 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel):
     plt.hlines(y=12, xmin=xmin, xmax=xmax, linestyles='--', lw=2, label='Average Suction Force')
 
     plt.grid()
-    plt.ylim([10, 15])
+    plt.ylim([0, 50])
     plt.legend()
     plt.xlabel(xlabel)
     plt.ylabel('Force [N]')
@@ -2825,7 +2825,8 @@ def mark10_pullback_experiments():
 
     # Step 1 - Location
     # folder = '/home/alejo/Downloads/Mark10_experiments-20240309T010320Z-001/Mark10_experiments/'    # ArmFarm laptop
-    folder = 'C:/Users/avela/Dropbox/03 Temporal/03 Research/data/Mark10_experiments/'  # Personal Laptop
+    folder = '/home/alejo/Dropbox/03 Temporal/03 Research/data/Mark10_experiments/'     # ArmFarm laptop
+    # folder = 'C:/Users/avela/Dropbox/03 Temporal/03 Research/data/Mark10_experiments/'  # Personal Laptop
 
 
     # --- Fake Apple / Pull-back trials at 0 degrees ---

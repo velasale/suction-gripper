@@ -27,7 +27,7 @@
 
           <!-- In-Hand Camera -->
           <include file="$(find video_stream_opencv)/launch/camera.launch">
-            <arg name="video_stream_provider" value="/dev/video2"/>
+            <arg name="video_stream_provider" value="/dev/video3"/>
             <arg name="visualize" value="true" />
           </include>
 
@@ -54,7 +54,7 @@
 
       <!-- Step 4: Launch ROS Serial -->
       <node pkg="rosserial_python" type="serial_node.py" name="rosserial" output="screen">
-        <param name="port" value="/dev/ttyACM1" />
+        <param name="port" value="/dev/ttyACM0" />
         <param name="baud" value="250000" doc="baudrate for Arduino Zero"/>
         <param name="baud" value="57600" />
       </node>

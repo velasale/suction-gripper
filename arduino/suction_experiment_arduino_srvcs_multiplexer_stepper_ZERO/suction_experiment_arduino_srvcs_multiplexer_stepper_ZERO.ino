@@ -20,20 +20,35 @@
 */
 
 #define Serial SerialUSB    //This trick is meant for the Aduino Zero board
-
 #include <Stepper.h>
+
+const bool  USE_ROSSERIAL = true;
 
 
 /********   Stepper Motor Variables ********/
+/* Pinouts */
 const byte manualFW = 5;
 const byte manualRW = 4;
-
 const byte enablePinA = 8;
 const byte enablePinB = 13;
 
-const int stepsPerRevolution = 2000;  // change this to fit the number of steps per revolution
+const int stepsPerRevolution = 200;  // change this to fit the number of steps per revolution
 const int steps = 1500;               // 1475 (70-80mm)    1475(80-90mm)  //For the Mark-10 I tested for every 25 steps
 const int stepSpeed = 15;             // 20
+
+/* Speeds */
+/* If L298N driver is used, speed should be within the range:
+ *    AccelStepper.h library: 450 < x < 1100    units: steps/sec
+ *    Stepper.h library:      140 < x < 340     units: rpm      */ 
+const int closing_speed = 240;        // rpm
+const int closing_speed_fast = 340;   // rpm
+const int opening_speed = 330;        // rpm
+
+/* Distances */
+const int distance = 58 * (200/8);    // 58mm * (200 steps / 1rev) * (1rev / 8mm)
+const int clamp_distance = 15 * (200/8);
+const int initial_distance = distance - clamp_distance;
+int target;
 
 /*******    Time Of Flight Sensor   ********/
 const int distCalib = 55;             // Prototype (70-80mm): 85 - 25 = 60    Prototype (80-90mm): 80 - 25 = 55
@@ -42,7 +57,6 @@ const int distCalib = 55;             // Prototype (70-80mm): 85 - 25 = 60    Pr
 Stepper myStepper(stepsPerRevolution, 9, 10, 11, 12);
 /*********/
 
-const bool  USE_ROSSERIAL = true;
 
 #include <Wire.h>
 #include <time.h>
@@ -209,6 +223,7 @@ void loop() {
   }
   else{
     Serial.println("\n......I2C Multiplexing.......");
+    delay(500);
   } 
   
   for (uint8_t i = 0; i < (3 + 1); i++) {
@@ -296,27 +311,17 @@ bool openValve() {
 }
 
 
-bool openFingers() {
-  digitalWrite(enablePinA, HIGH);
-  digitalWrite(enablePinB, HIGH);  
-  myStepper.step(-steps);
-
-  // With a screw-nut driver, there is no need to leave the driver on
-  digitalWrite(enablePinA, LOW);
-  digitalWrite(enablePinB, LOW);  
-  delay(1500);  
+bool closeFingers() {
+  motorSteps(closing_speed_fast, initial_distance);
+  delay(100);  
+   motorSteps(closing_speed, clamp_distance);  
+  delay(100);  
 }
 
 
-bool closeFingers() {
-  digitalWrite(enablePinA, HIGH);
-  digitalWrite(enablePinB, HIGH);  
-  myStepper.step(steps);
-
-  // With a screw-nut driver, there is no need to leave the driver on
-  digitalWrite(enablePinA, LOW);
-  digitalWrite(enablePinB, LOW);  
-  delay(1500);
+bool openFingers() {
+  motorSteps(opening_speed,-distance);     
+  delay(100);
 }
 
 
@@ -324,6 +329,20 @@ bool manualForward() {
   // step one step:
   myStepper.step(1);
   delay(500);
+}
+
+
+void motorSteps(int stp_speed, int stp_distance){    
+  digitalWrite(enablePinA, HIGH);
+  digitalWrite(enablePinB, HIGH);     
+   
+  myStepper.setSpeed(stp_speed);
+  myStepper.step(stp_distance);
+  
+  digitalWrite(enablePinA, LOW);
+  digitalWrite(enablePinB, LOW);      
+  delay(100);            
+  
 }
 
 
