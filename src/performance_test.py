@@ -125,7 +125,7 @@ def proxy_picks(gripper):
     # --- Experiment Parameters ---
     n_samples = 10  # starting positions to start gripper's pose
     yaws = [0, 60]
-    offsets = [5 / 1000, 10 / 1000, 15 / 1000, 20 / 1000]
+    offsets = [0/1000, 5 / 1000, 10 / 1000, 15 / 1000, 20 / 1000]
     n_reps = 1  # number of repetitions at each configuration
 
     # --- Uncomment if you need other poses
@@ -168,7 +168,7 @@ def proxy_picks(gripper):
 
         for yaw in yaws:
 
-            yaw -= 15   # Adjustment to have Suction Cup A facing down first
+            yaw -= 5   # Adjustment to have Suction Cup A facing down first
             gripper.yaw = yaw
 
             for offset in offsets:
@@ -219,9 +219,10 @@ def proxy_picks(gripper):
                     gripper.apply_offset(offset, 0, 0, yaw)
 
                     # --- Open Valve (apply vacuum)
-                    print("\n... Applying vacuum")
-                    gripper.publish_event("Vacuum On")
-                    service_call("openValve")               # See *.ino file for more details
+                    if gripper.ACTUATION_MODE != 'fingers':
+                        print("\n... Applying vacuum")
+                        gripper.publish_event("Vacuum On")
+                        service_call("openValve")               # See *.ino file for more details
 
                     # --- Approach Apple
                     print("\n... Approaching apple")
@@ -350,6 +351,7 @@ class RoboticGripper():
         self.SUCTION_CUP_NAME = "F-BX20 Silicone"
         self.SUCTION_CUP_GIVE = 0.010
         self.SUCTION_CUP_RADIUS = 0.021 / 2
+        self.PRESSURE_THRESHOLD = 600
         self.YAW_OFFSET = math.radians(15)      # In order for the x-axis to be aligned with suction cup B and C
         self.GRIPPER_TRACKS = "v8 70_80"
         self.ACTUATION_MODE = "dual"
@@ -901,9 +903,17 @@ class RoboticGripper():
             self.move_group.execute(plan, wait=False)
             close = False
             cnt = 0
+            airp_thr = self.PRESSURE_THRESHOLD
             while close is False:
                 rospy.sleep(.1)  # Sleep .1 second
-                if cnt == 50 or (self.ps2 < 500 and self.ps3 < 500):
+                thr_cnt = 0
+
+                # Check if air-pressure sensors are below the threshold
+                for i in [self.ps1, self.ps2, self.ps3]:
+                    if i < airp_thr:
+                        thr_cnt += 1
+                # Stop approach when one of these conditions is met
+                if cnt == 50 or thr_cnt >= 2:
                     self.move_group.stop()
                     close = True
                 print(cnt, self.ps1, self.ps2, self.ps3)
