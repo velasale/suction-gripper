@@ -224,7 +224,7 @@ def proxy_picks(gripper):
                         gripper.publish_event("Vacuum On")
                         service_call("openValve")               # See *.ino file for more details
 
-                    # --- Approach Apple
+                    # --- Approach Apple ---
                     print("\n... Approaching apple")
                     gripper.publish_event("Approach")
                     move = gripper.move_normal(gripper.APPROACH, speed_factor=0.1, condition=True)
