@@ -126,6 +126,7 @@ def proxy_picks(gripper):
     n_samples = 10  # starting positions to start gripper's pose
     yaws = [0, 60]
     offsets = [0/1000, 5 / 1000, 10 / 1000, 15 / 1000, 20 / 1000, 25/1000]
+    # offsets = [20 / 1000, 25 / 1000]
     n_reps = 1  # number of repetitions at each configuration
 
     # --- Uncomment if you need other poses
@@ -155,7 +156,7 @@ def proxy_picks(gripper):
     apples_to_pick = len(gripper.x_coord)
 
     # --- Sample points on a sphere around the apple
-    for sample in range(3, apples_to_pick-1):
+    for sample in range(4, apples_to_pick-1):
 
         gripper.sample = sample
 
