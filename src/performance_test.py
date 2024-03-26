@@ -125,13 +125,14 @@ def proxy_picks(gripper):
     # --- Experiment Parameters ---
     n_samples = 10  # starting positions to start gripper's pose
     yaws = [0, 60]
-    offsets = [0/1000, 5 / 1000, 10 / 1000, 15 / 1000, 20 / 1000]
+    offsets = [0/1000, 5 / 1000, 10 / 1000, 15 / 1000, 20 / 1000, 25/1000]
     n_reps = 1  # number of repetitions at each configuration
 
     # --- Uncomment if you need other poses
     yaws = [60]
     # offsets = [5/1000, 10/1000]
     # offsets = [0 / 1000]
+    # offsets = [25/1000]
 
     cart_noises = [0, 5/1000, 10/1000, 15/1000, 20/1000]
     ang_noises = [0, 5, 10, 15, 20]
@@ -154,7 +155,7 @@ def proxy_picks(gripper):
     apples_to_pick = len(gripper.x_coord)
 
     # --- Sample points on a sphere around the apple
-    for sample in range(0, apples_to_pick-1):
+    for sample in range(3, apples_to_pick-1):
 
         gripper.sample = sample
 
@@ -196,7 +197,7 @@ def proxy_picks(gripper):
                                            "experiment_steps",
                                            "/gripper/distance",
                                            "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3",
-                                           "/usb_cam/image_raw",
+                                           # "/usb_cam/image_raw",
                                            "/camera/image_raw"]
 
                     topics_without_cameras = ["wrench", "joint_states",
@@ -204,7 +205,7 @@ def proxy_picks(gripper):
                                               "/gripper/distance",
                                               "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3"]
 
-                    command, rosbag_process = start_rosbag(filename, topics_with_cameras)
+                    command, rosbag_process = start_rosbag(filename, topics_without_cameras)
                     print("\n... Start recording Rosbag")
                     time.sleep(0.2)
 
@@ -227,7 +228,12 @@ def proxy_picks(gripper):
                     # --- Approach Apple ---
                     print("\n... Approaching apple")
                     gripper.publish_event("Approach")
-                    move = gripper.move_normal(gripper.APPROACH, speed_factor=0.1, condition=True)
+                    if gripper.ACTUATION_MODE != 'fingers':
+                        # distance = gripper.APPROACH
+                        distance = 0.02
+                    else:
+                        distance = 0.02
+                    move = gripper.move_normal(distance, speed_factor=0.1, condition=True)
                     # todo: should we stop saving rosbag to avoid wasting space during labeling?
 
                     # --- Label cup engagement
@@ -255,7 +261,7 @@ def proxy_picks(gripper):
 
                     # --- Open Fingers
                     if gripper.ACTUATION_MODE != 'suction':
-                        input('Hit Enter to open the fingers')
+                        # input('Hit Enter to open the fingers')
                         gripper.publish_event("Opening fingers")
                         service_call("openFingers")
                         time.sleep(0.05)
@@ -345,7 +351,6 @@ class RoboticGripper():
         self.sample = 0
         self.repetition = 0
 
-
         # ---- Gripper Parameters
         # Source https://www.piab.com/inriverassociations/0206204/#specifications
         self.SUCTION_CUP_NAME = "F-BX20 Silicone"
@@ -367,7 +372,7 @@ class RoboticGripper():
         self.MAGNET_FORCE_LEVEL = 'high'
         self.APPLE_SOUTH_POLE_COORD = []
         self.APPLE_NORTH_POLE_COORD = []
-        self.ABCISSION_LAYER_COORD = []
+        self.ABSCISSION_LAYER_COORD = []
 
 
         # ---- Noise variables
@@ -848,9 +853,10 @@ class RoboticGripper():
         print("(b) Un-successful: Apple picked but apple it fell afterwards")
         print("(c) Un-successful: Apple not picked")
         print("(d) Successful pick: before pick pattern ")
+        print("(e) Successful pick: apple tweaked while closing fingers")
 
         result = ''
-        while (result != 'a' and result != 'b' and result != 'c' and result != 'd'):
+        while (result != 'a' and result != 'b' and result != 'c' and result != 'd' and result != 'e'):
             result = input()
         self.pick_result = result
 
@@ -1314,12 +1320,12 @@ class RoboticGripper():
         self.APPLE_NORTH_POLE_COORD = self.scan_point()
 
         input("--- Place probe at stem's abcission layer, hit ENTER when ready.")
-        self.ABCISSION_LAYER_COORD = self.scan_point()
+        self.ABSCISSION_LAYER_COORD = self.scan_point()
 
         print("The point are: ")
         print(self.APPLE_SOUTH_POLE_COORD)
         print(self.APPLE_NORTH_POLE_COORD)
-        print(self.ABCISSION_LAYER_COORD)
+        print(self.ABSCISSION_LAYER_COORD)
 
         input("Hit Enter to check the vacuum line")
 
@@ -1410,7 +1416,7 @@ def real_picks(gripper=RoboticGripper()):
         gripper.APPLE_HEIGHT = float(apple_coords[2])
         gripper.APPLE_SOUTH_POLE_COORD = slist_into_flist(apple_coords[3])
         gripper.APPLE_NORTH_POLE_COORD = slist_into_flist(apple_coords[4])
-        gripper.ABCISSION_LAYER_COORD = slist_into_flist(apple_coords[5])
+        gripper.ABSCISSION_LAYER_COORD = slist_into_flist(apple_coords[5])
         center = np.mean([gripper.APPLE_NORTH_POLE_COORD, gripper.APPLE_SOUTH_POLE_COORD], axis=0)
 
         # --- Calculate the angles of the apple
