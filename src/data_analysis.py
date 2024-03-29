@@ -271,7 +271,7 @@ def read_json(file):
         json_data = json.load(json_file)
 
         # Create Experiment as Object
-        experiment = Experiment()
+        experiment = ApplePickTrial()
 
         # Add metadata as attributes
         experiment.file_source = file
@@ -627,7 +627,7 @@ def plot_and_video():
     filename = '2023111_realapple24_mode_dual_attempt_1_orientation_0_yaw_0'
 
     # --- 3. Create Experiment Object
-    experiment = Experiment()
+    experiment = ApplePickTrial()
 
     # --- 4. Assign json dictionary as property of the experiment
     json_file = open(location + filename + '.json')
@@ -646,12 +646,15 @@ def plot_and_video():
     plt.show()
 
 
-def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel):
+def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plot_type='bandgap'):
 
     # Axes limits
     xmin = min(variable_list)
     xmax = max(variable_list)
-    colors = ['blue', 'green', 'red']
+    colors = ['green', 'red', 'blue', 'black']
+    markers = ['o', 'v', '^', '<', '>']
+    linestyles = ['dashed', 'dashdot', 'dotted', 'solid']
+
 
     # Experiment number
     exp_number = location.split('/experiment')[1]
@@ -662,12 +665,13 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel):
     stepses = []
     good_picks = []
     suction_picks = []
+    max_forces_data = []
 
     # Create figure
     fig = plt.figure()
     exp_prefix = 'loremipsum'
 
-    for mode, tag, color in zip(gripper_modes, tags, colors):
+    for mode, tag, color, marker, style in zip(gripper_modes, tags, colors, markers, linestyles):
         print('\nMode: ', mode)
         stepses = []
         mean_max_forces = []
@@ -682,6 +686,8 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel):
 
                 # exp_prefix = 'delta_' + str(steps) + '_' + (tag) + '_rep' + str(rep)
                 # exp_prefix = tag + '_dist_' + str(steps) + '_rep' + str(rep)
+
+                # Concatenate filename depending on each experiment
 
                 if exp_number == 8:
                     exp_prefix = 'exp(pullBack)_mode(' + tag + ')_dist(58)_speed(' + str(steps) + ')_rep' + str(rep)
@@ -698,6 +704,9 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel):
                 if exp_number == 10:
                     exp_prefix = 'exp(pullBack)_mode(' + tag + ')_angle(' + str(steps) + ')_rep' + str(rep)
 
+                if exp_number == 11:
+                    exp_prefix = 'exp(pullBackMoment)_mode(' + tag + ')_rep' + str(rep)
+
                 max_pull = 'Nan'
 
                 for file in sorted(os.listdir(location)):
@@ -710,6 +719,7 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel):
 
                         # # Plot time series
                         # plt.plot(trial_df['Travel [mm]'], trial_df['Load [N]'])
+                        # plt.plot(trial_df['Time'], trial_df['Load [N]'])
                         # plt.title(file)
                         # plt.grid()
                         # plt.show()
@@ -730,28 +740,31 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel):
             mean_max_forces.append(abs(np.mean(max_forces)))
             sdv_max_forces.append(abs(np.std(max_forces)))
 
+            max_forces_data.append(max_forces)
+
         print('\n', mode)
         print(stepses)
         print(mean_max_forces)
 
-        # Plot each mode series with a band gap
-        if tag == 'suction' or tag == 'V':
+        if plot_type == 'bandgap':
+            # Plot each mode series with a band gap
+            if tag == 'suction' or tag == 'V':
 
-            print('Suction Pick Forces:', suction_picks)
-            mean_suction_force = np.mean(suction_picks)
-            sdv_suction_force = np.std(suction_picks)
-            lows = np.subtract(mean_suction_force, sdv_suction_force)
-            highs = np.add(mean_suction_force, sdv_suction_force)
-            plt.hlines(y=mean_suction_force, xmin=xmin, xmax=xmax, linestyles='-', lw=1,
-                       label='Suction cup force [N]')
-            plt.fill_between(variable_list, lows, highs, alpha=.2)
+                print('Suction Pick Forces:', suction_picks)
+                mean_suction_force = np.mean(suction_picks)
+                sdv_suction_force = np.std(suction_picks)
+                lows = np.subtract(mean_suction_force, sdv_suction_force)
+                highs = np.add(mean_suction_force, sdv_suction_force)
+                plt.hlines(y=mean_suction_force, xmin=xmin, xmax=xmax, linestyles=style, lw=1,
+                           label='Suction cup force [N]')
+                plt.fill_between(variable_list, lows, highs, alpha=.2)
 
-        else:
-            if len(max_forces) > 0:
-                lows = np.add(mean_max_forces, sdv_max_forces)
-                highs = np.subtract(mean_max_forces, sdv_max_forces)
-                plt.plot(stepses, mean_max_forces, 'o-', label=mode, color=color)
-                plt.fill_between(stepses, lows, highs, alpha=.2, color=color)
+            else:
+                if len(max_forces) > 0:
+                    lows = np.add(mean_max_forces, sdv_max_forces)
+                    highs = np.subtract(mean_max_forces, sdv_max_forces)
+                    plt.plot(stepses, mean_max_forces, linestyle=style, label=mode, color=color, marker=marker)
+                    plt.fill_between(stepses, lows, highs, alpha=.2, color=color)
 
     # Note: Just for Experiment 2 -- Plot the force at which the magnet releases
     if len(good_picks) > 0:
@@ -763,22 +776,54 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel):
                    label='Magnet release force [N]', color='red')
         plt.fill_between(stepses, lows, highs, color='red', alpha=.2)
 
-    # Plot median detachment force
-    plt.hlines(y=16, xmin=xmin, xmax=xmax, linestyles='--', lw=2, label='Median Detachment Force', color='k')
-    # Plot suction force
-    plt.hlines(y=12, xmin=xmin, xmax=xmax, linestyles='--', lw=2, label='Average Suction Force')
+    if plot_type == 'bandgap':
+        # Plot median detachment force
+        plt.hlines(y=16, xmin=xmin, xmax=xmax, linestyle='--', lw=2, label='Median Detachment Force', color='k')
+
+
+    # Read suction reference values
+    suction_folder = ('C:/Users/avela/Dropbox/03 Temporal/03 Research/data/Mark10_experiments/'
+                      'suction_reference_values/')
+    max_forces = []
+    for file in sorted(os.listdir(suction_folder)):
+        trial_df = pd.read_excel(suction_folder + file, index_col=0)
+        # # Plot time series
+        # plt.plot(trial_df['Travel [mm]'], trial_df['Load [N]'])
+        # plt.plot(trial_df['Time'], trial_df['Load [N]'])
+        # plt.title(file)
+        # plt.grid()
+        # plt.show()
+
+        max_pull = abs(min(trial_df['Load [N]']))
+        # print('Max pull force: ', max_pull)
+        max_forces.append(max_pull)
+    print('Suction Max Forces: ', max_forces)
+    print('Suction Mean Max Forces: ', abs(np.mean(max_forces)))
+    print('Suction Sdv Max Forces: ', abs(np.std(max_forces)))
+    mean_pick_force = np.mean(max_forces)
+    sdv_pick_force = np.std(max_forces)
+    lows = np.subtract(mean_pick_force, sdv_pick_force)
+    highs = np.add(mean_pick_force, sdv_pick_force)
+    plt.hlines(y=mean_pick_force, xmin=xmin, xmax=xmax, linestyles='--', lw=1,
+               label='Suction-cups', color='blue')
+    plt.fill_between(stepses, lows, highs, color='blue', alpha=.2)
+
+
+    if plot_type == 'barplot':
+        plt.boxplot(max_forces_data)
+    else:
+        plt.legend()
 
     plt.grid()
     plt.ylim([0, 50])
-    plt.legend()
     plt.xlabel(xlabel)
     plt.ylabel('Force [N]')
     plt.title('Gripper pulling force [N] vs ' + xlabel)
 
 
-# ----------------------- MAIN CLASS FOR EXPERIMENTS ------------------------------------
-class Experiment:
-    """Class to define an Experiment as an Object. Each experiment has properties from its json file.
+# ----------------------- MAIN CLASS FOR TRIALS ------------------------------------
+class ApplePickTrial:
+    """Class to define a Trial as an Object. Each Trial has properties from its json file.
     """
     def __init__(self, metadata,
                  id=0, apple_id=0,
@@ -2484,7 +2529,7 @@ def simple_suction_experiment():
     plt.show()
 
 
-def proxy_experiments():
+def proxy_trials():
 
     # STEP A: Data Location
     # folder = '/home/alejo/gripper_ws/src/suction-gripper/data/'   # Default Hard Drive
@@ -2534,7 +2579,7 @@ def proxy_experiments():
     json_file = open(location + file + '.json')
     json_data = json.load(json_file)
     metadata = json_data
-    experiment = Experiment(metadata=metadata)
+    experiment = ApplePickTrial(metadata=metadata)
 
     print(experiment.metadata['general'])
 
@@ -2550,7 +2595,7 @@ def proxy_experiments():
     plt.show()
 
 
-def real_experiments():
+def real_trials():
 
     # STEP A: Data Location
     # TODO: detect machine
@@ -2611,7 +2656,7 @@ def real_experiments():
                 # STEP 2: Generate an experiment object for each file, and read its json file
                 json_file = open(location + file + '.json')
                 json_data = json.load(json_file)
-                experiment = Experiment(apple_id=apple_id, metadata=json_data)
+                experiment = ApplePickTrial(apple_id=apple_id, metadata=json_data)
                 experiment.filename = file
                 logging.debug('metadata: %s' %experiment.metadata['general'])
 
@@ -2818,15 +2863,15 @@ def orthogonal_load_cell_experiments():
     plt.legend()
     plt.ylim([0, 35])
 
-    plt.show()
+    # plt.show()
 
 
 def mark10_pullback_experiments():
 
     # Step 1 - Location
     # folder = '/home/alejo/Downloads/Mark10_experiments-20240309T010320Z-001/Mark10_experiments/'    # ArmFarm laptop
-    folder = '/home/alejo/Dropbox/03 Temporal/03 Research/data/Mark10_experiments/'     # ArmFarm laptop
-    # folder = 'C:/Users/avela/Dropbox/03 Temporal/03 Research/data/Mark10_experiments/'  # Personal Laptop
+    # folder = '/home/alejo/Dropbox/03 Temporal/03 Research/data/Mark10_experiments/'     # ArmFarm laptop
+    folder = 'C:/Users/avela/Dropbox/03 Temporal/03 Research/data/Mark10_experiments/'  # Personal Laptop
 
 
     # --- Fake Apple / Pull-back trials at 0 degrees ---
@@ -2841,7 +2886,6 @@ def mark10_pullback_experiments():
     # tags = ['V', 'F', 'VF']
     # steps_list = [1325, 1350, 1375, 1400]
 
-
     # ---- EQUATOR OFFSET ----
     # subfolder = 'experiment5_pullingLoad_fixedApple_distanced/'
     # exp_prefix = tag + '_dist_' + str(steps) + '_rep' + str(rep)
@@ -2851,8 +2895,8 @@ def mark10_pullback_experiments():
 
     # ---- CLAMPING SPEED ----
     mark10_plots(folder + 'experiment8_pullBack_fixedApple_fingerSpeed/',
-                 ['suction', 'fingers', 'dual'],
-                 ['Suction cups', 'Fingers', 'Dual'],
+                 ['fingers', 'dual'],
+                 ['Fingers', 'Dual'],
                  [140, 190, 240, 290, 340],
                  10,
                  'Nut-Travel speed [rpm]'
@@ -2860,8 +2904,8 @@ def mark10_pullback_experiments():
 
     # ---- NUT TRAVEL DISTANCE ----
     mark10_plots(folder + 'experiment7_pullBack_fixedApple_fingerDistance/',
-                 ['suction', 'fingers', 'dual'],
-                 ['Suction cups', 'Fingers', 'Dual'],
+                 ['fingers', 'dual'],
+                 ['Fingers', 'Dual'],
                  [52, 54, 56, 58],
                  10,
                  'Nut-Travel distance [mm]'
@@ -2869,8 +2913,8 @@ def mark10_pullback_experiments():
 
     # ---- EQUATOR OFFSET ----
     mark10_plots(folder + 'experiment9_pullBack_fixedApple_equatorOffset/',
-                 ['suction', 'fingers', 'dual'],
-                 ['Suction cups', 'Fingers', 'Dual'],
+                 ['fingers', 'dual'],
+                 ['Fingers', 'Dual'],
                  [0, 5, 10, 15, 20],
                  10,
                  'Equator Offset [mm]'
@@ -2878,14 +2922,24 @@ def mark10_pullback_experiments():
 
     # ---- ANGLES ----
     mark10_plots(folder + 'experiment10_pullBack_angled/',
-                 ['suction', 'fingers', 'dual'],
-                 ['Suction cups', 'Fingers', 'Dual'],
+                 ['fingers', 'dual', 'suction'],
+                 ['Fingers', 'Dual', 'Suction cups'],
                  [0, 15, 30, 45],
                  10,
                  'Angle between pulling force and gripper [deg]'
                  )
 
-    plt.show()
+    # ---- MOMENTS ----
+    mark10_plots(folder + 'experiment11_pullBack_moment/',
+                 ['fingers', 'dual', 'suction'],
+                 ['Fingers', 'Dual', 'Suction cups'],
+                 [0],
+                 10,
+                 '---',
+                 plot_type='barplot'
+                 )
+
+    # plt.show()
 
 
 def main():
@@ -2902,9 +2956,9 @@ def main():
     variable = 'pressure'  # switch between force, pressure and zforce
     # noise_experiments_pitch(exp_type='horizontal', radius=radius, variable=variable)
     # simple_suction_experiment()
-    proxy_experiments()
+    proxy_trials()
 
-    # real_experiments()
+    # real_trials()
 
     # --- Build video from pngs and a plot beside of it with a vertical line running ---
     # plot_and_video()
@@ -2917,6 +2971,9 @@ def main():
 
 if __name__ == '__main__':
     # main()
-    mark10_pullback_experiments()
-    # orthogonal_load_cell_experiments()
 
+    orthogonal_load_cell_experiments()
+    mark10_pullback_experiments()
+
+
+    plt.show()
