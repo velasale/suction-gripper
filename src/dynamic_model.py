@@ -1,6 +1,22 @@
 import math
 import matplotlib.pyplot as plt
 
+plt.rcParams["font.family"] = "serif"
+plt.rcParams["font.serif"] = ["Times New Roman"]
+
+# --- Plot Font Sizes ---
+SMALL_SIZE = 12
+MEDIUM_SIZE = 14
+BIGGER_SIZE = 16
+
+plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
+plt.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title
+plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
+plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
+plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
+
 # --- Cam Mechanism Parameters ---
 a = 12.13
 b = 18.5
@@ -52,7 +68,7 @@ for i in range(150):
     y.append(ratio)
     # print(d, alfa_deg, ratio)
 
-
+fig = plt.figure()
 plt.plot(x, y, c='r')
 plt.xlabel('nut travel distance [mm]')
 plt.ylabel('Force transmission ratio Fout/Fnut')
