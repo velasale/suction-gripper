@@ -41,6 +41,7 @@ L = pitch * starts          # pitch [m]
 efficiency = 0.125
 
 F_nut = (2 * T / d_m) * (math.pi * d_m * beta - mu * L) / (math.pi * mu * d_m + L * beta) * efficiency
+print(F_nut)
 
 x = []
 y = []
