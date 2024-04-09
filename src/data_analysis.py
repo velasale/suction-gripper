@@ -648,12 +648,16 @@ def plot_and_video():
 
 def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plot_type='bandgap'):
 
+    # Plot font
+    plt.rcParams["font.family"] = "serif"
+    plt.rcParams["font.serif"] = ["Times New Roman"]
+
     # Axes limits
     xmin = min(variable_list)
     xmax = max(variable_list)
     colors = ['green', 'red', 'blue', 'black']
     markers = ['o', 'v', '^', '<', '>']
-    linestyles = ['dashed', 'dashdot', 'dotted', 'solid']
+    linestyles = ['dotted', 'dashdot','--', 'solid']
 
 
     # Experiment number
@@ -750,23 +754,22 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plo
 
         if plot_type == 'bandgap':
             # Plot each mode series with a band gap
-            if tag == 'suction' or tag == 'V':
-
-                print('Suction Pick Forces:', suction_picks)
-                mean_suction_force = np.mean(suction_picks)
-                sdv_suction_force = np.std(suction_picks)
-                lows = np.subtract(mean_suction_force, sdv_suction_force)
-                highs = np.add(mean_suction_force, sdv_suction_force)
-                plt.hlines(y=mean_suction_force, xmin=xmin, xmax=xmax, linestyles=style, lw=1,
-                           label='Suction cup force [N]')
-                plt.fill_between(variable_list, lows, highs, alpha=.2)
-
-            else:
-                if len(max_forces) > 0:
-                    lows = np.add(mean_max_forces, sdv_max_forces)
-                    highs = np.subtract(mean_max_forces, sdv_max_forces)
-                    plt.plot(stepses, mean_max_forces, linestyle=style, label=mode, color=color, marker=marker, lw=1)
-                    plt.fill_between(stepses, lows, highs, alpha=.2, color=color)
+            # if tag == 'suction' or tag == 'V':
+            #     print('Suction Pick Forces:', suction_picks)
+            #     mean_suction_force = np.mean(suction_picks)
+            #     sdv_suction_force = np.std(suction_picks)
+            #     lows = np.subtract(mean_suction_force, sdv_suction_force)
+            #     highs = np.add(mean_suction_force, sdv_suction_force)
+            #     plt.hlines(y=mean_suction_force, xmin=xmin, xmax=xmax, linestyles=style, lw=1, color=color,
+            #                label='Suction cup force [N]')
+            #     plt.fill_between(variable_list, lows, highs, alpha=.2)
+            #
+            # else:
+            # if len(max_forces) > 0:
+            lows = np.add(mean_max_forces, sdv_max_forces)
+            highs = np.subtract(mean_max_forces, sdv_max_forces)
+            plt.plot(stepses, mean_max_forces, linestyle=style, label=mode, color=color, marker=marker, lw=1)
+            plt.fill_between(stepses, lows, highs, alpha=.2, color=color)
 
     # Note: Just for Experiment 2 -- Plot the force at which the magnet releases
     if len(good_picks) > 0:
@@ -782,33 +785,33 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plo
         # Plot median detachment force
         plt.hlines(y=16, xmin=xmin, xmax=xmax, linestyle='--', lw=2, label='Median Detachment Force', color='k')
 
-
     # Read suction reference values
-    suction_folder = ('C:/Users/avela/Dropbox/03 Temporal/03 Research/data/Mark10_experiments/'
-                      'suction_reference_values/')
-    max_forces = []
-    for file in sorted(os.listdir(suction_folder)):
-        trial_df = pd.read_excel(suction_folder + file, index_col=0)
-        # # Plot time series
-        # plt.plot(trial_df['Travel [mm]'], trial_df['Load [N]'])
-        # plt.plot(trial_df['Time'], trial_df['Load [N]'])
-        # plt.title(file)
-        # plt.grid()
-        # plt.show()
+    if 'suction' not in tags:
+        suction_folder = ('C:/Users/avela/Dropbox/03 Temporal/03 Research/data/Mark10_experiments/'
+                          'suction_reference_values/')
+        max_forces = []
+        for file in sorted(os.listdir(suction_folder)):
+            trial_df = pd.read_excel(suction_folder + file, index_col=0)
+            # # Plot time series
+            # plt.plot(trial_df['Travel [mm]'], trial_df['Load [N]'])
+            # plt.plot(trial_df['Time'], trial_df['Load [N]'])
+            # plt.title(file)
+            # plt.grid()
+            # plt.show()
 
-        max_pull = abs(min(trial_df['Load [N]']))
-        # print('Max pull force: ', max_pull)
-        max_forces.append(max_pull)
-    print('Suction Max Forces: ', max_forces)
-    print('Suction Mean Max Forces: ', abs(np.mean(max_forces)))
-    print('Suction Sdv Max Forces: ', abs(np.std(max_forces)))
-    mean_pick_force = np.mean(max_forces)
-    sdv_pick_force = np.std(max_forces)
-    lows = np.subtract(mean_pick_force, sdv_pick_force)
-    highs = np.add(mean_pick_force, sdv_pick_force)
-    plt.hlines(y=mean_pick_force, xmin=xmin, xmax=xmax, linestyles='--', lw=1,
-               label='Suction-cups', color='blue')
-    plt.fill_between(stepses, lows, highs, color='blue', alpha=.2)
+            max_pull = abs(min(trial_df['Load [N]']))
+            # print('Max pull force: ', max_pull)
+            max_forces.append(max_pull)
+        print('Suction Max Forces: ', max_forces)
+        print('Suction Mean Max Forces: ', abs(np.mean(max_forces)))
+        print('Suction Sdv Max Forces: ', abs(np.std(max_forces)))
+        mean_pick_force = np.mean(max_forces)
+        sdv_pick_force = np.std(max_forces)
+        lows = np.subtract(mean_pick_force, sdv_pick_force)
+        highs = np.add(mean_pick_force, sdv_pick_force)
+        plt.hlines(y=mean_pick_force, xmin=xmin, xmax=xmax, linestyles='--', lw=1,
+                   label='Suction-cups', color='blue')
+        plt.fill_between(stepses, lows, highs, color='blue', alpha=.2)
 
     if plot_type == 'barplot':
         plt.boxplot(max_forces_data, labels=gripper_modes)
@@ -2903,44 +2906,44 @@ def mark10_pullback_experiments():
     #              'Nut-Travel speed [rpm]'
     #              )
     #
-    # # ---- NUT TRAVEL DISTANCE ----
-    # mark10_plots(folder + 'experiment7_pullBack_fixedApple_fingerDistance/',
-    #              ['fingers', 'dual'],
-    #              ['Fingers', 'Dual'],
-    #              [52, 54, 56, 58],
-    #              10,
-    #              'Nut-Travel distance [mm]'
-    #              )
-    #
-    # # ---- EQUATOR OFFSET ----
-    # mark10_plots(folder + 'experiment9_pullBack_fixedApple_equatorOffset/',
-    #              ['fingers', 'dual'],
-    #              ['Fingers', 'Dual'],
-    #              [0, 5, 10, 15, 20],
-    #              10,
-    #              'Equator Offset [mm]'
-    #              )
-    #
-    # # ---- ANGLES ----
-    # mark10_plots(folder + 'experiment10_pullBack_angled/',
-    #              ['fingers', 'dual', 'suction'],
-    #              ['Fingers', 'Dual', 'Suction cups'],
-    #              [0, 15, 30, 45],
-    #              10,
-    #              'Angle between pulling force and gripper [deg]'
-    #              )
-
-    # ---- MOMENTS ----
-    mark10_plots(folder + 'experiment11_pullBack_moment/',
-                 ['suction', 'fingers', 'dual'],
-                 ['Suction cups', 'Fingers', 'Dual'],
-                 [0],
+    # ---- NUT TRAVEL DISTANCE ----
+    mark10_plots(folder + 'experiment7_pullBack_fixedApple_fingerDistance/',
+                 ['fingers', 'dual'],
+                 ['Fingers', 'Dual'],
+                 [52, 54, 56, 58],
                  10,
-                 'Actuation mode',
-                 plot_type='barplot'
+                 'Nut-Travel distance [mm]'
                  )
 
-    # plt.show()
+    # ---- EQUATOR OFFSET ----
+    mark10_plots(folder + 'experiment9_pullBack_fixedApple_equatorOffset/',
+                 ['fingers', 'dual'],
+                 ['Fingers', 'Dual'],
+                 [0, 5, 10, 15, 20],
+                 10,
+                 'Equator Offset [mm]'
+                 )
+
+    # ---- ANGLES ----
+    mark10_plots(folder + 'experiment10_pullBack_angled/',
+                 ['fingers', 'dual', 'suction'],
+                 ['Fingers', 'Dual', 'Suction cups'],
+                 [0, 15, 30, 45],
+                 10,
+                 'Angle between pulling force and gripper [deg]'
+                 )
+
+    # # ---- MOMENTS ----
+    # mark10_plots(folder + 'experiment11_pullBack_moment/',
+    #              ['suction', 'fingers', 'dual'],
+    #              ['Suction cups', 'Fingers', 'Dual'],
+    #              [0],
+    #              10,
+    #              'Actuation mode',
+    #              plot_type='barplot'
+    #              )
+
+    plt.show()
 
 
 def main():
