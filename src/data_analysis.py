@@ -134,8 +134,9 @@ def locate_index_of_deltas_v2(data, intercept=0.5):
 
         previous = data[i]
 
-
-    print('\nPOIs: ', POIS_plus, POIS_minus,'\n')
+    print('For the intercept: ', intercept)
+    print('\nPOIs of positive deltas: ', POIS_plus)
+    print('POIs of negative deltas: ', POIS_minus,'\n')
 
     return POIS_plus, POIS_minus
 
@@ -2789,7 +2790,8 @@ def orthogonal_load_cell_experiments():
     folder = 'C:/Users/avela/Dropbox/03 Temporal/03 Research/data/Mark10_experiments/'      # Personal Laptop
 
     # subfolder = 'experiment1_orthogonalLoad/'
-    subfolder = 'experiment6_orthogonalLoad_accelStepper/'
+    # subfolder = 'experiment6_orthogonalLoad_accelStepper/'
+    subfolder = 'experiment12_orthogonalLoad/'
 
     folder = folder + subfolder
 
@@ -2864,6 +2866,83 @@ def orthogonal_load_cell_experiments():
     print(thr_force)
     # plt.hlines(y=thr_force, xmin=1285, xmax=1425, linestyles='--', lw=2, label='Apple Bruising threshold')
     plt.hlines(y=thr_force, xmin=52, xmax=60, linestyles='--', lw=2, label='Apple Bruising threshold')
+    plt.legend()
+    plt.ylim([0, 35])
+
+    # plt.show()
+
+
+def push_load_cell_experiments():
+    # Step 1 - Location
+    # folder = '/home/alejo/Downloads/Mark10_experiments-20240227T171746Z-001/Mark10_experiments/experiment1_orthogonalLoad/'
+    folder = 'C:/Users/avela/Dropbox/03 Temporal/03 Research/data/Mark10_experiments/'      # Personal Laptop
+
+    # subfolder = 'experiment1_orthogonalLoad/'
+    # subfolder = 'experiment6_orthogonalLoad_accelStepper/'
+    subfolder = 'experiment12_orthogonalLoad/'
+
+    location = folder + subfolder
+
+    mean_max_forces = []
+    std_max_forces = []
+    max_vals = []
+
+    max_ortho = 'Nan'
+
+    for file in sorted(os.listdir(location)):
+
+        if file.startswith('f'):
+            print(file)
+
+            # Step 3: Open file and turn into dataframe
+            trial_df = pd.read_excel(location + file, index_col=0)
+
+            load_list = trial_df['Load [N]'].tolist()
+
+            # plt.plot(load_list)
+            filtered_data = median_filter(load_list, 20)
+            # plt.plot(filtered_data)
+            # plt.show()
+
+            # Step 4: Check for POI's
+            max_ortho = max(filtered_data)
+            pois_pos, pois_neg = locate_index_of_deltas_v2(filtered_data, max_ortho*0.25)
+            cycles = len(pois_pos)
+            print('Number of cycles: ', cycles)
+
+            # Step 5: Take the max values from each cycle
+
+            n_points = trial_df.shape[0]
+
+            for i in range(cycles):
+                start = pois_pos[i]
+                try:
+                    end = pois_neg[i]
+                except IndexError:
+                    end = n_points
+
+                max_val = max(filtered_data[start : end])
+                max_vals.append(max_val)
+
+            print('Max values', max_vals)
+
+        plt.boxplot(max_vals)
+
+    plt.grid()
+
+    plt.xlabel('Nut travel distance [mm]')
+    plt.ylabel('Force [N]')
+    plt.title('Normal Force from each finger [N]')
+
+    # Plot the apple bruising threshold
+    thr_press = 0.29e6    # Pa (Li et al. 2016)
+    finger_width = 20   # mm
+    thr_force = thr_press * (10 ** 2)/1e6
+    print(thr_force)
+    # plt.hlines(y=thr_force, xmin=1285, xmax=1425, linestyles='--', lw=2, label='Apple Bruising threshold')
+
+    # plt.hlines(y=thr_force, xmin=52, xmax=60, linestyles='--', lw=2, label='Apple Bruising threshold')
+
     plt.legend()
     plt.ylim([0, 35])
 
@@ -2977,7 +3056,8 @@ if __name__ == '__main__':
     # main()
 
     # orthogonal_load_cell_experiments()
-    mark10_pullback_experiments()
+    # mark10_pullback_experiments()
 
+    push_load_cell_experiments()
 
     plt.show()

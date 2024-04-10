@@ -33,12 +33,14 @@ T = 0.4                     # N.m
 pitch = 2/1000              # [m]
 starts = 4
 diameter = 8/1000           # [m]
-mu = 0.25                   # Nut material: Brass
+mu = 0.20                   # Brass (Nut material) and Steel (Screw material)
 beta = 0.968                # ACME Thread geometry parameter  = cos(14.5deg)
 d_m = diameter - pitch/2    # mean diameter[m]
 L = pitch * starts          # pitch [m]
 
-efficiency = 0.125
+print('lead angle [deg]: ', math.degrees(math.atan(L/(math.pi*d_m))))
+
+efficiency = 0.3            # From friction, manufacturing tolerances,
 
 F_nut = (2 * T / d_m) * (math.pi * d_m * beta - mu * L) / (math.pi * mu * d_m + L * beta) * efficiency
 print(F_nut)
@@ -46,6 +48,7 @@ print(F_nut)
 x = []
 y = []
 f_outs = []
+f_outs_per_finger = []
 
 for i in range(150):
 
@@ -65,6 +68,7 @@ for i in range(150):
 
     F_out = F_nut * ratio
     f_outs.append(F_out)
+    f_outs_per_finger.append(F_out/3)
 
     y.append(ratio)
     # print(d, alfa_deg, ratio)
@@ -76,9 +80,21 @@ plt.ylabel('Force transmission ratio Fout/Fnut')
 plt.grid()
 
 fig = plt.figure()
-plt.plot(x, f_outs, c='r')
+plt.plot(x, f_outs, c='r', label='total')
+plt.plot(x, f_outs_per_finger, c='orange', label='per finger (total/3)')
 plt.xlabel('nut travel distance [mm]')
-plt.ylabel('Output Force [N]')
+plt.ylabel('push force [N]')
+
+# Plot apple bruising threshold
+thr_press = 0.29e6  # Pa (Li et al. 2016)
+finger_width = 20  # mm
+thr_force = thr_press * (10 ** 2) / 1e6
+print(thr_force)
+# plt.hlines(y=thr_force, xmin=1285, xmax=1425, linestyles='--', lw=2, label='Apple Bruising threshold')
+plt.hlines(y=thr_force, xmin=min(x), xmax=max(x), linestyles='--', lw=2, label='apple bruising threshold')
+
+plt.ylim([0,50])
+plt.legend()
 plt.grid()
 
 plt.show()
