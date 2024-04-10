@@ -2926,11 +2926,8 @@ def push_load_cell_experiments():
 
             print('Max values', max_vals)
 
-        plt.boxplot(max_vals)
+    plt.boxplot(max_vals)
 
-    plt.grid()
-
-    plt.xlabel('Nut travel distance [mm]')
     plt.ylabel('Force [N]')
     plt.title('Normal Force from each finger [N]')
 
@@ -2942,9 +2939,8 @@ def push_load_cell_experiments():
     # plt.hlines(y=thr_force, xmin=1285, xmax=1425, linestyles='--', lw=2, label='Apple Bruising threshold')
 
     # plt.hlines(y=thr_force, xmin=52, xmax=60, linestyles='--', lw=2, label='Apple Bruising threshold')
-
-    plt.legend()
-    plt.ylim([0, 35])
+    plt.ylim([0, 30])
+    plt.grid()
 
     # plt.show()
 
