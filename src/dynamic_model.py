@@ -43,12 +43,16 @@ print('lead angle [deg]: ', math.degrees(math.atan(L/(math.pi*d_m))))
 efficiency = 0.3            # From friction, manufacturing tolerances,
 
 F_nut = (2 * T / d_m) * (math.pi * d_m * beta - mu * L) / (math.pi * mu * d_m + L * beta) * efficiency
+
+factor = (math.pi * mu * d_m + L * beta) / (math.pi * d_m * beta - mu * L)
+
 print(F_nut)
 
 x = []
 y = []
 f_outs = []
 f_outs_per_finger = []
+T_motors = []
 
 for i in range(150):
 
@@ -63,14 +67,21 @@ for i in range(150):
     gamma = math.acos((c ** 2 + b ** 2 - a ** 2 - d ** 2) / (2 * b * c))
     theta = math.asin(c * math.sin(gamma) / math.sqrt(a ** 2 + d ** 2))
 
-    # --- Force ratio ---
+    # --- Forces ratio ---
     ratio = (c/e) * math.sin(gamma) / math.cos(alfa + theta)
+    y.append(ratio)
 
+    # --- APPROACH 1: Given the Motor Torque, find the output force
     F_out = F_nut * ratio
     f_outs.append(F_out)
     f_outs_per_finger.append(F_out/3)
 
-    y.append(ratio)
+    # --- APPROACH 2: Given the Output Force, find the Motor Torque
+    F_out = 30
+    F_nut = F_out / ratio
+    T = F_nut * d_m * factor / 2
+    T_motors.append(T)
+
     # print(d, alfa_deg, ratio)
 
 fig = plt.figure()
@@ -92,9 +103,14 @@ thr_force = thr_press * (10 ** 2) / 1e6
 print(thr_force)
 # plt.hlines(y=thr_force, xmin=1285, xmax=1425, linestyles='--', lw=2, label='Apple Bruising threshold')
 plt.hlines(y=thr_force, xmin=min(x), xmax=max(x), linestyles='--', lw=2, label='apple bruising threshold')
-
-plt.ylim([0,50])
+plt.ylim([0, 50])
 plt.legend()
+plt.grid()
+
+fig = plt.figure()
+plt.plot(x, T_motors, c='r')
+plt.xlabel('nut travel distance [mm]')
+plt.ylabel('Motor Torque [N.m]')
 plt.grid()
 
 plt.show()
