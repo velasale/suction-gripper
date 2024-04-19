@@ -67,14 +67,14 @@ void loop() {
   if (key == 'u'){
     Serial.println("");
     Serial.println("Moving up");
-    motorSteps(closing_speed_fast, initial_distance);
+    motorSteps(closing_speed_fast, initial_distance,0);
     delay(100);  
-    motorSteps(closing_speed, clamp_distance);  
+    motorSteps(closing_speed, clamp_distance,0);  
   }
   if (key == 'd'){
     Serial.println("");
     Serial.println("Moving down");    
-    motorSteps(opening_speed,-distance);         
+    motorSteps(opening_speed,-distance,0);         
   }
 
 
@@ -82,12 +82,12 @@ void loop() {
   if (key == 'w'){
     Serial.println("");
     Serial.println("Moving one step up");    
-    motorSteps(closing_speed, steps);      
+    motorSteps(closing_speed, steps,0);      
   }
   if (key == 's'){
     Serial.println("");
     Serial.println("Moving one step up");
-    motorSteps(closing_speed, - steps);  
+    motorSteps(closing_speed, - steps,0);  
   }
   
 
@@ -106,7 +106,7 @@ void loop() {
 }
 
 
-void motorSteps(int stp_speed, int stp_distance){    
+void motorSteps(int stp_speed, int stp_distance, int int_delay){    
   digitalWrite(enablePinA, HIGH);
   digitalWrite(enablePinB, HIGH);     
    
@@ -114,6 +114,8 @@ void motorSteps(int stp_speed, int stp_distance){
   stepper.step(stp_distance);
 
   Serial.println("Finished moving");
+
+  delay(int_delay);
 
   digitalWrite(enablePinA, LOW);
   digitalWrite(enablePinB, LOW);      

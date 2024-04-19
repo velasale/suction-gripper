@@ -200,9 +200,9 @@ void setup() {
 
   // Reset MPRLS sensors
   pinMode(RESET_PRESSURE_SENSORS, HIGH);
-  delay(10);
+  delay(1000);
   pinMode(RESET_PRESSURE_SENSORS, LOW);
-  delay(10);  
+  delay(1000);  
   
 
 }
@@ -355,4 +355,5 @@ void pcaselect(uint8_t i) {
   Wire.beginTransmission(PCAADR);
   Wire.write(1 << i);
   Wire.endTransmission();
+  
 }
