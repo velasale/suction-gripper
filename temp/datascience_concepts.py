@@ -8,15 +8,17 @@ def kalman_filter_example():
     # e.g. Altitude sensor of a building with the a constant height
 
     # --- Create a noisy signal
-    size = 1000
+    size = 100
     sigma = 0.2
-    amplitude = 5
+    amplitude = 0.4
     periods = 1
+
     # Constant signal
     voltage = amplitude * np.ones(size)       # Real values
     # Sinusoidal signal
     x = np.linspace(-periods * np.pi, periods * np.pi, size)
     voltage = np.add(5, np.sin(x))
+
     # Measurement Noise
     noise = np.random.normal(0, sigma, size)    # Noisy values
     plt.hist(noise)
@@ -29,31 +31,34 @@ def kalman_filter_example():
     xE.append(0)
     # Error Covariance
     P = []
-    P.append(1)
+    P.append(1)         # Initial error covariance
     # Store K
     Ks = []
 
+    # --- PARAMETERS
     Q = 1e-5            # Process noise covariance
     R = sigma ** 2      # Measurement noise covariance
-    R = 0.001
+    R = 0.0001
+    A = 1               # The signal is a constant value
+    H = 1               # Becuase our measurement is of the state itself.
 
     for i in range(1, size):
-        # Predict
-        error = P[i-1] + Q
+        # --- Time Update: PREDICTION ---
+        prediction_update = xE[-1]
+        error_update = P[i-1] + Q
 
-        # Correct
-        K = error / (error + R)
+        # ---- Measurement Update: CORRECTION ---
+        K = error_update / (error_update + R)
         Ks.append(K)
-        prediction = xE[-1] + K*(meas_list[i]-xE[-1])
+        prediction = prediction_update + K*(meas_list[i]-prediction_update)
         xE.append(prediction)
-
-        new_error = (1-K) * error
-        P.append(new_error)
+        error = (1-K) * error_update
+        P.append(error)
 
     fig = plt.figure()
     plt.plot(meas_list, label='Measurement', marker=".", color='r', linestyle='None', markersize = 2.0)
     plt.plot(xE, label='Filtered signal')
-    plt.plot(voltage, label='Real value')
+    plt.plot(voltage, label='Ground Truth', color='k', linestyle='--')
     plt.plot(Ks, label='Kalman Gain')
     plt.legend()
     # plt.ylim([3, 6])
