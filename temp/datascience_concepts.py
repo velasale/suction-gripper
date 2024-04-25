@@ -2,6 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import random
 
+from sklearn import cluster, datasets, mixture
+
 def kalman_filter_example():
     # Example of measuring a fixed value variable:
     # e.g. Voltage sensor of a power supply set at a constant value
@@ -64,5 +66,60 @@ def kalman_filter_example():
     # plt.ylim([3, 6])
     plt.show()
 
+
+def gmm_example():
+    # Method to demonstrate how Gaussian Mixture Models work
+
+    # Step 0: Generate Ground truth data
+    cluster_1 = np.random.normal(40, 5, 1000)  # Noisy values
+    cluster_2 = np.random.normal(50, 5, 1000)
+    plt.hist(cluster_1)
+    plt.hist(cluster_2)
+
+    X = np.concatenate((cluster_1, cluster_2)).reshape(-1,1)
+    fig = plt.figure()
+    plt.hist(X)
+
+    # plt.show()
+
+    # Step 1: SciKit package
+    gmm = mixture.GaussianMixture(n_components=2, random_state=0).fit(X)
+    means = gmm.means_
+    covariances = gmm.covariances_
+    weights = gmm.weights_
+
+    fig = plt.figure()
+    # Plot individual PDFs
+    x = np.linspace(np.min(X), np.max(X), 1000)[:, np.newaxis]
+    for i in range(len(means)):
+        pdf_values = weights[i] * gaussian_pdf(x, means[i], covariances[i])
+        plt.plot(x, pdf_values, label=f'Component {i + 1}')
+
+
+    plt.xlabel('X')
+    plt.ylabel('Probability Density')
+    plt.title('Individual PDFs of Gaussian Mixture Model')
+    plt.legend()
+    plt.show()
+
+
+
+def gaussian_pdf(x, mean, cov):
+    """
+    Calculate the PDF of a Gaussian distribution.
+
+    Parameters:
+        x (numpy array): The input values.
+        mean (numpy array): The mean of the Gaussian distribution.
+        cov (numpy array): The covariance matrix of the Gaussian distribution.
+
+    Returns:
+        numpy array: The PDF values corresponding to the input values.
+    """
+    exponent = -0.5 * np.sum((x - mean) @ np.linalg.inv(cov) * (x - mean), axis=1)
+    return np.exp(exponent) / np.sqrt((2 * np.pi) ** len(mean) * np.linalg.det(cov))
+
+
 if __name__ == '__main__':
-    kalman_filter_example()
+    # kalman_filter_example()
+    gmm_example()
