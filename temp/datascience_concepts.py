@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.ticker import PercentFormatter
 import random
 import statistics as st
 
@@ -127,7 +128,7 @@ def binomial_distribution():
     # Parameters:
     success_rate = 0.5     # Probability of success rate
     sample_size = 100
-    number_of_samples = 100000
+    number_of_samples = 10000
 
     samples = []
 
@@ -145,11 +146,12 @@ def binomial_distribution():
             else:
                 sample.append(0)
 
-        average = st.mean(sample)
+        average = sum(sample)
         samples.append(average)
 
-    plt.hist(samples)
+    plt.hist(samples, bins=[0,10,20,30,40,50,60,70,80,90], desnsity=True)
     plt.title('Binomial Distribution')
+    plt.gca().yaxis.set_major_formatter(PercentFormatter(1))
 
 
 
