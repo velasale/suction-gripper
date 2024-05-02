@@ -1,8 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import random
+import statistics as st
 
 from sklearn import cluster, datasets, mixture
+
 
 def kalman_filter_example():
     # Example of measuring a fixed value variable:
@@ -72,36 +74,35 @@ def gmm_example():
 
     # Step 0: Generate Ground truth data
     cluster_1 = np.random.normal(40, 5, 1000)  # Noisy values
-    cluster_2 = np.random.normal(50, 5, 1000)
+    cluster_2 = np.random.normal(50, 3, 1000)
     plt.hist(cluster_1)
     plt.hist(cluster_2)
+    plt.title('Ground Truth: Clustered Distributions')
 
+    # Step 1: Simply simulates getting all the data together
     X = np.concatenate((cluster_1, cluster_2)).reshape(-1,1)
     fig = plt.figure()
     plt.hist(X)
+    plt.title('All data concatenated')
 
-    # plt.show()
-
-    # Step 1: SciKit package
+    # Step 2: SciKit package
     gmm = mixture.GaussianMixture(n_components=2, random_state=0).fit(X)
     means = gmm.means_
     covariances = gmm.covariances_
     weights = gmm.weights_
 
-    fig = plt.figure()
     # Plot individual PDFs
+    fig = plt.figure()
     x = np.linspace(np.min(X), np.max(X), 1000)[:, np.newaxis]
     for i in range(len(means)):
         pdf_values = weights[i] * gaussian_pdf(x, means[i], covariances[i])
         plt.plot(x, pdf_values, label=f'Component {i + 1}')
-
 
     plt.xlabel('X')
     plt.ylabel('Probability Density')
     plt.title('Individual PDFs of Gaussian Mixture Model')
     plt.legend()
     plt.show()
-
 
 
 def gaussian_pdf(x, mean, cov):
@@ -120,6 +121,44 @@ def gaussian_pdf(x, mean, cov):
     return np.exp(exponent) / np.sqrt((2 * np.pi) ** len(mean) * np.linalg.det(cov))
 
 
+
+def binomial_distribution():
+
+    # Parameters:
+    success_rate = 0.5     # Probability of success rate
+    sample_size = 100
+    number_of_samples = 100000
+
+    samples = []
+
+    for i in range(number_of_samples):
+
+        sample = []
+
+        for j in range(sample_size):
+
+            # Generate random data if numbers are less than the success rate, record as a positive review
+            point = random.random()
+
+            if point < success_rate:
+                sample.append(1)
+            else:
+                sample.append(0)
+
+        average = st.mean(sample)
+        samples.append(average)
+
+    plt.hist(samples)
+    plt.title('Binomial Distribution')
+
+
+
+
+
+
 if __name__ == '__main__':
     # kalman_filter_example()
-    gmm_example()
+    # gmm_example()
+    binomial_distribution()
+
+    plt.show()
