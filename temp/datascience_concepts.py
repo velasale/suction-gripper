@@ -1,11 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.ticker import PercentFormatter
 import random
-import statistics as st
+from matplotlib.ticker import PercentFormatter
+from scipy.stats import binom
 
 from sklearn import cluster, datasets, mixture
-
 
 def kalman_filter_example():
     # Example of measuring a fixed value variable:
@@ -75,35 +74,36 @@ def gmm_example():
 
     # Step 0: Generate Ground truth data
     cluster_1 = np.random.normal(40, 5, 1000)  # Noisy values
-    cluster_2 = np.random.normal(50, 3, 1000)
+    cluster_2 = np.random.normal(50, 5, 1000)
     plt.hist(cluster_1)
     plt.hist(cluster_2)
-    plt.title('Ground Truth: Clustered Distributions')
 
-    # Step 1: Simply simulates getting all the data together
     X = np.concatenate((cluster_1, cluster_2)).reshape(-1,1)
     fig = plt.figure()
     plt.hist(X)
-    plt.title('All data concatenated')
 
-    # Step 2: SciKit package
+    # plt.show()
+
+    # Step 1: SciKit package
     gmm = mixture.GaussianMixture(n_components=2, random_state=0).fit(X)
     means = gmm.means_
     covariances = gmm.covariances_
     weights = gmm.weights_
 
-    # Plot individual PDFs
     fig = plt.figure()
+    # Plot individual PDFs
     x = np.linspace(np.min(X), np.max(X), 1000)[:, np.newaxis]
     for i in range(len(means)):
         pdf_values = weights[i] * gaussian_pdf(x, means[i], covariances[i])
         plt.plot(x, pdf_values, label=f'Component {i + 1}')
+
 
     plt.xlabel('X')
     plt.ylabel('Probability Density')
     plt.title('Individual PDFs of Gaussian Mixture Model')
     plt.legend()
     plt.show()
+
 
 
 def gaussian_pdf(x, mean, cov):
@@ -122,45 +122,75 @@ def gaussian_pdf(x, mean, cov):
     return np.exp(exponent) / np.sqrt((2 * np.pi) ** len(mean) * np.linalg.det(cov))
 
 
+def binomial_pdf():
 
-def binomial_distribution():
+    # --- Parameters ---
+    success_rate = 0.9
+    sample_size = 10
+    samples = 1000
+    bins = np.arange(0, sample_size + 2) - 0.5
 
-    # Parameters:
-    success_rate = 0.5     # Probability of success rate
-    sample_size = 100
-    number_of_samples = 10000
+    plt.ion()
 
-    samples = []
+    fig, ax = plt.subplots()
+    ax.set_yticklabels(['{:.0f}%'.format(x * 100) for x in plt.gca().get_yticks()])
 
-    for i in range(number_of_samples):
+    binary_results = []
+    for i in range(samples):
 
+        ax.clear()
+
+        # Draw a sample
         sample = []
-
         for j in range(sample_size):
 
-            # Generate random data if numbers are less than the success rate, record as a positive review
-            point = random.random()
-
-            if point < success_rate:
+            trial = random.random()
+            if trial < success_rate:
                 sample.append(1)
             else:
                 sample.append(0)
 
-        average = sum(sample)
-        samples.append(average)
+        binary_results.append(sum(sample))
 
-    plt.hist(samples, bins=[0,10,20,30,40,50,60,70,80,90], desnsity=True)
-    plt.title('Binomial Distribution')
-    plt.gca().yaxis.set_major_formatter(PercentFormatter(1))
+        ax.hist(binary_results, bins=bins, density=True)
+        ax.set_title('Animated Sampling of a Binomial Distribution (%i samples)' %i)
+        ax.grid(True)
+
+        # Pause to allow the plot to be updated
+        plt.pause(0.001)
+
+    plt.ioff()  # Turn off interactive mode after the loop is finished
+
+    # --- Approach 2: Using Scipy ---
+    data_binom = binom.rvs(n=sample_size, p=success_rate, size=samples)
+    fig=plt.figure()
+    plt.hist(data_binom, bins=bins, density=True)
+    plt.title('Histogram of Binomial Distribution (using Scipy')
+    plt.grid(True)
+
+    # --- APPROACH 3: Using Numpy ---
+    # Parameters for the binomial distribution
+    fig = plt.figure()
+
+    # Generate binomial distribution data
+    data = np.random.binomial(sample_size, success_rate, samples)
+
+    # Plot histogram
+    plt.hist(data, bins=bins, density=True, alpha=0.75)
+
+    # Adjust y-axis ticks to percentages
+    plt.gca().set_yticklabels(['{:.0f}%'.format(x * 100) for x in plt.gca().get_yticks()])
+
+    # Add labels and title
+    plt.xlabel('Number of Successes')
+    plt.ylabel('Percentage')
+    plt.title('Histogram of Binomial Distribution (using Numpy')
+    plt.grid(True)
 
 
-
-
-
+    plt.show()
 
 if __name__ == '__main__':
     # kalman_filter_example()
     # gmm_example()
-    binomial_distribution()
-
-    plt.show()
+    binomial_pdf()
