@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import random
 from matplotlib.ticker import PercentFormatter
 from scipy.stats import binom
+import statistics as st
 
 from sklearn import cluster, datasets, mixture
 
@@ -125,7 +126,7 @@ def gaussian_pdf(x, mean, cov):
 def binomial_pdf():
 
     # --- Parameters ---
-    success_rate = 0.9
+    success_rate = 0.95
     sample_size = 10
     samples = 1000
     bins = np.arange(0, sample_size + 2) - 0.5
@@ -190,7 +191,36 @@ def binomial_pdf():
 
     plt.show()
 
+
+def central_limit_theorem():
+    # How many samples do you need, before the mean of the means of the samples is the same as the mean of the population
+
+    # Create a population distribution
+    population = np.random.normal(40, 30, 10000)  # Noisy values
+
+    # Draw a sample from the population
+
+    mean_of_means = []
+    means = []
+    for i in range(100):
+        sample = np.random.choice(population, 10)
+        means.append(sample.mean())
+
+        mm = st.mean(means)
+        mean_of_means.append(mm)
+
+        print('Sample No %i, Mean: %.2f' %(i, mm))
+
+    plt.plot(mean_of_means)
+    plt.grid()
+    plt.show()
+
+
+
+
+
 if __name__ == '__main__':
     # kalman_filter_example()
     # gmm_example()
-    binomial_pdf()
+    # binomial_pdf()
+    central_limit_theorem()
