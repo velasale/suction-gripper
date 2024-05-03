@@ -196,22 +196,26 @@ def central_limit_theorem():
     # How many samples do you need, before the mean of the means of the samples is the same as the mean of the population
 
     # Create a population distribution
-    population = np.random.normal(40, 30, 10000)  # Noisy values
+    population = np.random.normal(100, 60, 1000)  # Noisy values
 
     # Draw a sample from the population
 
-    mean_of_means = []
     means = []
-    for i in range(100):
-        sample = np.random.choice(population, 10)
-        means.append(sample.mean())
+    # Vary the size of the sample
+    for i in range(500):
 
-        mm = st.mean(means)
-        mean_of_means.append(mm)
+        samples = []
+        # Take a few samples
+        for j in range(5):
+            sample = np.random.choice(population, i)
+            samples.append(sample.mean())
 
-        print('Sample No %i, Mean: %.2f' %(i, mm))
+        mean_of_samples = st.mean(samples)
+        means.append(mean_of_samples)
 
-    plt.plot(mean_of_means)
+        print('Sample No %i, Mean: %.2f' %(i, mean_of_samples))
+
+    plt.plot(means)
     plt.grid()
     plt.show()
 
