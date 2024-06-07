@@ -33,7 +33,7 @@ def running_plot_and_video(location, filename, experiment, xlabel='Elapsed time 
     values_list_3 = experiment.pressure_sc3_values
 
     force_time_list = experiment.wrench_elapsed_time
-    net_force_values_list = experiment.wrench_sumforce_relative_values
+    net_force_values_list = experiment.wrench_netforce_relative_values
 
     # --- Sort png files in a list
     lst = os.listdir(location + filename + '/pngs_fixed_cam')
