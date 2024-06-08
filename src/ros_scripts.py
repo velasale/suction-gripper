@@ -330,7 +330,6 @@ def datetime_simplified():
 def main():
 
     #################### Small tutorial to use 'bag_to_video' #################
-
     # --- Step 1: Provide file ---
 
     # --- Lab's Laptop - Hard Drive A ---
@@ -350,52 +349,59 @@ def main():
     # file = '20230922_realapple2_attempt_2_orientation_0_yaw_0.bag'
 
     # --- files used for ICRA24 media ---
-    file = '20230731_proxy_sample_6_yaw_45_rep_0_stiff_low_force_low.bag'
-    file = '20230922_realapple3_attempt_1_orientation_0_yaw_0.bag'
-    file = '20230922_realapple2_attempt_1_orientation_0_yaw_0.bag'
+    storage = '/media/alejo/Elements/'
+    folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/04 - 2023 summer - suctionCup gripper/LOW STIFFNESS/'
+    location = storage + folder
 
+    file = '20230731_proxy_sample_6_yaw_45_rep_0_stiff_low_force_low.bag'
+    # file = '20230922_realapple3_attempt_1_orientation_0_yaw_0.bag'
+    # file = '20230922_realapple2_attempt_1_orientation_0_yaw_0.bag'
     # file = '2023111_realapple21_mode_dual_attempt_3_orientation_0_yaw_0.bag'
 
     # --- Data Location ---
-    folder = '/media/alejo/Elements/Prosser_Data/'
-    subfolder = 'Dataset - apple grasps/'
+    # folder = '/media/alejo/Elements/Prosser_Data/'
+    # subfolder = 'Dataset - apple grasps/'
 
-    # --- Opening bags in a batch ---
-    for filename in os.listdir(folder + subfolder):
-        if filename.endswith(".bag"):
-            print(filename)
+    open_batch = 'no'
 
-            # --- Skip if there is already a folder
-            just_name = filename.split('.', 1)[0]
-            print(just_name)
-            if Path(folder + subfolder + just_name).is_dir():
-                print('there is already a folder with this name')
-                continue
+    if open_batch == 'yes':
+        # --- Opening bags in a batch ---
+        for filename in os.listdir(folder + subfolder):
+            if filename.endswith(".bag"):
+                print(filename)
 
-            # --- Extract topics
-            print('there is not a folder yet')
-            topic = "/camera/image_raw"
-            bag_to_pngs(folder + subfolder, filename, topic,'/pngs_inhand_cam')
+                # --- Skip if there is already a folder
+                just_name = filename.split('.', 1)[0]
+                print(just_name)
+                if Path(folder + subfolder + just_name).is_dir():
+                    print('there is already a folder with this name')
+                    continue
 
-            topic = "/usb_cam/image_raw"
-            bag_to_pngs(folder + subfolder, filename, topic, '/pngs_fixed_cam')
-            bag_to_video(folder + subfolder, filename, topic)
+                # --- Extract topics
+                print('there is not a folder yet')
+                topic = "/camera/image_raw"
+                bag_to_pngs(folder + subfolder, filename, topic,'/pngs_inhand_cam')
 
-            bag_to_csvs(folder + subfolder + filename)
+                topic = "/usb_cam/image_raw"
+                bag_to_pngs(folder + subfolder, filename, topic, '/pngs_fixed_cam')
+                bag_to_video(folder + subfolder, filename, topic)
 
-    #
-    # file = '2023111_realapple21_mode_dual_attempt_3_orientation_0_yaw_0.bag'
-    #
-    # # --- Step 2: You may save the png files as well ---
-    # topic = "/camera/image_raw"
-    # bag_to_pngs(folder + subfolder, file, topic,'/pngs_inhand_cam')
-    #
-    # topic = "/usb_cam/image_raw"
-    # bag_to_pngs(folder + subfolder, file, topic, '/pngs_fixed_cam')
-    #
-    # bag_to_csvs(folder + subfolder + file)
-    # bag_to_video(folder + subfolder, file, topic)
-    # # -------------------------------------
+                bag_to_csvs(folder + subfolder + filename)
+
+    else:
+        # --- Open a single file ---
+        # file = '2023111_realapple21_mode_dual_attempt_3_orientation_0_yaw_0.bag'
+        #
+        # # --- Step 2: You may save the png files as well ---
+        topic = "/camera/image_raw"
+        bag_to_pngs(location, file, topic,'/pngs_inhand_cam')
+
+        topic = "/usb_cam/image_raw"
+        bag_to_pngs(location, file, topic, '/pngs_fixed_cam')
+
+        bag_to_csvs(location + file)
+        bag_to_video(location, file, topic)
+        # # -------------------------------------
 
 
 

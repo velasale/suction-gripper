@@ -38,7 +38,7 @@ import pyautogui
 from tqdm import tqdm
 
 ######## Self developed imports ########
-# from ros_scripts import *
+from ros_scripts import *
 from plot_scripts import *
 
 import logging
@@ -614,27 +614,37 @@ def plot_and_video():
     # filename = 'horizontal_#7_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_26.46_pitch_45.0_rep_1'
 
     # --- ICRA24 accompanying video
-    # subfolder = "LOW_STIFFNESS/"
-    subfolder = ''
-    location = folder + subfolder
+    storage = '/media/alejo/Elements'
+    folder = '/Alejo - Apple Pick Data/Apple Proxy Picks/04 - 2023 summer - suctionCup gripper/LOW STIFFNESS/'
+    location = storage + folder
     filename = '20230731_proxy_sample_6_yaw_45_rep_0_stiff_low_force_low'
-    filename = '20230922_realapple3_attempt_1_orientation_0_yaw_0'
 
-    filename = '20230922_realapple1_attempt_1_orientation_0_yaw_0'
-    filename = '20230922_realapple2_attempt_1_orientation_0_yaw_0'
+    # filename = '20230922_realapple3_attempt_1_orientation_0_yaw_0'
+    # filename = '20230922_realapple1_attempt_1_orientation_0_yaw_0'
+    # filename = '20230922_realapple2_attempt_1_orientation_0_yaw_0'
 
     # --- Prosser2
-    location = '/media/alejo/Elements/Prosser_Data/Dataset - apple picks/'
-    filename = '2023111_realapple24_mode_dual_attempt_1_orientation_0_yaw_0'
+    # storage = '/media/alejo/Elements'
+    # folder = '/Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/Dataset - apple picks/'
+    # location = storage + folder
+    # filename = '2023111_realapple24_mode_dual_attempt_1_orientation_0_yaw_0'
 
-    # --- 3. Create Experiment Object
-    experiment = ApplePickTrial()
+    # --- 2. Turn bag into csvs if needed
+    if os.path.isdir(location + filename):
+        print("csvs already created")
+        pass
+    else:
+        print("csvs need to be generated from bag file")
+        bag_to_csvs(location + filename + ".bag")
 
-    # --- 4. Assign json dictionary as property of the experiment
+    # --- 3. Read metadata
     json_file = open(location + filename + '.json')
     json_data = json.load(json_file)
-    experiment.metadata = json_data
-    print(experiment.metadata['general'])
+    trial_metadata = json_data
+    print(trial_metadata['general'])
+
+    # --- 4. Create Experiment Object
+    experiment = ApplePickTrial(metadata=trial_metadata)
 
     # --- 4. Read values from 'csv'
     read_csvs(experiment, location + filename)
@@ -830,7 +840,8 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plo
 class ApplePickTrial:
     """Class to define a Trial as an Object. Each Trial has properties from its json file.
     """
-    def __init__(self, metadata,
+    def __init__(self,
+                 metadata,
                  id=0, apple_id=0,
                  pressure=60,
                  surface="3DPrinted_with_Primer",
@@ -844,7 +855,7 @@ class ApplePickTrial:
         self.vacuum_type = vacuum_type
 
         # ------------------------- Data from jsons ---------------------------
-        self.exp_type = metadata['general']['experiment type']
+
         self.pressure = pressure
         self.surface = surface
         self.surface_radius = radius
@@ -860,6 +871,7 @@ class ApplePickTrial:
         self.repetition = 0
 
         self.metadata = metadata
+        self.exp_type = metadata['general']['experiment type']
 
         # ------------------------ Data from csvs -----------------------------
         # Topic: Gripper's Pressure Sensors
@@ -2575,9 +2587,10 @@ def proxy_trials():
 
     # --- 2. Turn bag into csvs if needed
     if os.path.isdir(location + file):
-        # print("csvs already created")
+        print("csvs already created")
         pass
     else:
+        print("csvs net to be generated from bag file")
         bag_to_csvs(location + file + ".bag")
 
     # --- 3. Create Experiment Object
@@ -3035,12 +3048,12 @@ def main():
     variable = 'pressure'  # switch between force, pressure and zforce
     # noise_experiments_pitch(exp_type='horizontal', radius=radius, variable=variable)
     # simple_suction_experiment()
-    proxy_trials()
 
+    # proxy_trials()
     # real_trials()
 
     # --- Build video from pngs and a plot beside of it with a vertical line running ---
-    # plot_and_video()
+    plot_and_video()
 
     # TODO: Compare results between  get_detach_values() and get_forces_at_pick()
     # TODO: Interpret moments (lever = height of the rig)
@@ -3049,11 +3062,10 @@ def main():
 
 
 if __name__ == '__main__':
-    # main()
+    main()
 
     # orthogonal_load_cell_experiments()
     # mark10_pullback_experiments()
-
-    push_load_cell_experiments()
+    # push_load_cell_experiments()
 
     plt.show()
