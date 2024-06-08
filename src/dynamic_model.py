@@ -9,6 +9,10 @@ SMALL_SIZE = 12
 MEDIUM_SIZE = 14
 BIGGER_SIZE = 16
 
+# --- Image size ---
+x_size = 3.5
+y_size = 4
+
 plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
 plt.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title
 plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
@@ -40,7 +44,7 @@ L = pitch * starts          # pitch [m]
 
 print('lead angle [deg]: ', math.degrees(math.atan(L/(math.pi*d_m))))
 
-efficiency = 0.3            # From friction, manufacturing tolerances,
+efficiency = 1            # From friction, manufacturing tolerances,
 
 F_nut = (2 * T / d_m) * (math.pi * d_m * beta - mu * L) / (math.pi * mu * d_m + L * beta) * efficiency
 
@@ -77,24 +81,26 @@ for i in range(150):
     f_outs_per_finger.append(F_out/3)
 
     # --- APPROACH 2: Given the Output Force, find the Motor Torque
-    F_out = 30
-    F_nut = F_out / ratio
-    T = F_nut * d_m * factor / 2
+    F_out2 = 30
+    F_nut2 = F_out2 / ratio
+    T = F_nut2 * d_m * factor / 2
     T_motors.append(T)
 
     # print(d, alfa_deg, ratio)
 
-fig = plt.figure()
+fig = plt.figure(figsize=(x_size, y_size))
 plt.plot(x, y, c='r')
 plt.xlabel('nut travel distance [mm]')
 plt.ylabel('Force transmission ratio Fout/Fnut')
 plt.grid()
+plt.tight_layout()
 
-fig = plt.figure()
+fig = plt.figure(figsize=(x_size, y_size))
 plt.plot(x, f_outs, c='r', label='total')
 plt.plot(x, f_outs_per_finger, c='orange', label='per finger (total/3)')
 plt.xlabel('nut travel distance [mm]')
 plt.ylabel('push force [N]')
+plt.tight_layout()
 
 # Plot apple bruising threshold
 thr_press = 0.29e6  # Pa (Li et al. 2016)
@@ -106,12 +112,14 @@ plt.hlines(y=thr_force, xmin=min(x), xmax=max(x), linestyles='--', lw=2, label='
 plt.ylim([0, 50])
 plt.legend()
 plt.grid()
+plt.tight_layout()
 
-fig = plt.figure()
+fig = plt.figure(figsize=(x_size, y_size))
 plt.plot(x, T_motors, c='r')
 plt.xlabel('nut travel distance [mm]')
 plt.ylabel('Motor Torque [N.m]')
 plt.grid()
+plt.tight_layout()
 
 plt.show()
 

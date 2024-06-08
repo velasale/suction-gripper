@@ -106,7 +106,6 @@ def gmm_example():
     plt.show()
 
 
-
 def gaussian_pdf(x, mean, cov):
     """
     Calculate the PDF of a Gaussian distribution.
@@ -188,7 +187,6 @@ def binomial_pdf():
     plt.title('Histogram of Binomial Distribution (using Numpy')
     plt.grid(True)
 
-
     plt.show()
 
 
@@ -218,8 +216,6 @@ def central_limit_theorem():
     plt.plot(means)
     plt.grid()
     plt.show()
-
-
 
 
 

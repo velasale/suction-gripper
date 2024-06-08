@@ -38,7 +38,7 @@ import pyautogui
 from tqdm import tqdm
 
 ######## Self developed imports ########
-from ros_scripts import *
+# from ros_scripts import *
 from plot_scripts import *
 
 import logging
@@ -662,13 +662,15 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plo
     # Plot font
     plt.rcParams["font.family"] = "serif"
     plt.rcParams["font.serif"] = ["Times New Roman"]
+    plt.rcParams["font.size"] = 18
+    plt.rc('legend', fontsize=14)  # using a size in points
 
     # Axes limits
     xmin = min(variable_list)
     xmax = max(variable_list)
     colors = ['green', 'red', 'blue', 'black']
     markers = ['o', 'v', '^', '<', '>']
-    linestyles = ['dotted', 'dashdot','--', 'solid']
+    linestyles = ['dotted', 'dashdot', '--', 'solid']
 
 
     # Experiment number
@@ -683,7 +685,7 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plo
     max_forces_data = []
 
     # Create figure
-    fig = plt.figure()
+    fig = plt.figure(figsize=(8, 6))
     exp_prefix = 'loremipsum'
 
     for mode, tag, color, marker, style in zip(gripper_modes, tags, colors, markers, linestyles):
@@ -753,7 +755,10 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plo
                             suction_picks.append(max_pull)
 
             print(max_forces)
+
             stepses.append(steps)
+            # stepses.append(steps/max(variable_list))
+
             mean_max_forces.append(abs(np.mean(max_forces)))
             sdv_max_forces.append(abs(np.std(max_forces)))
 
@@ -824,6 +829,17 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plo
                    label='Suction-cups', color='blue')
         plt.fill_between(stepses, lows, highs, color='blue', alpha=.2)
 
+        if 'dual' not in tags:
+            # Combined Plots
+            # This is just to make the plot more clear, and see both modes adding each other
+            both_pick_force = np.add(mean_pick_force, mean_max_forces)
+            both_sdv_force = np.add(sdv_pick_force, sdv_max_forces)
+            lows = np.subtract(both_pick_force, both_sdv_force)
+            highs = np.add(both_pick_force, both_sdv_force)
+            plt.plot(stepses, both_pick_force, linestyle='dashdot', label='Dual', color='red', marker='v', lw=1)
+            plt.fill_between(stepses, lows, highs, color='red', alpha=.2)
+
+
     if plot_type == 'barplot':
         plt.boxplot(max_forces_data, labels=gripper_modes)
     else:
@@ -833,7 +849,7 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plo
     plt.ylim([0, 50])
     plt.xlabel(xlabel)
     plt.ylabel('Force [N]')
-    plt.title('Gripper pulling force [N] vs ' + xlabel)
+    # plt.title('Gripper pulling force [N] vs ' + xlabel)
 
 
 # ----------------------- MAIN CLASS FOR TRIALS ------------------------------------
@@ -2886,6 +2902,14 @@ def orthogonal_load_cell_experiments():
 
 
 def push_load_cell_experiments():
+
+    # Plot font
+    plt.rcParams["font.family"] = "serif"
+    plt.rcParams["font.serif"] = ["Times New Roman"]
+    plt.rcParams["font.size"] = 18
+    plt.rc('legend', fontsize=14)  # using a size in points
+
+
     # Step 1 - Location
     # folder = '/home/alejo/Downloads/Mark10_experiments-20240227T171746Z-001/Mark10_experiments/experiment1_orthogonalLoad/'
     folder = 'C:/Users/avela/Dropbox/03 Temporal/03 Research/data/Mark10_experiments/'      # Personal Laptop
@@ -2898,11 +2922,15 @@ def push_load_cell_experiments():
 
     mean_max_forces = []
     std_max_forces = []
-    max_vals = []
-
+    all_fingers_max_vals = []
     max_ortho = 'Nan'
 
+    fingers_data = []
+
+
     for file in sorted(os.listdir(location)):
+
+        finger_max_vals = []
 
         if file.startswith('f'):
             print(file)
@@ -2934,15 +2962,21 @@ def push_load_cell_experiments():
                 except IndexError:
                     end = n_points
 
-                max_val = max(filtered_data[start : end])
-                max_vals.append(max_val)
+                max_val = max(filtered_data[start: end])
+                finger_max_vals.append(max_val)
+                all_fingers_max_vals.append(max_val)
 
-            print('Max values', max_vals)
+            print('Max values', all_fingers_max_vals)
 
-    plt.boxplot(max_vals)
+        fingers_data.append(finger_max_vals)
 
+    fingers_data.append(all_fingers_max_vals)
+
+    fig = plt.figure(figsize=(8, 6))
+    plt.boxplot(fingers_data, labels=['A', 'B', 'C', 'All'])
+    plt.xlabel('Finger')
     plt.ylabel('Force [N]')
-    plt.title('Normal Force from each finger [N]')
+    # plt.title('Normal Force from each finger [N]')
 
     # Plot the apple bruising threshold
     thr_press = 0.29e6    # Pa (Li et al. 2016)
@@ -2952,7 +2986,7 @@ def push_load_cell_experiments():
     # plt.hlines(y=thr_force, xmin=1285, xmax=1425, linestyles='--', lw=2, label='Apple Bruising threshold')
 
     # plt.hlines(y=thr_force, xmin=52, xmax=60, linestyles='--', lw=2, label='Apple Bruising threshold')
-    plt.ylim([0, 30])
+    plt.ylim([0, 50])
     plt.grid()
 
     # plt.show()
@@ -3000,16 +3034,18 @@ def mark10_pullback_experiments():
                  ['Fingers', 'Dual'],
                  [52, 54, 56, 58],
                  10,
-                 'Nut-Travel distance [mm]'
+                 'Nut-travel distance [mm]'
                  )
 
     # ---- EQUATOR OFFSET ----
     mark10_plots(folder + 'experiment9_pullBack_fixedApple_equatorOffset/',
-                 ['fingers', 'dual'],
-                 ['Fingers', 'Dual'],
+                 # ['fingers', 'dual'],
+                 ['fingers'],
+                 # ['Fingers', 'Dual'],
+                     ['Fingers'],
                  [0, 5, 10, 15, 20],
                  10,
-                 'Equator Offset [mm]'
+                 'Equator offset [mm]'
                  )
 
     # ---- ANGLES ----
@@ -3018,18 +3054,18 @@ def mark10_pullback_experiments():
                  ['Fingers', 'Dual', 'Suction cups'],
                  [0, 15, 30, 45],
                  10,
-                 'Angle between pulling force and gripper [deg]'
+                 '$\omega$ [deg]'
                  )
 
-    # # ---- MOMENTS ----
-    # mark10_plots(folder + 'experiment11_pullBack_moment/',
-    #              ['suction', 'fingers', 'dual'],
-    #              ['Suction cups', 'Fingers', 'Dual'],
-    #              [0],
-    #              10,
-    #              'Actuation mode',
-    #              plot_type='barplot'
-    #              )
+    # ---- MOMENTS ----
+    mark10_plots(folder + 'experiment11_pullBack_moment/',
+                 ['suction', 'fingers', 'dual'],
+                 ['Suction cups', 'Fingers', 'Dual'],
+                 [0],
+                 10,
+                 'Actuation mode',
+                 plot_type='barplot'
+                 )
 
     plt.show()
 
@@ -3062,10 +3098,10 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    # main()
 
     # orthogonal_load_cell_experiments()
     # mark10_pullback_experiments()
-    # push_load_cell_experiments()
+    push_load_cell_experiments()
 
     plt.show()
