@@ -40,7 +40,7 @@ import pyautogui
 from tqdm import tqdm
 
 ######## Self developed imports ########
-from ros_scripts import *
+# from ros_scripts import *
 from plot_scripts import *
 
 import logging
@@ -1411,9 +1411,15 @@ class ApplePickTrial:
         """Returns as numpy arrays the coordinates of calix, north pole and abcission layer"""
 
         # STEP1: Locate csv with the ground truth of the apples
-        location = '/media/alejo/Elements/Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/Probe/'
+        storage = '/media/alejo/Elements'
+        storage = 'D:/'
+
+        folder = '/Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/Probe/'
+        folder = storage + folder
+
         filename = '20231101_apples_coords.csv'
-        folder = location + filename
+
+        folder = folder + filename
         data_list = pd.read_csv(folder)
 
         array_sp = np.ones(3)
@@ -2647,7 +2653,13 @@ def real_trials():
     # folder = '/home/alejo/gripper_ws/src/suction-gripper/data/'   # ArmFarm laptop - Default Hard Drive
     # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"     # ArmFarm laptop - Hard Drive B
     # folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'  # ArmFarm laptop - Hard Drive C
-    folder = '/media/alejo/Elements/Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/'   # External SSD (ALEJO HD1)
+
+    # storage = '/media/alejo/Elements/'
+    storage = 'D:/'
+
+    folder = '/Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/'   # External SSD (ALEJO HD1)
+    folder = storage + folder
+
     # folder = 'D:/Prosser_Data/'
     # subfolder = 'Dataset - apple grasps/'
     # subfolder = 'Dataset - apple picks/'
@@ -2672,13 +2684,14 @@ def real_trials():
     sc3_values_at_eng = []
 
     # STEP C: Sweep all bag files, and for each one do next
-    # subfolders= ['Dataset - apple grasps/', 'Dataset - apple picks/']
+    subfolders= ['Dataset - apple grasps/', 'Dataset - apple picks/']
     # subfolders = ['Dataset - apple grasps/']
-    subfolders = ['Dataset - apple picks/']
+    # subfolders = ['Dataset - apple picks/']
 
-    folder = '/media/alejo/Elements/Alejo - Apple Pick Data/Apple Proxy Picks/05 - 2024 winter - finger and dual trials/'
+    # --- Proxy verification ---
+    # folder = '/media/alejo/Elements/Alejo - Apple Pick Data/Apple Proxy Picks/05 - 2024 winter - finger and dual trials/'
     # subfolders = ['FINGER_GRIPPER_EXPERIMENTS_rep1/']
-    subfolders = ['DUAL_GRIPPER_EXPERIMENTS_rep1/', 'DUAL_GRIPPER_EXPERIMENTS_rep2/']
+    # subfolders = ['DUAL_GRIPPER_EXPERIMENTS_rep1/', 'DUAL_GRIPPER_EXPERIMENTS_rep2/']
 
     for subfolder in subfolders:
 
@@ -2697,7 +2710,6 @@ def real_trials():
                     logging.debug('Apple %i' %apple_id)
                 except IndexError:
                     apple_id = 1
-
 
                 # STEP 1: Turn bag into csvs if needed
                 if os.path.isdir(location + file):
