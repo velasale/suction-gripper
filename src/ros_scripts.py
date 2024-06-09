@@ -370,6 +370,10 @@ def main():
 
     file = '2023111_realapple7_mode_dual_attempt_1_orientation_0_yaw_0.bag'
 
+
+    # --- Proxy Data ---
+    folder = '/media/alejo/Elements/Alejo - Apple Pick Data/Apple Proxy Picks/05 - 2024 winter - finger and dual trials/FINGER_GRIPPER_EXPERIMENTS_rep2/'
+
     # file = '20230731_proxy_sample_4_yaw_45_rep_0_stiff_low_force_medium.bag'
     # file = '20230731_proxy_sample_5_yaw_45_rep_0_stiff_low_force_medium.bag'
     # file = '20230731_proxy_sample_5_yaw_45_rep_0_stiff_low_force_low.bag'
@@ -384,7 +388,7 @@ def main():
     # folder = '/media/alejo/Elements/Prosser_Data/'
     # subfolder = 'Dataset - apple grasps/'
 
-    open_batch = 'no'
+    open_batch = 'yes'
 
     if open_batch == 'yes':
         # --- Opening bags in a batch ---
@@ -402,11 +406,12 @@ def main():
                 # --- Extract topics
                 print('there is not a folder yet')
                 topic = "/camera/image_raw"
-                bag_to_pngs(folder + subfolder, filename, topic,'/pngs_inhand_cam')
+                # bag_to_pngs(folder + subfolder, filename, topic,'/pngs_inhand_cam')
 
                 topic = "/usb_cam/image_raw"
-                bag_to_pngs(folder + subfolder, filename, topic, '/pngs_fixed_cam')
-                bag_to_video(folder + subfolder, filename, topic)
+                # bag_to_pngs(folder + subfolder, filename, topic, '/pngs_fixed_cam')
+
+                # bag_to_video(folder + subfolder, filename, topic)
 
                 bag_to_csvs(folder + subfolder + filename)
 
