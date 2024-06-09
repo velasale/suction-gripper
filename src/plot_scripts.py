@@ -45,7 +45,11 @@ def running_plot_and_video(location, filename, experiment, xlabel='Elapsed time 
     listop.sort()
 
     # --- Pressure Plots
-    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(12, 4.8))
+    plt.rcParams.update({'font.size': 16})
+    plt.rcParams.update({'font.family': "sans-serif"})
+    plt.rcParams.update({'font.serif': "Times New Roman"})
+
+    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(13.5, 5.45))
 
     ax[0].plot(time_list, values_list, 'red', linewidth=2, label='cup A')
     ax[0].plot(time_list_2, values_list_2, 'green', linewidth=2, label='cup B')
@@ -57,10 +61,11 @@ def running_plot_and_video(location, filename, experiment, xlabel='Elapsed time 
     ax[0].set_ylabel(ylabel)
     ax[0].legend()
 
+
     # --- Force Plots
     ax_1 = ax[0].twinx()       # same plot, sharing the x axis, but different y-axis
     ax_1.plot(force_time_list, net_force_values_list, 'k-', linestyle='dashed', linewidth=2, label='net force')
-    ax_1.set_ylim(0, 25)
+    ax_1.set_ylim(0, 35)
     ax_1.set_ylabel("Force [N]")
     ax_1.legend()
 
@@ -74,21 +79,21 @@ def running_plot_and_video(location, filename, experiment, xlabel='Elapsed time 
         ax[1].spines[spine].set_visible(False)
 
     # --- Display new figure for each png
-    list_of_figures = []
     counter = 0
     for i in listop:
 
         # --- Display dashed vertical line moving along the x axis
-        x = i / 1000
+        x = i / 10
         line = ax[0].axvline(x=x, color='red', linestyle='dotted', linewidth=2)
 
         # --- Load picture from the rosbag file
         img = plt.imread(location + filename + '/pngs_fixed_cam/' + str(i) + '.png', 0)
-        im = OffsetImage(img, zoom=0.55)
-        ab = AnnotationBbox(im, (0, 0), xycoords='axes fraction', box_alignment=(0, 0))
+        im = OffsetImage(img, zoom=0.64)
+        ab = AnnotationBbox(im, (0, 0), xycoords='axes fraction', box_alignment=(0, 0), frameon=False)
 
         # --- Place image in subplot
         ax[1].add_artist(ab)
+        plt.tight_layout()
         plt.pause(0.00001)
 
         # --- Save image in order to create a video later
@@ -110,10 +115,13 @@ def running_plot_and_video(location, filename, experiment, xlabel='Elapsed time 
     for i in listop:
         img = cv2.imread(temporal_dir + '/' + str(i) + '.png', cv2.IMREAD_ANYCOLOR)
         h, w, _ = img.shape
+
         fps = 9.93
 
+        speed_factor = 2
+
         if out is None:
-            out = cv2.VideoWriter(temporal_dir + 'party.avi', cv2.VideoWriter_fourcc(*'MP4V'), 10, (w, h))
+            out = cv2.VideoWriter(temporal_dir + 'party.avi', cv2.VideoWriter_fourcc(*'MP4V'), speed_factor * 10, (w, h))
         out.write(img)
 
     out.release()

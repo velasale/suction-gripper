@@ -38,7 +38,7 @@ import pyautogui
 from tqdm import tqdm
 
 ######## Self developed imports ########
-# from ros_scripts import *
+from ros_scripts import *
 from plot_scripts import *
 
 import logging
@@ -617,17 +617,19 @@ def plot_and_video():
     storage = '/media/alejo/Elements'
     folder = '/Alejo - Apple Pick Data/Apple Proxy Picks/04 - 2023 summer - suctionCup gripper/LOW STIFFNESS/'
     location = storage + folder
-    filename = '20230731_proxy_sample_6_yaw_45_rep_0_stiff_low_force_low'
+
+    filename = '20230731_proxy_sample_4_yaw_45_rep_0_stiff_low_force_medium'
+    # filename = '20230731_proxy_sample_5_yaw_45_rep_0_stiff_low_force_medium'
 
     # filename = '20230922_realapple3_attempt_1_orientation_0_yaw_0'
     # filename = '20230922_realapple1_attempt_1_orientation_0_yaw_0'
     # filename = '20230922_realapple2_attempt_1_orientation_0_yaw_0'
 
     # --- Prosser2
-    # storage = '/media/alejo/Elements'
-    # folder = '/Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/Dataset - apple picks/'
-    # location = storage + folder
-    # filename = '2023111_realapple24_mode_dual_attempt_1_orientation_0_yaw_0'
+    storage = '/media/alejo/Elements'
+    folder = '/Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/Dataset - apple picks/'
+    location = storage + folder
+    filename = '2023111_realapple7_mode_dual_attempt_1_orientation_0_yaw_0'
 
     # --- 2. Turn bag into csvs if needed
     if os.path.isdir(location + filename):
@@ -3098,10 +3100,10 @@ def main():
 
 
 if __name__ == '__main__':
-    # main()
+    main()
 
     # orthogonal_load_cell_experiments()
     # mark10_pullback_experiments()
-    push_load_cell_experiments()
+    # push_load_cell_experiments()
 
     plt.show()

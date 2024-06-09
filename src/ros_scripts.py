@@ -241,19 +241,29 @@ def bag_to_pngs(input_dir, bag_file, cam_topic, output_folder='/pngs'):
         cv_img = bridge.imgmsg_to_cv2(msg, "bgr8")
 
         # Add white background for the text
-        img_height, img_width, __ = cv_img.shape
-        cv2.rectangle(cv_img, (0, img_height), (320, img_height - 40), (255, 255, 255), -1)
+        # img_height, img_width, __ = cv_img.shape
+        # cv2.rectangle(cv_img, (0, img_height), (250, img_height - 40), (255, 255, 255), -1)
 
         # Add elapsed time as text at the bottom of the image
         if count == 0:
             initial_time_stamp = t
-        elapsed_time = round((t.to_sec() - initial_time_stamp.to_sec()), 3)
-        font = cv2.FONT_HERSHEY_COMPLEX
+
+        elapsed_time = round((t.to_sec() - initial_time_stamp.to_sec()), 1)
+        et_string = str(elapsed_time)
+        decimals = et_string.split(".")[1]
+
+        if len(decimals) == 0:
+            et_string = et_string + '0'
+        elif len(decimals) == 1:
+            et_string = et_string + ''
+
+        # font = cv2.FONT_HERSHEY_COMPLEX
+        font = cv2.FONT_HERSHEY_DUPLEX
         font_color = (0,0,0)     # BGR
-        cv2.putText(cv_img, 'time: ' + str(elapsed_time) + ' sec', (int(cv_img.shape[0] * 0.05), int(cv_img.shape[1] * 0.73)), font, 1.0, font_color, 1, cv2.LINE_AA)
+        cv2.putText(cv_img, 'time: ' + et_string + ' s', (int(cv_img.shape[0] * 0.025), int(cv_img.shape[1] * 0.73)), font, 1.0, font_color, 1, cv2.LINE_AA)
 
         # Save file
-        cv2.imwrite(os.path.join(output_dir, str(int(elapsed_time*1000)) + ".png"), cv_img)
+        cv2.imwrite(os.path.join(output_dir, str(int(elapsed_time*10)) + ".png"), cv_img)
         print("Wrote image %i" % count)
 
         count += 1
@@ -348,12 +358,24 @@ def main():
     # file = '20230920_realapple2_orientation_0_yaw_0.bag'
     # file = '20230922_realapple2_attempt_2_orientation_0_yaw_0.bag'
 
-    # --- files used for ICRA24 media ---
+    # --- Trials used for ICRA24 media ---
     storage = '/media/alejo/Elements/'
     folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/04 - 2023 summer - suctionCup gripper/LOW STIFFNESS/'
     location = storage + folder
 
-    file = '20230731_proxy_sample_6_yaw_45_rep_0_stiff_low_force_low.bag'
+    # --- Prosser Data ---
+    storage = '/media/alejo/Elements'
+    folder = '/Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/Dataset - apple picks/'
+    location = storage + folder
+
+    file = '2023111_realapple7_mode_dual_attempt_1_orientation_0_yaw_0.bag'
+
+    # file = '20230731_proxy_sample_4_yaw_45_rep_0_stiff_low_force_medium.bag'
+    # file = '20230731_proxy_sample_5_yaw_45_rep_0_stiff_low_force_medium.bag'
+    # file = '20230731_proxy_sample_5_yaw_45_rep_0_stiff_low_force_low.bag'
+    # file = '2023082_proxy_sample_5_yaw_45_rep_0_stiff_high_force_low.bag'
+    # file = '2023083_proxy_sample_5_yaw_45_rep_1_stiff_high_force_medium.bag'
+
     # file = '20230922_realapple3_attempt_1_orientation_0_yaw_0.bag'
     # file = '20230922_realapple2_attempt_1_orientation_0_yaw_0.bag'
     # file = '2023111_realapple21_mode_dual_attempt_3_orientation_0_yaw_0.bag'
@@ -389,21 +411,18 @@ def main():
                 bag_to_csvs(folder + subfolder + filename)
 
     else:
-        # --- Open a single file ---
+        # --- Open a single bag file ---
         # file = '2023111_realapple21_mode_dual_attempt_3_orientation_0_yaw_0.bag'
         #
         # # --- Step 2: You may save the png files as well ---
         topic = "/camera/image_raw"
-        bag_to_pngs(location, file, topic,'/pngs_inhand_cam')
+        bag_to_pngs(location, file, topic, '/pngs_inhand_cam')
 
         topic = "/usb_cam/image_raw"
         bag_to_pngs(location, file, topic, '/pngs_fixed_cam')
 
         bag_to_csvs(location + file)
-        bag_to_video(location, file, topic)
-        # # -------------------------------------
-
-
+        # bag_to_video(location, file, topic)
 
 
 if __name__ == '__main__':
