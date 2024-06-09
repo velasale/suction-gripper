@@ -365,8 +365,79 @@ def icra24_analysis():
     plt.show()
 
 
+def success_counter():
+
+    # --- Step 1: Open folder
+    location = '/media/alejo/Elements/Alejo - Apple Pick Data/Apple Proxy Picks/05 - 2024 winter - finger and dual trials/'
+    folders = ['FINGER_GRIPPER_EXPERIMENTS_rep1/', 'FINGER_GRIPPER_EXPERIMENTS_rep2/']
+    # folders = ['DUAL_GRIPPER_EXPERIMENTS_rep1/', 'DUAL_GRIPPER_EXPERIMENTS_rep2/']
+
+    print(folders)
+
+    # --- Variables to keep track of labels
+    a_success = 0
+    b_unsuccess = 0
+    c_unsuccess = 0
+    d_success = 0
+    e_success = 0
+
+    for folder in folders:
+
+        for filename in os.listdir(location + folder):
+
+            if filename.endswith(".json") and not filename.startswith("vacuum_test"):
+                # print('\n' + CGREEN + "Experiment # %i" %exp)
+                # print(filename)
+
+                with open(location + folder + filename, 'r') as json_file:
+
+                    # Extract dictionaries
+                    json_dict = json.load(json_file)
+                    general_info = json_dict['general']
+                    robot_info = json_dict['robot']
+                    proxy_info = json_dict['proxy']
+                    labels = json_dict['labels']
+
+                    # Extract values
+                    sampling_point = general_info['sampling point']
+                    x_offset = robot_info['position noise command [m]'][0]
+                    yaw = general_info['yaw']
+                    stiffness = rename_level(proxy_info['branch stiffness']) + '_stiffness'
+                    strength = rename_level(proxy_info['stem force']) + '_strength'
+                    cup_a = labels['suction cup a']
+                    cup_b = labels['suction cup b']
+                    cup_c = labels['suction cup c']
+                    result = labels['apple pick result']
+
+
+                    # print("(a) Successful pick: after pick pattern")
+                    # print("(b) Un-successful: Apple picked but apple it fell afterwards")
+                    # print("(c) Un-successful: Apple not picked")
+                    # print("(d) Successful pick: before pick pattern ")
+                    # print("(e) Successful pick: apple tweaked while closing fingers")
+
+                    if result == 'a':
+                        a_success += 1
+                    elif result == 'b':
+                        b_unsuccess += 1
+                    elif result == 'c':
+                        c_unsuccess += 1
+                    elif result == 'd':
+                        d_success += 1
+                    elif result == 'e':
+                        e_success += 1
+
+    successful_pics = a_success + d_success + e_success
+    unsuccessful_picks = b_unsuccess + c_unsuccess
+
+    print("Successful trials: %i, Un-successful trials: %i" %(successful_pics, unsuccessful_picks))
+    print(a_success, b_unsuccess, c_unsuccess, d_success, e_success)
+
 def main():
-    icra24_analysis()
+
+    # icra24_analysis()
+
+    success_counter()
 
 
 if __name__ == '__main__':

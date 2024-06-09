@@ -15,6 +15,8 @@ from scipy.ndimage import gaussian_filter, median_filter
 import scipy.stats as st
 from scipy.stats import norm
 
+import matplotlib.font_manager
+
 
 ######## 3rd parties Imports ########
 from operator import sub, add
@@ -805,8 +807,10 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plo
 
     # Read suction reference values
     if 'suction' not in tags:
-        suction_folder = ('C:/Users/avela/Dropbox/03 Temporal/03 Research/data/Mark10_experiments/'
-                          'suction_reference_values/')
+        # suction_folder = ('C:/Users/avela/Dropbox/03 Temporal/03 Research/data/Mark10_experiments/'
+        #                   'suction_reference_values/')
+
+        suction_folder = '/home/alejo/Dropbox/03 Temporal/03 Research/data/Mark10_experiments/suction_reference_values/'
         max_forces = []
         for file in sorted(os.listdir(suction_folder)):
             trial_df = pd.read_excel(suction_folder + file, index_col=0)
@@ -1407,8 +1411,9 @@ class ApplePickTrial:
         """Returns as numpy arrays the coordinates of calix, north pole and abcission layer"""
 
         # STEP1: Locate csv with the ground truth of the apples
-        folder = '/media/alejo/Elements/Prosser_Data/Probe/20231101_apples_coords.csv'
-        # folder = 'D:/Prosser_Data/Probe/20231101_apples_coords.csv'
+        location = '/media/alejo/Elements/Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/Probe/'
+        filename = '20231101_apples_coords.csv'
+        folder = location + filename
         data_list = pd.read_csv(folder)
 
         array_sp = np.ones(3)
@@ -1514,7 +1519,11 @@ class ApplePickTrial:
 
         # Get indexes where detachment occurs
         start_index = self.event_values.index(start_label)
-        end_index = self.event_values.index("Vacuum Off")
+        try:
+            end_index = self.event_values.index("Vacuum Off")
+        except ValueError:
+            end_index = len(self.event_values)-1  # Warning: Trying this fix
+
 
         # Get the time at which the steady state starts and ends
         retrieve_start = self.event_elapsed_time[start_index]
@@ -2638,7 +2647,7 @@ def real_trials():
     # folder = '/home/alejo/gripper_ws/src/suction-gripper/data/'   # ArmFarm laptop - Default Hard Drive
     # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"     # ArmFarm laptop - Hard Drive B
     # folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'  # ArmFarm laptop - Hard Drive C
-    folder = '/media/alejo/Elements/Prosser_Data/'      # External Hard Drive
+    folder = '/media/alejo/Elements/Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/'   # External SSD (ALEJO HD1)
     # folder = 'D:/Prosser_Data/'
     # subfolder = 'Dataset - apple grasps/'
     # subfolder = 'Dataset - apple picks/'
@@ -2663,9 +2672,13 @@ def real_trials():
     sc3_values_at_eng = []
 
     # STEP C: Sweep all bag files, and for each one do next
-    subfolders= ['Dataset - apple grasps/', 'Dataset - apple picks/']
-    subfolders = ['Dataset - apple grasps/']
+    # subfolders= ['Dataset - apple grasps/', 'Dataset - apple picks/']
+    # subfolders = ['Dataset - apple grasps/']
     subfolders = ['Dataset - apple picks/']
+
+    folder = '/media/alejo/Elements/Alejo - Apple Pick Data/Apple Proxy Picks/05 - 2024 winter - finger and dual trials/'
+    # subfolders = ['FINGER_GRIPPER_EXPERIMENTS_rep1/']
+    subfolders = ['DUAL_GRIPPER_EXPERIMENTS_rep1/', 'DUAL_GRIPPER_EXPERIMENTS_rep2/']
 
     for subfolder in subfolders:
 
@@ -2673,13 +2686,18 @@ def real_trials():
         for file in tqdm(os.listdir(location)):
             if file.endswith('.bag') and file != 'vacuum_test_.bag':
                 logging.debug('------------- Filename: %s ------------' %file)
-                only_name = file.split('.')[0]  # remove extension
+                only_name = file.split('.bag')[0]  # remove extension
                 file = only_name
+                print(file)
 
                 # Extract apple's id
-                apple_id = file.split('apple')[1]
-                apple_id = int(apple_id.split('_')[0])
-                logging.debug('Apple %i' %apple_id)
+                try:
+                    apple_id = file.split('apple')[1]
+                    apple_id = int(apple_id.split('_')[0])
+                    logging.debug('Apple %i' %apple_id)
+                except IndexError:
+                    apple_id = 1
+
 
                 # STEP 1: Turn bag into csvs if needed
                 if os.path.isdir(location + file):
@@ -2700,7 +2718,7 @@ def real_trials():
                 mode = experiment.metadata['robot']['actuation mode']
                 pick = experiment.metadata['labels']['apple pick result']
 
-                # if pick != 'c':
+                # if pick != 'c':         # c: unsuccessful
                 # if pick == 'c':
                 if True:
                 # if mode == 'suction':
@@ -2712,18 +2730,18 @@ def real_trials():
                     # STEP 5: Get features for the experiment
                     experiment.get_features()
                     experiment.eef_location(plots='no')
-                    # experiment.pick_points(plots='no')
-                    # experiment.pick_forces()
-                    # experiment.pick_stiffness(plots='no')
-                    experiment.suction_engagement()
+                    experiment.pick_points(plots='no')
+                    experiment.pick_forces()
+                    experiment.pick_stiffness(plots='no')
+                    # experiment.suction_engagement()
 
                     # STEP 6: Append variables of interest
-                    # stiffnesses.append(experiment.stiffness)
-                    # max_normalForces.append(experiment.max_normalForce_at_pick)
-                    # max_tangentialForces.append(experiment.max_tangentialForce_at_pick)
-                    # max_netForces.append(experiment.max_netForce_at_pick)
-                    # thetas.append(experiment.theta_at_pick)
-                    # deltas.append(experiment.travel_at_pick)
+                    stiffnesses.append(experiment.stiffness)
+                    max_normalForces.append(experiment.max_normalForce_at_pick)
+                    max_tangentialForces.append(experiment.max_tangentialForce_at_pick)
+                    max_netForces.append(experiment.max_netForce_at_pick)
+                    thetas.append(experiment.theta_at_pick)
+                    deltas.append(experiment.travel_at_pick)
                     apple_ids.append(experiment.apple_id)
 
                     air_pres_thr = 120       # @ Corvallis, atmospheric air pressure ~115kPa
@@ -2997,10 +3015,14 @@ def push_load_cell_experiments():
 def mark10_pullback_experiments():
 
     # Step 1 - Location
-    # folder = '/home/alejo/Downloads/Mark10_experiments-20240309T010320Z-001/Mark10_experiments/'    # ArmFarm laptop
-    # folder = '/home/alejo/Dropbox/03 Temporal/03 Research/data/Mark10_experiments/'     # ArmFarm laptop
-    folder = 'C:/Users/avela/Dropbox/03 Temporal/03 Research/data/Mark10_experiments/'  # Personal Laptop
+    # folder = '/home/alejo/Downloads/Mark10_experiments-20240309T010320Z-001/'     # ArmFarm laptop
+    # folder = '/home/alejo/Dropbox/03 Temporal/03 Research/data/                   # ArmFarm laptop
+    # folder = 'C:/Users/avela/Dropbox/03 Temporal/03 Research/data/                  # Personal Laptop
+    # folder = '/media/alejo/Elements/Alejo - Mark10 Gripper Tests/                   # External SD 'ALEJO HD1'
+    location = '/home/alejo/Dropbox/03 Temporal/03 Research/data/'
 
+    folder = 'Mark10_experiments/'
+    folder = location + folder
 
     # --- Fake Apple / Pull-back trials at 0 degrees ---
     # subfolder = 'experiment2_pullingLoad_medSpring_medMagnet/'
@@ -3060,14 +3082,14 @@ def mark10_pullback_experiments():
                  )
 
     # ---- MOMENTS ----
-    mark10_plots(folder + 'experiment11_pullBack_moment/',
-                 ['suction', 'fingers', 'dual'],
-                 ['Suction cups', 'Fingers', 'Dual'],
-                 [0],
-                 10,
-                 'Actuation mode',
-                 plot_type='barplot'
-                 )
+    # mark10_plots(folder + 'experiment11_pullBack_moment/',
+    #              ['suction', 'fingers', 'dual'],
+    #              ['Suction cups', 'Fingers', 'Dual'],
+    #              [0],
+    #              10,
+    #              'Actuation mode',
+    #              plot_type='barplot'
+    #              )
 
     plt.show()
 
@@ -3088,10 +3110,10 @@ def main():
     # simple_suction_experiment()
 
     # proxy_trials()
-    # real_trials()
+    real_trials()
 
     # --- Build video from pngs and a plot beside of it with a vertical line running ---
-    plot_and_video()
+    # plot_and_video()
 
     # TODO: Compare results between  get_detach_values() and get_forces_at_pick()
     # TODO: Interpret moments (lever = height of the rig)
@@ -3100,6 +3122,7 @@ def main():
 
 
 if __name__ == '__main__':
+
     main()
 
     # orthogonal_load_cell_experiments()
