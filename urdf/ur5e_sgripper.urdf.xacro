@@ -37,7 +37,7 @@
     <joint name="world_small_table" type="fixed">
     <parent link="world" />
     <child link="small_table" />
-    <origin xyz="-0.155 -1.35 0" rpy="0 0 1.5708" /> 
+    <origin xyz="0 -1.35 0" rpy="0 0 1.5708" />
     <!-- <origin xyz="-0.155 -1.50 0" rpy="0 0 1.5708" /> -->
     <!-- <origin xyz="-0.155 -1.65 0" rpy="0 0 1.5708" />    -->
 
@@ -49,7 +49,7 @@
     <joint name = "bigTable_simpleProxy" type="fixed"> 
     <parent link = "big_table" /> 
     <child link = "apple_proxy" /> 
-    <origin xyz = "0.4572 0.91 0.895" rpy="1.5708 0 -1.5708" />
+    <origin xyz = "0.4572 0.63 0.895" rpy="1.5708 0 -1.5708" />
     </joint>
 
     
@@ -57,7 +57,7 @@
     <joint name="world_joint" type="fixed">
     <parent link="small_table" />
     <child link = "base_link" />
-    <origin xyz="0.35 0.357 0.858" rpy="0.0 0.0 3.1416" />
+    <origin xyz="0.35 0.357 0.858" rpy="0.0 0.0 0.0" />
     </joint>
 
 

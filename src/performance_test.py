@@ -102,13 +102,13 @@ def main():
     # suction_gripper.go_to_preliminary_position()
 
     # --- Step 2: Gather info from user
-    print("\n\n****** Suction Gripper Experiments *****")
+    print("\n\n****** Gripper Experiments *****")
     suction_gripper.info_from_user()
 
     # --- Step 3: Scan Apple and Stem
     # suction_gripper.scan_apple_and_stem()
 
-    # --- Step 4: Check that the vacuum circuit is free of holes
+    # --- Step 4: Check that the vacuum circuit is sealed
     # suction_gripper.suction_cup_test()
 
     # --- Step 5: Start the desired experiment
@@ -125,15 +125,20 @@ def proxy_picks(gripper):
     # --- Experiment Parameters ---
     n_samples = 10  # starting positions to start gripper's pose
     yaws = [0, 60]
-    offsets = [0/1000, 5 / 1000, 10 / 1000, 15 / 1000, 20 / 1000, 25/1000]
+    # offsets = [0/1000, 5 / 1000, 10 / 1000, 15 / 1000, 20 / 1000, 25/1000]
     # offsets = [20 / 1000, 25 / 1000]
-    n_reps = 1  # number of repetitions at each configuration
 
     # --- Uncomment if you need other poses
-    yaws = [60]
+    # yaws = [60]
     # offsets = [5/1000, 10/1000]
     # offsets = [0 / 1000]
     # offsets = [25/1000]
+
+    # --- Occlusion Trials Parameters ---
+    n_samples = 10  # starting positions to start gripper's pose
+    offsets = [0]
+    yaws = [60]
+    n_reps = 1
 
     cart_noises = [0, 5/1000, 10/1000, 15/1000, 20/1000]
     ang_noises = [0, 5, 10, 15, 20]
@@ -156,7 +161,7 @@ def proxy_picks(gripper):
     apples_to_pick = len(gripper.x_coord)
 
     # --- Sample points on a sphere around the apple
-    for sample in range(4, apples_to_pick-1):
+    for sample in range(0, apples_to_pick-1):
 
         gripper.sample = sample
 
@@ -170,7 +175,7 @@ def proxy_picks(gripper):
 
         for yaw in yaws:
 
-            yaw -= 5   # Adjustment to have Suction Cup A facing down first
+            yaw += 25   # Adjustment to have Suction Cup A facing down first
             gripper.yaw = yaw
 
             for offset in offsets:
@@ -365,7 +370,7 @@ class RoboticGripper():
         # ---- Apple Proxy Parameters
         # Medium Force z = 1.05
         # 1st Bushing y = -0.49    2nd Bushing y = -0.69
-        self.apple_pose = [-0.69, -0.275, +1.07, 0.00, 0.00, 0.00]
+        self.apple_pose = [-0.315, -0.29, +1.15, 0.00, 0.00, 0.00]
         self.stem_pose = [-0.49, -0.30, +1.28, 0.00, 0.00, 0.00]
         self.APPLE_DIAMETER = 80 / 1000  # units [m]
         self.APPLE_HEIGHT = 70 / 1000  # units [m]
