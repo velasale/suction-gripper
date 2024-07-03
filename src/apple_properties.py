@@ -11,9 +11,9 @@ plt.rc('legend', fontsize=14)  # using a size in points
 
 
 # --- Step 1: Read File ----
-if os.name == 'nt':
+if os.name == 'nt':     # Windows OS
     storage = 'D:/'
-else:
+else:                   # Ubuntu OS
     storage = '/media/alejo/Elements/'
 
 folder = 'Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/Probe/'
