@@ -368,9 +368,17 @@ def icra24_analysis():
 def success_counter():
 
     # --- Step 1: Open folder
-    location = '/media/alejo/Elements/Alejo - Apple Pick Data/Apple Proxy Picks/05 - 2024 winter - finger and dual trials/'
+    if os.name == 'nt':     # Windows OS
+        location = 'D:/'
+    else:                   # Ubuntu OS
+        location = '/media/alejo/Elements/'
+
+    folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/05 - 2024 winter - finger and dual trials/'
     folders = ['FINGER_GRIPPER_EXPERIMENTS_rep1/', 'FINGER_GRIPPER_EXPERIMENTS_rep2/']
     # folders = ['DUAL_GRIPPER_EXPERIMENTS_rep1/', 'DUAL_GRIPPER_EXPERIMENTS_rep2/']
+
+    # Leaf Occlusion Trials
+    folders = ['Alejo - Apple Pick Data/Apple Proxy Picks/06 - 2024 summer - occlusion trials/leaf_occlusions/']
 
     print(folders)
 
@@ -409,7 +417,6 @@ def success_counter():
                     cup_c = labels['suction cup c']
                     result = labels['apple pick result']
 
-
                     # print("(a) Successful pick: after pick pattern")
                     # print("(b) Un-successful: Apple picked but apple it fell afterwards")
                     # print("(c) Un-successful: Apple not picked")
@@ -422,6 +429,7 @@ def success_counter():
                         b_unsuccess += 1
                     elif result == 'c':
                         c_unsuccess += 1
+                        print (filename)
                     elif result == 'd':
                         d_success += 1
                     elif result == 'e':

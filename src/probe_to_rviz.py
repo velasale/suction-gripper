@@ -65,7 +65,7 @@ def main():
         gripper = RoboticGripper()
 
         # ... Step 1: Read the txt file with all the coordinates
-        location = '/media/alejo/Elements/Prosser_Data/Probe/'
+        location = '/media/alejo/Elements/Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/Probe/'
         file = '20231101_apples_coords.csv'
         with open(location + file, 'r') as f:
             apples_coords = list(csv.reader(f, delimiter=","))

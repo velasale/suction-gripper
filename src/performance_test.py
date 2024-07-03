@@ -161,7 +161,7 @@ def proxy_picks(gripper):
     apples_to_pick = len(gripper.x_coord)
 
     # --- Sample points on a sphere around the apple
-    for sample in range(0, apples_to_pick-1):
+    for sample in range(5, apples_to_pick-1):
 
         gripper.sample = sample
 
@@ -175,7 +175,13 @@ def proxy_picks(gripper):
 
         for yaw in yaws:
 
+            # Adjust yaw for the different pitches in order to make the fingers contact the clusters or not
+            # Simply comment if unwanted
+            if sample > 3:
+                yaw = 0
+
             yaw += 25   # Adjustment to have Suction Cup A facing down first
+
             gripper.yaw = yaw
 
             for offset in offsets:
@@ -203,15 +209,16 @@ def proxy_picks(gripper):
                                            "experiment_steps",
                                            "/gripper/distance",
                                            "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3",
-                                           # "/usb_cam/image_raw",
-                                           "/camera/image_raw"]
+                                           "/usb_cam/image_raw"
+                                           # "/camera/image_raw"
+                                           ]
 
                     topics_without_cameras = ["wrench", "joint_states",
                                               "experiment_steps",
                                               "/gripper/distance",
                                               "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3"]
 
-                    command, rosbag_process = start_rosbag(filename, topics_without_cameras)
+                    command, rosbag_process = start_rosbag(filename, topics_with_cameras)
                     print("\n... Start recording Rosbag")
                     time.sleep(0.2)
 
@@ -236,9 +243,9 @@ def proxy_picks(gripper):
                     gripper.publish_event("Approach")
                     if gripper.ACTUATION_MODE != 'fingers':
                         # distance = gripper.APPROACH
-                        distance = 0.02
+                        distance = 0.03
                     else:
-                        distance = 0.02
+                        distance = 0.03
                     move = gripper.move_normal(distance, speed_factor=0.1, condition=True)
                     # todo: should we stop saving rosbag to avoid wasting space during labeling?
 
@@ -370,7 +377,7 @@ class RoboticGripper():
         # ---- Apple Proxy Parameters
         # Medium Force z = 1.05
         # 1st Bushing y = -0.49    2nd Bushing y = -0.69
-        self.apple_pose = [-0.315, -0.29, +1.15, 0.00, 0.00, 0.00]
+        self.apple_pose = [-0.315, -0.30, +1.125, 0.00, 0.00, 0.00]
         self.stem_pose = [-0.49, -0.30, +1.28, 0.00, 0.00, 0.00]
         self.APPLE_DIAMETER = 80 / 1000  # units [m]
         self.APPLE_HEIGHT = 70 / 1000  # units [m]
@@ -408,7 +415,7 @@ class RoboticGripper():
         self.y_coord = []
         self.z_coord = []
         self.pose_starts = []
-        self.APPROACH = 2 * self.SUCTION_CUP_GIVE + (self.sphere_diam - self.APPLE_DIAMETER) / 2  # Distance to approach normal
+        self.APPROACH = 4 * self.SUCTION_CUP_GIVE + 0.1*(self.sphere_diam - self.APPLE_DIAMETER)  # Distance to approach normal
         # self.APPROACH = 25
         # self.RETRIEVE = -100 / 1000
         self.RETRIEVE = -130 / 1000
@@ -894,7 +901,9 @@ class RoboticGripper():
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             raise
 
+        print('before',cur_pose_ezframe)
         cur_pose_ezframe.pose.position.z += z
+        print('after',cur_pose_ezframe)
         cur_pose_ezframe.header.stamp = rospy.Time(0)
 
         # ---- Step 3: Transform again the goal pose into the planning frame

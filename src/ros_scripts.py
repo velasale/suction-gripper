@@ -388,6 +388,9 @@ def main():
     # folder = '/media/alejo/Elements/Prosser_Data/'
     # subfolder = 'Dataset - apple grasps/'
 
+    # --- Occlusions ----
+    folder = '/media/alejo/Elements/Alejo - Apple Pick Data/Apple Proxy Picks/06 - 2024 summer - occlusion trials/cluster_occlusions/'
+
     open_batch = 'yes'
 
     if open_batch == 'yes':
@@ -406,12 +409,12 @@ def main():
                 # --- Extract topics
                 print('there is not a folder yet')
                 topic = "/camera/image_raw"
-                # bag_to_pngs(folder + subfolder, filename, topic,'/pngs_inhand_cam')
+                bag_to_pngs(folder + subfolder, filename, topic,'/pngs_inhand_cam')
 
                 topic = "/usb_cam/image_raw"
-                # bag_to_pngs(folder + subfolder, filename, topic, '/pngs_fixed_cam')
+                bag_to_pngs(folder + subfolder, filename, topic, '/pngs_fixed_cam')
 
-                # bag_to_video(folder + subfolder, filename, topic)
+                bag_to_video(folder + subfolder, filename, topic)
 
                 bag_to_csvs(folder + subfolder + filename)
 
