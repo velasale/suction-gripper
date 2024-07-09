@@ -846,7 +846,8 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plo
 
 
     if plot_type == 'barplot':
-        plt.boxplot(max_forces_data, labels=gripper_modes)
+        array = np.array(max_forces_data, dtype=object)
+        plt.boxplot(array, labels=gripper_modes)
     else:
         plt.legend()
 
@@ -3105,14 +3106,14 @@ def mark10_pullback_experiments():
                  )
 
     # ---- MOMENTS ----
-    # mark10_plots(folder + 'experiment11_pullBack_moment/',
-    #              ['suction', 'fingers', 'dual'],
-    #              ['Suction cups', 'Fingers', 'Dual'],
-    #              [0],
-    #              10,
-    #              'Actuation mode',
-    #              plot_type='barplot'
-    #              )
+    mark10_plots(folder + 'experiment11_pullBack_moment/',
+                 ['suction', 'fingers', 'dual'],
+                 ['Suction cups', 'Fingers', 'Dual'],
+                 [0],
+                 10,
+                 'Actuation mode',
+                 plot_type='barplot'
+                 )
 
     plt.show()
 
