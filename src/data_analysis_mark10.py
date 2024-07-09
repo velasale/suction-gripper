@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 from scipy.ndimage import gaussian_filter, median_filter
 
+
 ################################ HANDY FUNCTIONS ##################################################
 def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plot_type='bandgap'):
 
@@ -232,22 +233,13 @@ def locate_index_of_deltas_v2(data, intercept=0.5):
 
 
 ############################### SCRIPTS FOR EACH EXPERIMENT ########################################
-
-def orthogonal_load_cell_experiments():
-
-    # --- Step 1 - Data Location ---
-    if os.name == 'nt':  # Windows OS
-        storage = 'D:/'
-    else:  # Ubuntu OS
-        storage = '/media/alejo/Elements/'
-
-    folder = 'Alejo - Mark10 Gripper Tests/Mark10_experiments/'
+def orthogonal_load_cell_experiments(folder):
 
     # subfolder = 'experiment1_orthogonalLoad/'
     subfolder = 'experiment6_orthogonalLoad_accelStepper/'
     # subfolder = 'experiment12_orthogonalLoad/'
 
-    folder = storage + folder + subfolder
+    folder = folder + subfolder
 
     # Step 2 - Sweep all diameters
     diameters = [70, 75, 80]
@@ -326,7 +318,7 @@ def orthogonal_load_cell_experiments():
     plt.show()
 
 
-def push_load_cell_experiments():
+def push_load_cell_experiments(folder):
 
     # --- Plot Parameters. For papers ---
     plt.rcParams["font.family"] = "serif"
@@ -334,19 +326,11 @@ def push_load_cell_experiments():
     plt.rcParams["font.size"] = 18
     plt.rc('legend', fontsize=14)  # using a size in points
 
-    # --- Step 1 - Data Location ---
-    if os.name == 'nt':  # Windows OS
-        storage = 'D:/'
-    else:  # Ubuntu OS
-        storage = '/media/alejo/Elements/'
-
-    folder = 'Alejo - Mark10 Gripper Tests/Mark10_experiments/'
-
     # subfolder = 'experiment1_orthogonalLoad/'
     # subfolder = 'experiment6_orthogonalLoad_accelStepper/'
     subfolder = 'experiment12_orthogonalLoad/'
 
-    location = storage + folder + subfolder
+    location = folder + subfolder
 
     mean_max_forces = []
     std_max_forces = []
@@ -366,6 +350,7 @@ def push_load_cell_experiments():
             trial_df = pd.read_excel(location + file, index_col=0)
             load_list = trial_df['Load [N]'].tolist()
 
+            fig = plt.figure(figsize=(8, 6))
             plt.plot(load_list, label='original data')
             filtered_data = median_filter(load_list, 20)
             plt.plot(filtered_data, label='filtered data')
@@ -395,13 +380,11 @@ def push_load_cell_experiments():
             print('Finger Max-values', finger_max_vals)
             print('All fingers accumulated Max-values', all_fingers_max_vals)
 
-            # plt.show()
 
         fingers_data.append(finger_max_vals)
 
         fig = plt.figure(figsize=(8, 6))
         plt.boxplot(finger_max_vals)
-        plt.show()
 
     fingers_data.append(all_fingers_max_vals)
 
@@ -428,16 +411,8 @@ def push_load_cell_experiments():
     plt.show()
 
 
-def mark10_pullback_experiments():
+def mark10_pullback_experiments(folder):
 
-    # --- Step 1 - Data Location ---
-    if os.name == 'nt':  # Windows OS
-        storage = 'D:/'
-    else:  # Ubuntu OS
-        storage = '/media/alejo/Elements/'
-
-    folder = 'Alejo - Mark10 Gripper Tests/Mark10_experiments/'
-    folder = storage + folder
 
     # --- Fake Apple / Pull-back trials at 0 degrees ---
     # subfolder = 'experiment2_pullingLoad_medSpring_medMagnet/'
@@ -511,6 +486,16 @@ def mark10_pullback_experiments():
 
 if __name__ == '__main__':
 
-    # orthogonal_load_cell_experiments()
-    # mark10_pullback_experiments()
-    push_load_cell_experiments()
+    ### Step 1 - Data Location ###
+    if os.name == 'nt':     # Windows OS
+        storage = 'D:/'
+    else:                   # Ubuntu OS
+        storage = '/media/alejo/Elements/'
+
+    folder = 'Alejo - Mark10 Gripper Tests/Mark10_experiments/'
+    folder = storage + folder
+
+    ### Step 2 - Subfunctions ###
+    # orthogonal_load_cell_experiments(folder)
+    # mark10_pullback_experiments(folder)
+    push_load_cell_experiments(folder)
