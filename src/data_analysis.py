@@ -802,7 +802,7 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plo
 
     if plot_type == 'bandgap':
         # Plot median detachment force
-        plt.hlines(y=16, xmin=xmin, xmax=xmax, linestyle='--', lw=2, label='Median Detachment Force', color='k')
+        plt.hlines(y=16, xmin=xmin, xmax=xmax, linestyle='--', lw=2, label='Median FDF', color='k')
 
     # Read suction reference values
     if 'suction' not in tags:
@@ -1410,16 +1410,19 @@ class ApplePickTrial:
     def apple_pose(self):
         """Returns as numpy arrays the coordinates of calix, north pole and abcission layer"""
 
-        # STEP1: Locate csv with the ground truth of the apples
-        storage = '/media/alejo/Elements'
-        storage = 'D:/'
+        # --- Step 1 - Data Location ---
+        if os.name == 'nt':  # Windows OS
+            storage = 'D:/'
+        else:  # Ubuntu OS
+            storage = '/media/alejo/Elements/'
 
-        folder = '/Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/Probe/'
+        folder = 'Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/Probe/'
         folder = storage + folder
 
         filename = '20231101_apples_coords.csv'
 
         folder = folder + filename
+        print(folder)
         data_list = pd.read_csv(folder)
 
         array_sp = np.ones(3)
@@ -2648,16 +2651,17 @@ def proxy_trials():
 
 def real_trials():
 
-    # STEP A: Data Location
-    # TODO: detect machine
+    # --- Step 1 - Data Location ---
+    if os.name == 'nt':  # Windows OS
+        storage = 'D:/'
+    else:  # Ubuntu OS
+        storage = '/media/alejo/Elements/'
+
     # folder = '/home/alejo/gripper_ws/src/suction-gripper/data/'   # ArmFarm laptop - Default Hard Drive
     # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"     # ArmFarm laptop - Hard Drive B
     # folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'  # ArmFarm laptop - Hard Drive C
 
-    # storage = '/media/alejo/Elements/'
-    storage = 'D:/'
-
-    folder = '/Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/'   # External SSD (ALEJO HD1)
+    folder = 'Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/'
     folder = storage + folder
 
     # folder = 'D:/Prosser_Data/'
@@ -2684,9 +2688,9 @@ def real_trials():
     sc3_values_at_eng = []
 
     # STEP C: Sweep all bag files, and for each one do next
-    subfolders= ['Dataset - apple grasps/', 'Dataset - apple picks/']
+    # subfolders= ['Dataset - apple grasps/', 'Dataset - apple picks/']
     # subfolders = ['Dataset - apple grasps/']
-    # subfolders = ['Dataset - apple picks/']
+    subfolders = ['Dataset - apple picks/']
 
     # --- Proxy verification ---
     # folder = '/media/alejo/Elements/Alejo - Apple Pick Data/Apple Proxy Picks/05 - 2024 winter - finger and dual trials/'
@@ -2711,7 +2715,7 @@ def real_trials():
                 except IndexError:
                     apple_id = 1
 
-                # STEP 1: Turn bag into csvs if needed
+                ### STEP 1: Turn bag into csvs if needed
                 if os.path.isdir(location + file):
                     logging.debug('csvs were already generated')
                     pass
@@ -2719,27 +2723,27 @@ def real_trials():
                     logging.debug('make sure to import ros_scripts.py')
                     bag_to_csvs(location + file + ".bag")
 
-                # STEP 2: Generate an experiment object for each file, and read its json file
+                ### STEP 2: Generate an experiment object for each file, and read its json file
                 json_file = open(location + file + '.json')
                 json_data = json.load(json_file)
                 experiment = ApplePickTrial(apple_id=apple_id, metadata=json_data)
                 experiment.filename = file
                 logging.debug('metadata: %s' %experiment.metadata['general'])
 
-                # STEP 3: Check conditions from metadata to continue with the analysis
+                ### STEP 3: Check conditions from metadata to continue with the analysis
                 mode = experiment.metadata['robot']['actuation mode']
                 pick = experiment.metadata['labels']['apple pick result']
 
+                ### STEP 4: Apply filter
                 # if pick != 'c':         # c: unsuccessful
-                # if pick == 'c':
-                if True:
+                if pick == 'c':
+                # if True:
                 # if mode == 'suction':
-                # if file == '2023111_realapple2_mode_dual_attempt_1_orientation_0_yaw_0':
 
-                    # STEP 4: Read values from 'csv'
+                    ### STEP 4: Read values from 'csv'
                     read_csvs(experiment, location + file)
 
-                    # STEP 5: Get features for the experiment
+                    ### STEP 5: Get features for the experiment
                     experiment.get_features()
                     experiment.eef_location(plots='no')
                     experiment.pick_points(plots='no')
@@ -2747,7 +2751,7 @@ def real_trials():
                     experiment.pick_stiffness(plots='no')
                     # experiment.suction_engagement()
 
-                    # STEP 6: Append variables of interest
+                    ### STEP 6: Append variables of interest
                     stiffnesses.append(experiment.stiffness)
                     max_normalForces.append(experiment.max_normalForce_at_pick)
                     max_tangentialForces.append(experiment.max_tangentialForce_at_pick)
@@ -2767,7 +2771,7 @@ def real_trials():
                     if experiment.offset_eef_apple < 100:       # Record of the offset between eef and apple
                         offsets.append(experiment.offset_eef_apple)
 
-                    # STEP 7: Single experiment plots
+                    ### STEP 7: Single experiment plots
                     # experiment.plot_only_pressure(type='single')
                     # experiment.plot_only_total_force()
 
@@ -2780,10 +2784,10 @@ def real_trials():
         confidence = 0.95
         a = stiffnesses
         c_int = st.t.interval(confidence, len(a)-1, loc=np.mean(a), scale=st.sem(a))
-        print('Stiffness Confidence Interval 95%: ', round(c_int[0],2), round(c_int[1],2))
+        print('Stiffness Confidence Interval 95%: ', round(c_int[0], 2), round(c_int[1], 2))
         a = max_netForces
         c_int = st.t.interval(confidence, len(a)-1, loc=np.mean(a), scale=st.sem(a))
-        print('Net Force Confidence Interval 95%: ', round(c_int[0],2), round(c_int[1],2))
+        print('Net Force Confidence Interval 95%: ', round(c_int[0], 2), round(c_int[1], 2))
 
         # Boxplots
         fig = plt.figure()
@@ -3147,10 +3151,10 @@ def main():
 
 if __name__ == '__main__':
 
-    # main()
+    main()
 
     # orthogonal_load_cell_experiments()
-    mark10_pullback_experiments()
+    # mark10_pullback_experiments()
     # push_load_cell_experiments()
 
     plt.show()
