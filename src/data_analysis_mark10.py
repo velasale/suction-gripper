@@ -449,7 +449,7 @@ def mark10_pullback_experiments(folder):
                      ['Fingers'],
                  [0, 5, 10, 15, 20],
                  10,
-                 'Equator offset [mm]'
+                 'Fruit equator offset [mm]'
                  )
 
     # ---- ANGLES ----
@@ -492,13 +492,9 @@ if __name__ == '__main__':
     folder = 'Alejo - Mark10 Gripper Tests/Mark10_experiments/'
     folder = storage + folder
 
-
     ### Step 2 - Subfunctions ###
     # orthogonal_load_cell_experiments(folder)
-    push_load_cell_experiments(folder)
-    # mark10_pullback_experiments(folder)
-
-
-
+    # push_load_cell_experiments(folder)
+    mark10_pullback_experiments(folder)
 
     plt.show()
