@@ -10,11 +10,6 @@ from scipy.ndimage import gaussian_filter, median_filter
 ################################ HANDY FUNCTIONS ##################################################
 def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plot_type='bandgap'):
 
-    # Plot font
-    plt.rcParams["font.family"] = "serif"
-    plt.rcParams["font.serif"] = ["Times New Roman"]
-    plt.rcParams["font.size"] = 18
-    plt.rc('legend', fontsize=14)  # using a size in points
 
     # Axes limits
     xmin = min(variable_list)
@@ -320,12 +315,6 @@ def orthogonal_load_cell_experiments(folder):
 
 def push_load_cell_experiments(folder):
 
-    # --- Plot Parameters. For papers ---
-    plt.rcParams["font.family"] = "serif"
-    plt.rcParams["font.serif"] = ["Times New Roman"]
-    plt.rcParams["font.size"] = 18
-    plt.rc('legend', fontsize=14)  # using a size in points
-
     # subfolder = 'experiment1_orthogonalLoad/'
     # subfolder = 'experiment6_orthogonalLoad_accelStepper/'
     subfolder = 'experiment12_orthogonalLoad/'
@@ -408,10 +397,11 @@ def push_load_cell_experiments(folder):
     plt.ylim([0, 50])
     plt.grid()
 
-    plt.show()
+    # plt.show()
 
 
 def mark10_pullback_experiments(folder):
+
 
 
     # --- Fake Apple / Pull-back trials at 0 degrees ---
@@ -481,10 +471,17 @@ def mark10_pullback_experiments(folder):
                  plot_type='barplot'
                  )
 
-    plt.show()
+    # plt.show()
 
 
 if __name__ == '__main__':
+
+    ### Adjust plot parameters (for papers) ###
+    plt.rcParams["font.family"] = "serif"
+    plt.rcParams["font.serif"] = ["Times New Roman"]
+    plt.rcParams["font.size"] = 16
+    plt.rcParams["font.weight"] = 'light'
+    plt.rc('legend', fontsize=14)  # using a size in points
 
     ### Step 1 - Data Location ###
     if os.name == 'nt':     # Windows OS
@@ -495,7 +492,13 @@ if __name__ == '__main__':
     folder = 'Alejo - Mark10 Gripper Tests/Mark10_experiments/'
     folder = storage + folder
 
+
     ### Step 2 - Subfunctions ###
     # orthogonal_load_cell_experiments(folder)
-    # mark10_pullback_experiments(folder)
     push_load_cell_experiments(folder)
+    # mark10_pullback_experiments(folder)
+
+
+
+
+    plt.show()
