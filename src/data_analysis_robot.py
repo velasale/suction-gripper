@@ -168,6 +168,26 @@ def relative_values(original_list, reference_value):
     return relative_list
 
 
+def crop_lists(lower_bound, time_list, value_list):
+    """
+    Crop a time and a value list, given a lower bound time
+    @param lower_bound:
+    @param time_list:
+    @param value_list:
+    @return:
+    """
+
+    cropped_time_list = []
+    cropped_value_list = []
+
+    for i, j in zip(time_list, value_list):
+        if i > lower_bound:
+            cropped_time_list.append(i)
+            cropped_value_list.append(j)
+
+    return cropped_time_list, cropped_value_list
+
+
 # ------------------------ FORWARD KINEMATICS FUNCTIONS -------------------------------
 def DH_T(i, thetas, alphas, a_links, d_offsets):
     """
@@ -566,56 +586,63 @@ def circle_plots(x_noises, z_noises, radius, x_forces, z_forces, pressure):
 def plot_and_video():
     """Method to run a vertical line on a plot and a video"""
 
-    # --- Provide File ---
+    ### Step 1 - Data Location ###
+    if os.name == 'nt':  # Windows OS
+        storage = 'D:/'
+    else:  # Ubuntu OS
+        storage = '/media/alejo/Elements/'
 
-    # --- Default Hard Drive ---
-    # folder = '/home/alejo/gripper_ws/src/suction-gripper/data/'
-    # --- Hard Drive B ---
-    folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"
-    # --- Hard Drive C ---
-    folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'
-
-    location = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/DATASET5/'
-    filename = 'horizontal_#7_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_26.46_pitch_45.0_rep_1'
-    # Sample with 0deg tilt and 0 mm offset:
-    filename = 'horizontal_#0_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_0.0_pitch_0.0_rep_1'
-    # Sample with 0deg tilt and 18.9mm offset:
-    filename = 'horizontal_#5_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_18.9_pitch_0.0_rep_1'
-    # Sample with 15deg tilt and 18.9mm offset
-    filename = 'horizontal_#5_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_18.9_pitch_15.0_rep_3'
-    # Sample with 30deg tilt and 18.9mm offset
-    filename = 'horizontal_#5_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_18.9_pitch_45.0_rep_1'
-    # Sample with 45deg tilt and 26.5mm offsrt
-    # filename = 'horizontal_#7_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_26.46_pitch_45.0_rep_1'
-
-    # --- ICRA24 accompanying video
-    storage = '/media/alejo/Elements'
-    folder = '/Alejo - Apple Pick Data/Apple Proxy Picks/04 - 2023 summer - suctionCup gripper/LOW STIFFNESS/'
+    ### RAL24 figures ###
+    folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/06 - 2024 summer - occlusion trials/cluster_occlusions/'
     location = storage + folder
+    file = '20240628_proxy_sample_2_yaw_85_offset_0_rep_0_stiff_medium_force_medium'
 
-    filename = '20230731_proxy_sample_4_yaw_45_rep_0_stiff_low_force_medium'
-    # filename = '20230731_proxy_sample_5_yaw_45_rep_0_stiff_low_force_medium'
+    # # --- Default Hard Drive ---
+    # # folder = '/home/alejo/gripper_ws/src/suction-gripper/data/'
+    # # --- Hard Drive B ---
+    # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"
+    # # --- Hard Drive C ---
+    # folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'
+    #
+    # location = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/DATASET5/'
+    # filename = 'horizontal_#7_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_26.46_pitch_45.0_rep_1'
+    # # Sample with 0deg tilt and 0 mm offset:
+    # filename = 'horizontal_#0_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_0.0_pitch_0.0_rep_1'
+    # # Sample with 0deg tilt and 18.9mm offset:
+    # filename = 'horizontal_#5_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_18.9_pitch_0.0_rep_1'
+    # # Sample with 15deg tilt and 18.9mm offset
+    # filename = 'horizontal_#5_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_18.9_pitch_15.0_rep_3'
+    # # Sample with 30deg tilt and 18.9mm offset
+    # filename = 'horizontal_#5_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_18.9_pitch_45.0_rep_1'
+    # # Sample with 45deg tilt and 26.5mm offsrt
+    # # filename = 'horizontal_#7_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_26.46_pitch_45.0_rep_1'
 
-    # filename = '20230922_realapple3_attempt_1_orientation_0_yaw_0'
-    # filename = '20230922_realapple1_attempt_1_orientation_0_yaw_0'
-    # filename = '20230922_realapple2_attempt_1_orientation_0_yaw_0'
+    # # --- ICRA24 accompanying video
+    # storage = '/media/alejo/Elements'
+    # folder = '/Alejo - Apple Pick Data/Apple Proxy Picks/04 - 2023 summer - suctionCup gripper/LOW STIFFNESS/'
+    # location = storage + folder
+    #
+    # filename = '20230731_proxy_sample_4_yaw_45_rep_0_stiff_low_force_medium'
+    # # filename = '20230731_proxy_sample_5_yaw_45_rep_0_stiff_low_force_medium'
+    # # filename = '20230922_realapple3_attempt_1_orientation_0_yaw_0'
+    # # filename = '20230922_realapple1_attempt_1_orientation_0_yaw_0'
+    # # filename = '20230922_realapple2_attempt_1_orientation_0_yaw_0'
 
     # --- Prosser2
-    storage = '/media/alejo/Elements'
-    folder = '/Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/Dataset - apple picks/'
-    location = storage + folder
-    filename = '2023111_realapple7_mode_dual_attempt_1_orientation_0_yaw_0'
+    # folder = '/Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/Dataset - apple picks/'
+    # location = storage + folder
+    # filename = '2023111_realapple7_mode_dual_attempt_1_orientation_0_yaw_0'
 
     # --- 2. Turn bag into csvs if needed
-    if os.path.isdir(location + filename):
+    if os.path.isdir(location + file):
         print("csvs already created")
         pass
     else:
         print("csvs need to be generated from bag file")
-        bag_to_csvs(location + filename + ".bag")
+        bag_to_csvs(location + file + ".bag")
 
     # --- 3. Read metadata
-    json_file = open(location + filename + '.json')
+    json_file = open(location + file + '.json')
     json_data = json.load(json_file)
     trial_metadata = json_data
     print(trial_metadata['general'])
@@ -624,15 +651,14 @@ def plot_and_video():
     experiment = ApplePickTrial(metadata=trial_metadata)
 
     # --- 4. Read values from 'csv'
-    read_csvs(experiment, location + filename)
+    read_csvs(experiment, location + file)
 
     # --- 5. Get different features for the experiment
     experiment.get_features()
 
     # 6. Plot each experiment if needed
-    running_plot_and_video(location, filename, experiment)
+    running_plot_and_video(location, file, experiment)
     plt.show()
-
 
 
 # ----------------------- MAIN CLASS FOR TRIALS ------------------------------------
@@ -1647,13 +1673,13 @@ class ApplePickTrial:
         @return:
         """
 
+        ### Step1: Plot Parameters ###
         icra24_figure5_fonts = 24
+        icra22_figure5_size = (13, 5)
 
         FONTSIZE = icra24_figure5_fonts
-        TICKSIZE = icra24_figure5_fonts
-        # FIGURESIZE = (8, 6)
-        FIGURESIZE = (13, 5)  # Fig5 ICRA24
-
+        TICKSIZE = icra24_figure5_fonts - 6
+        FIGURESIZE = icra22_figure5_size
 
         lines = itertools.cycle(('dotted', 'dashed', 'dashdot'))
         colors = itertools.cycle(('orange', 'blue', 'green'))
@@ -1663,38 +1689,21 @@ class ApplePickTrial:
         # pressure_time = self.pressure_elapsed_time
         # pressure_values = self.pressure_values
 
-        # --- Zoom In the a-xis if needed ---
-        threshold = 0
-        suctionCup1_times = []
-        suctionCup2_times = []
-        suctionCup3_times = []
-        suctionCup1_values = []
-        suctionCup2_values = []
-        suctionCup3_values = []
+        ### Step2: Crop data if needed ###
+        start_time = 65
+        cropped_times1, cropped_values1 = crop_lists(start_time, self.pressure_sc1_elapsed_time, self.pressure_sc1_values)
+        cropped_times2, cropped_values2 = crop_lists(start_time, self.pressure_sc2_elapsed_time, self.pressure_sc2_values)
+        cropped_times3, cropped_values3 = crop_lists(start_time, self.pressure_sc3_elapsed_time, self.pressure_sc3_values)
 
-        for i, j in zip(self.pressure_sc1_elapsed_time, self.pressure_sc1_values):
-            if i > threshold:
-                suctionCup1_times.append(i)
-                suctionCup1_values.append(j)
-        for i, j in zip(self.pressure_sc2_elapsed_time, self.pressure_sc2_values):
-            if i > threshold:
-                suctionCup2_times.append(i)
-                suctionCup2_values.append(j)
-        for i, j in zip(self.pressure_sc3_elapsed_time, self.pressure_sc3_values):
-            if i > threshold:
-                suctionCup3_times.append(i)
-                suctionCup3_values.append(j)
-
-        pressure_times = [suctionCup1_times, suctionCup2_times, suctionCup3_times]
-        pressure_values = [suctionCup1_values, suctionCup2_values, suctionCup3_values]
+        pressure_times = [cropped_times1, cropped_times2, cropped_times3]
+        pressure_values = [cropped_values1, cropped_values2, cropped_values3]
         pressure_labels = ["cup A", "cup B", "cup C"]
 
         event_x = self.event_elapsed_time
         event_y = self.event_values
 
-        # --- Condition the Event's labels a bit for the paper purposes
-        picking_time = 10.597
-        # picking_time = 22.9
+        ### Step3: Adapt event's labels for paper purposes (if needed) ###
+        picking_time = 81.4
         cnt = 0
         flag = 0
         for i, j in zip(event_x, event_y):
@@ -1711,6 +1720,7 @@ class ApplePickTrial:
                 event_y[cnt] = 'pull back'
             cnt += 1
 
+        ### Step4: Elaborate plots ###
         if type == 'many':
             print(self.filename, '\n')
             fig, axes = plt.subplots(3, 1, figsize=FIGURESIZE)
@@ -1769,9 +1779,12 @@ class ApplePickTrial:
             plt.xlabel("Elapsed Time [sec]", fontsize=FONTSIZE)
             plt.ylabel("Pressure [kPa]", fontsize=FONTSIZE)
             plt.ylim([0, 110])
+
             # plt.xlim([0, 25])
-            plt.xlim([0, 16])       # Fig.5 ICRA24
-            # plt.xlim([0,30])        # Fig.8 ICRA24
+            # plt.xlim([0, 16])       # Fig.5 ICRA24
+            # plt.xlim([0, 50])        # Fig.8 ICRA24
+            plt.title(self.filename)
+
             plt.yticks(fontsize=TICKSIZE)
             plt.xticks(fontsize=TICKSIZE)
             plt.grid()
@@ -1781,35 +1794,26 @@ class ApplePickTrial:
     def plot_only_total_force(self):
         """Plots only force readings (forces and moments)"""
 
+        ### Step1: Plot Parameters ###
         icra24_figure5_fonts = 24
+        icra22_figure5_size = (13, 5)
 
-        FONTSIZE = icra24_figure5_fonts           # Use 24 for papers
-        TICKSIZE = icra24_figure5_fonts
-        FIGURESIZE = (8, 6)
-        FIGURESIZE = (13, 5)  # Fig5 ICRA24
+        FONTSIZE = icra24_figure5_fonts
+        TICKSIZE = icra24_figure5_fonts - 6
+        FIGURESIZE = icra22_figure5_size
 
         plt.figure(figsize=FIGURESIZE)
 
-        # ------- Zoom In the a-xis if needed -------
-        threshold = 0
-        force_time = []
-        sumforce_values = []
-
-        force_values = self.wrench_netforce_relative_values
-        # force_values = self.wrench_zforce_values
-
-        for i, j in zip(self.wrench_elapsed_time, force_values):
-            if i > threshold:
-                force_time.append(i)
-                sumforce_values.append(j)
-        # --------------------------------------------
+        ### Step2: Crop data if needed ###
+        start_time = 65
+        force_time, sumforce_values = crop_lists(start_time, self.wrench_elapsed_time,
+                                                     self.wrench_netforce_relative_values)
 
         event_x = self.event_elapsed_time
         event_y = self.event_values
 
-        # --- Condition the Event's labels a bit for the paper purposes
-        picking_time = 10.597       # Fig5. ICRA24
-        # picking_time = 22.9
+        ### Step3: Adapt events' labels for paper purposes (if needed) ####
+        picking_time = 81.4
         cnt = 0
         flag = 0
         for i, j in zip(event_x, event_y):
@@ -1830,18 +1834,20 @@ class ApplePickTrial:
         max_sumforce_time = self.max_detach_sumforce_time
 
         plt.plot(force_time, sumforce_values, linewidth=2, color='red')
-        plt.annotate('Max Force: ' + str(round(max_sumforce_val, 1)), xy=(max_sumforce_time, max_sumforce_val),
-                            xycoords='data', xytext=(max_sumforce_time + 0, max_sumforce_val + 1.5),
-                            va='top', ha='right', arrowprops=dict(facecolor='orange', shrink=0), fontsize=FONTSIZE)
+
+        ### Add arrow pointint to the Max Force ###
+        # plt.annotate('Max Force: ' + str(round(max_sumforce_val, 1)), xy=(max_sumforce_time, max_sumforce_val),
+        #                     xycoords='data', xytext=(max_sumforce_time -2, max_sumforce_val + 1.5),
+        #                     va='top', ha='right', arrowprops=dict(facecolor='orange', shrink=0), fontsize=FONTSIZE)
 
         for event, label in zip(event_x, event_y):
             plt.axvline(x=event, color='black', linestyle='--', linewidth=1.5)
             # plt.text(event, 0.5, label.lower(), rotation=45, color='black', fontsize=FONTSIZE)
-            plt.text(event, 2, label.lower(), rotation=45, color='black', fontsize=FONTSIZE)   # Fig.5 ICRA24
+            plt.text(event, 7, label.lower(), rotation=45, color='black', fontsize=TICKSIZE)   # Fig.5 ICRA24
             plt.xlabel("Elapsed Time [sec]", fontsize=FONTSIZE)
             plt.ylabel("Force [N]", fontsize=FONTSIZE)
             # plt.ylim([-5, 40])
-            plt.ylim([0, 10])       # Limits for Fig.5 ICRA24
+            # plt.ylim([0, 10])       # Limits for Fig.5 ICRA24
 
 
         # --- Add error in the title if there was any ---
@@ -1862,11 +1868,14 @@ class ApplePickTrial:
         plt.grid()
         plt.xticks(size=TICKSIZE)
         plt.yticks(size=TICKSIZE)
-        # plt.title(self.filename + "\n" + error_type, fontsize=8)
+        plt.title(self.filename + "\n" + error_type, fontsize=8)
         # plt.suptitle(title_text)
+
         # plt.xlim([0, 100])
-        plt.xlim([0, 16])       # Fig.5 ICRA24
+        # plt.xlim([0, 16])       # Fig.5 ICRA24
         # plt.xlim([0,30])        # Fig.8 ICRA24
+        plt.ylim([0, 20])
+
         plt.tight_layout()
 
     def plot_only_pressure_animated(self, location, filename):
@@ -2361,41 +2370,27 @@ def simple_suction_experiment():
 
 def proxy_trials():
 
-    # STEP A: Data Location
-    # folder = '/home/alejo/gripper_ws/src/suction-gripper/data/'   # Default Hard Drive
+    ### Step 1 - Data Location ###
+    if os.name == 'nt':  # Windows OS
+        storage = 'D:/'
+    else:  # Ubuntu OS
+        storage = '/media/alejo/Elements/'
 
-    folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"     # Fig.5 ICRA24
+    folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/06 - 2024 summer - occlusion trials/cluster_occlusions/'
+    location = storage + folder
+    file = '20240628_proxy_sample_2_yaw_85_offset_0_rep_0_stiff_medium_force_medium'
 
-    # folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'  # Hard Drive C
-    # folder = '/media/alejo/Elements/Prosser_Data/'  # External Hard Drive
-
-    # subfolder = 'MEDIUM_STIFFNESS/'
-    subfolder = 'HIGH_STIFFNESS/'       # Fig5 ICRA24
-    # subfolder = 'LOW_STIFFNESS/'
-    # subfolder = 'Dataset - apple picks/'
-    # subfolder = ''
-
-    location = folder + subfolder
-
-    # file = '2023083_proxy_sample_6_yaw_45_rep_0_stiff_medium_force_low'
-    # file ='2023083_proxy_sample_0_yaw_-15_rep_1_stiff_medium_force_medium'
-    # file = '2023083_proxy_sample_5_yaw_45_rep_0_stiff_medium_force_low'
-    # file = '2023082_proxy_sample_5_yaw_45_rep_0_stiff_high_force_low'
-
-    # --- ICRA24 paper plots
-    file = '2023083_proxy_sample_5_yaw_45_rep_1_stiff_high_force_low'   # Fig5. ICRA24
-    # file = '2023096_realapple5_attempt3'
+    ### ICRA24 Figures ###
+    # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"  # Fig.5 ICRA24
+    # subfolder = 'HIGH_STIFFNESS/'  # Fig5 ICRA24
+    # file = '2023083_proxy_sample_5_yaw_45_rep_1_stiff_high_force_low'  # Fig5. ICRA24
     # file = '2023096_realapple6_attempt5'            # Fig8. ICRA24
-    # file = '2023096_realapple3_attempt1'
-    # file = '2023083_proxy_sample_0_yaw_45_rep_1_stiff_low_force_low'
-    # file = '20230922_realapple3_attempt_1_orientation_0_yaw_0'
-    # file = '20230920_sim_sample_0_yaw_-15_offset_0.005_rep_0_stiff_low_force_low'
+    # location = folder + subfolder
 
     # --- ICRA24 accompanying video
     # file = '20230731_proxy_sample_6_yaw_45_rep_0_stiff_low_force_low'
     # file = '20230922_realapple3_attempt_1_orientation_0_yaw_0'
     # file = '20230922_realapple2_attempt_1_orientation_0_yaw_0'
-
 
 
     # --- 2. Turn bag into csvs if needed
@@ -2411,6 +2406,7 @@ def proxy_trials():
     json_data = json.load(json_file)
     metadata = json_data
     experiment = ApplePickTrial(metadata=metadata)
+    experiment.filename = file
 
     print(experiment.metadata['general'])
 
@@ -2451,7 +2447,7 @@ def real_trials():
     # file = '20230922_realapple2_attempt_1_orientation_0_yaw_0'
     # file = '2023111_realapple1_mode_dual_attempt_1_orientation_0_yaw_0'
 
-    ### Step 2: Define variables to gather from the trials ###
+    ### Step 2: Define what variables to gather from trials ###
     stiffnesses = []
     max_normalForces = []
     max_tangentialForces = []
@@ -2641,8 +2637,8 @@ def main():
     # noise_experiments_pitch(exp_type='horizontal', radius=radius, variable=variable)
     # simple_suction_experiment()
 
-    # proxy_trials()
-    real_trials()
+    proxy_trials()
+    # real_trials()
 
     # --- Build video from pngs and a plot beside of it with a vertical line running ---
     # plot_and_video()
@@ -2656,4 +2652,4 @@ def main():
 if __name__ == '__main__':
 
     main()
-    plt.show()
+    # plt.show()
