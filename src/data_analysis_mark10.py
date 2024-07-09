@@ -403,7 +403,6 @@ def push_load_cell_experiments(folder):
 def mark10_pullback_experiments(folder):
 
 
-
     # --- Fake Apple / Pull-back trials at 0 degrees ---
     # subfolder = 'experiment2_pullingLoad_medSpring_medMagnet/'
     # exp_prefix = 'pull_load_fakeApple_' + str(steps) + 'steps_rep' + str(rep) + '_' + tag + '_'

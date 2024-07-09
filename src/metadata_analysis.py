@@ -12,6 +12,7 @@ import seaborn as sns
 import itertools
 
 
+######################################### HANDY FUNCTIONS ################################
 def rename_level(level):
 
     if level == 'low':
@@ -249,6 +250,7 @@ def df_categorical_stats(df, cat_name, cat_value, x_filter_name, x_filter_values
         plt.tight_layout()
 
 
+####################### FUNCTIONS FOR SPECIFIC EXPERIMENTS AND PUBLICATIONS #############
 def icra24_analysis():
     """ This script is the main used for ICRA24 paper plots
     ICRA 2024 Contributed paper 2508: Dynamic evaluation of a suction based gripper for fruit picking using a physical twin
@@ -369,20 +371,26 @@ def icra24_analysis():
 
 def success_counter():
 
-    # --- Step 1: Open folder
+    ### Step 1: Data Location: Hard Drive (ALEJO HD1) ###
     if os.name == 'nt':     # Windows OS
         location = 'D:/'
     else:                   # Ubuntu OS
         location = '/media/alejo/Elements/'
 
-    folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/05 - 2024 winter - finger and dual trials/'
-    folders = ['FINGER_GRIPPER_EXPERIMENTS_rep1/', 'FINGER_GRIPPER_EXPERIMENTS_rep2/']
-    # folders = ['DUAL_GRIPPER_EXPERIMENTS_rep1/', 'DUAL_GRIPPER_EXPERIMENTS_rep2/']
+    # folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/05 - 2024 winter - finger and dual trials/'
+    # subfolders = ['FINGER_GRIPPER_EXPERIMENTS_rep1/', 'FINGER_GRIPPER_EXPERIMENTS_rep2/']
+    # subfolders = ['DUAL_GRIPPER_EXPERIMENTS_rep1/', 'DUAL_GRIPPER_EXPERIMENTS_rep2/']
 
-    # Leaf Occlusion Trials
-    folders = ['Alejo - Apple Pick Data/Apple Proxy Picks/06 - 2024 summer - occlusion trials/leaf_occlusions/']
+    ### Leaf Occlusion Trials
+    # folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/06 - 2024 summer - occlusion trials/'
+    # subfolders = ['leaf_occlusions/']
+    ### Apple Clusters
+    folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/06 - 2024 summer - occlusion trials/'
+    subfolders = ['cluster_occlusions/']
 
-    print(folders)
+    location = location + folder
+
+    print(subfolders)
 
     # --- Variables to keep track of labels
     a_success = 0
@@ -391,15 +399,16 @@ def success_counter():
     d_success = 0
     e_success = 0
 
-    for folder in folders:
+    ### Step2: Sweep data to get the statistics ###
+    for subfolder in subfolders:
 
-        for filename in os.listdir(location + folder):
+        for filename in os.listdir(location + subfolder):
 
             if filename.endswith(".json") and not filename.startswith("vacuum_test"):
                 # print('\n' + CGREEN + "Experiment # %i" %exp)
                 # print(filename)
 
-                with open(location + folder + filename, 'r') as json_file:
+                with open(location + subfolder + filename, 'r') as json_file:
 
                     # Extract dictionaries
                     json_dict = json.load(json_file)
@@ -443,10 +452,11 @@ def success_counter():
     print("Successful trials: %i, Un-successful trials: %i" %(successful_pics, unsuccessful_picks))
     print(a_success, b_unsuccess, c_unsuccess, d_success, e_success)
 
+
 def main():
 
-    icra24_analysis()
-    # success_counter()
+    # icra24_analysis()
+    success_counter()
 
 
 if __name__ == '__main__':
