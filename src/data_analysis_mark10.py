@@ -4,7 +4,9 @@ import os
 from matplotlib import pyplot as plt
 import pandas as pd
 import numpy as np
+from scipy.ndimage import gaussian_filter, median_filter
 
+################################ HANDY FUNCTIONS ##################################################
 def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plot_type='bandgap'):
 
     # Plot font
@@ -203,6 +205,34 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plo
     # plt.title('Gripper pulling force [N] vs ' + xlabel)
 
 
+def locate_index_of_deltas_v2(data, intercept=0.5):
+    """
+    Useful to locate in square signals, the index where the signal intersects a certain value
+    """
+
+    POIS_plus = []
+    POIS_minus = []
+
+    previous = data[0]
+
+    for i in range(len(data)):
+
+        if (previous < intercept) and (data[i] > intercept):
+            POIS_plus.append(i)     # collects all points with positive gradient
+        if (previous > intercept) and (data[i] < intercept):
+            POIS_minus.append(i)    # collects all points with negative gradient
+
+        previous = data[i]
+
+    print('For the intercept: ', intercept)
+    print('POIs of positive deltas: ', POIS_plus)
+    print('POIs of negative deltas: ', POIS_minus)
+
+    return POIS_plus, POIS_minus
+
+
+############################### SCRIPTS FOR EACH EXPERIMENT ########################################
+
 def orthogonal_load_cell_experiments():
 
     # --- Step 1 - Data Location ---
@@ -214,8 +244,8 @@ def orthogonal_load_cell_experiments():
     folder = 'Alejo - Mark10 Gripper Tests/Mark10_experiments/'
 
     # subfolder = 'experiment1_orthogonalLoad/'
-    # subfolder = 'experiment6_orthogonalLoad_accelStepper/'
-    subfolder = 'experiment12_orthogonalLoad/'
+    subfolder = 'experiment6_orthogonalLoad_accelStepper/'
+    # subfolder = 'experiment12_orthogonalLoad/'
 
     folder = storage + folder + subfolder
 
@@ -293,7 +323,7 @@ def orthogonal_load_cell_experiments():
     plt.legend()
     plt.ylim([0, 35])
 
-    # plt.show()
+    plt.show()
 
 
 def push_load_cell_experiments():
@@ -375,8 +405,11 @@ def push_load_cell_experiments():
 
     fingers_data.append(all_fingers_max_vals)
 
+    # Convert into array to circumvent the list size misalignment
+    array = np.array(fingers_data, dtype=object)
+
     fig = plt.figure(figsize=(8, 6))
-    plt.boxplot(fingers_data, labels=['A', 'B', 'C', 'All'])
+    plt.boxplot(array, labels=['A', 'B', 'C', 'All'])
     plt.xlabel('Finger')
     plt.ylabel('Force [N]')
     # plt.title('Normal Force from each finger [N]')
@@ -392,7 +425,7 @@ def push_load_cell_experiments():
     plt.ylim([0, 50])
     plt.grid()
 
-    # plt.show()
+    plt.show()
 
 
 def mark10_pullback_experiments():
@@ -476,9 +509,8 @@ def mark10_pullback_experiments():
     plt.show()
 
 
-
 if __name__ == '__main__':
 
     # orthogonal_load_cell_experiments()
-    mark10_pullback_experiments()
-    # push_load_cell_experiments()
+    # mark10_pullback_experiments()
+    push_load_cell_experiments()
