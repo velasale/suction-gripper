@@ -123,22 +123,21 @@ def locate_index_of_deltas_v2(data, intercept=0.5):
 
     POIS_plus = []
     POIS_minus = []
-    POIS = []
 
     previous = data[0]
 
     for i in range(len(data)):
 
         if (previous < intercept) and (data[i] > intercept):
-            POIS_plus.append(i)     # collects all points with positive changes
+            POIS_plus.append(i)     # collects all points with positive gradient
         if (previous > intercept) and (data[i] < intercept):
-            POIS_minus.append(i)    # collects all points with negative changes
+            POIS_minus.append(i)    # collects all points with negative gradient
 
         previous = data[i]
 
     print('For the intercept: ', intercept)
-    print('\nPOIs of positive deltas: ', POIS_plus)
-    print('POIs of negative deltas: ', POIS_minus,'\n')
+    print('POIs of positive deltas: ', POIS_plus)
+    print('POIs of negative deltas: ', POIS_minus)
 
     return POIS_plus, POIS_minus
 
@@ -2846,15 +2845,20 @@ def real_trials():
 
 
 def orthogonal_load_cell_experiments():
-    # Step 1 - Location
-    # folder = '/home/alejo/Downloads/Mark10_experiments-20240227T171746Z-001/Mark10_experiments/experiment1_orthogonalLoad/'
-    folder = 'C:/Users/avela/Dropbox/03 Temporal/03 Research/data/Mark10_experiments/'      # Personal Laptop
+
+    # --- Step 1 - Data Location ---
+    if os.name == 'nt':  # Windows OS
+        storage = 'D:/'
+    else:  # Ubuntu OS
+        storage = '/media/alejo/Elements/'
+
+    folder = 'Alejo - Mark10 Gripper Tests/Mark10_experiments/'
 
     # subfolder = 'experiment1_orthogonalLoad/'
     # subfolder = 'experiment6_orthogonalLoad_accelStepper/'
     subfolder = 'experiment12_orthogonalLoad/'
 
-    folder = folder + subfolder
+    folder = storage + folder + subfolder
 
     # Step 2 - Sweep all diameters
     diameters = [70, 75, 80]
@@ -2935,22 +2939,25 @@ def orthogonal_load_cell_experiments():
 
 def push_load_cell_experiments():
 
-    # Plot font
+    # --- Plot Parameters. For papers ---
     plt.rcParams["font.family"] = "serif"
     plt.rcParams["font.serif"] = ["Times New Roman"]
     plt.rcParams["font.size"] = 18
     plt.rc('legend', fontsize=14)  # using a size in points
 
+    # --- Step 1 - Data Location ---
+    if os.name == 'nt':  # Windows OS
+        storage = 'D:/'
+    else:  # Ubuntu OS
+        storage = '/media/alejo/Elements/'
 
-    # Step 1 - Location
-    # folder = '/home/alejo/Downloads/Mark10_experiments-20240227T171746Z-001/Mark10_experiments/experiment1_orthogonalLoad/'
-    folder = 'C:/Users/avela/Dropbox/03 Temporal/03 Research/data/Mark10_experiments/'      # Personal Laptop
+    folder = 'Alejo - Mark10 Gripper Tests/Mark10_experiments/'
 
     # subfolder = 'experiment1_orthogonalLoad/'
     # subfolder = 'experiment6_orthogonalLoad_accelStepper/'
     subfolder = 'experiment12_orthogonalLoad/'
 
-    location = folder + subfolder
+    location = storage + folder + subfolder
 
     mean_max_forces = []
     std_max_forces = []
@@ -2959,23 +2966,21 @@ def push_load_cell_experiments():
 
     fingers_data = []
 
-
     for file in sorted(os.listdir(location)):
 
         finger_max_vals = []
 
         if file.startswith('f'):
-            print(file)
+            print('\n\n' + file)
 
             # Step 3: Open file and turn into dataframe
             trial_df = pd.read_excel(location + file, index_col=0)
-
             load_list = trial_df['Load [N]'].tolist()
 
-            # plt.plot(load_list)
+            plt.plot(load_list, label='original data')
             filtered_data = median_filter(load_list, 20)
-            # plt.plot(filtered_data)
-            # plt.show()
+            plt.plot(filtered_data, label='filtered data')
+            plt.legend()
 
             # Step 4: Check for POI's
             max_ortho = max(filtered_data)
@@ -2984,7 +2989,6 @@ def push_load_cell_experiments():
             print('Number of cycles: ', cycles)
 
             # Step 5: Take the max values from each cycle
-
             n_points = trial_df.shape[0]
 
             for i in range(cycles):
@@ -2992,15 +2996,23 @@ def push_load_cell_experiments():
                 try:
                     end = pois_neg[i]
                 except IndexError:
+                    # Because some times the trials were cut in the middle
                     end = n_points
 
                 max_val = max(filtered_data[start: end])
                 finger_max_vals.append(max_val)
                 all_fingers_max_vals.append(max_val)
 
-            print('Max values', all_fingers_max_vals)
+            print('Finger Max-values', finger_max_vals)
+            print('All fingers accumulated Max-values', all_fingers_max_vals)
+
+            # plt.show()
 
         fingers_data.append(finger_max_vals)
+
+        fig = plt.figure(figsize=(8, 6))
+        plt.boxplot(finger_max_vals)
+        plt.show()
 
     fingers_data.append(all_fingers_max_vals)
 
@@ -3026,15 +3038,14 @@ def push_load_cell_experiments():
 
 def mark10_pullback_experiments():
 
-    # Step 1 - Location
-    # folder = '/home/alejo/Downloads/Mark10_experiments-20240309T010320Z-001/'     # ArmFarm laptop
-    # folder = '/home/alejo/Dropbox/03 Temporal/03 Research/data/                   # ArmFarm laptop
-    # folder = 'C:/Users/avela/Dropbox/03 Temporal/03 Research/data/                  # Personal Laptop
-    # folder = '/media/alejo/Elements/Alejo - Mark10 Gripper Tests/                   # External SD 'ALEJO HD1'
-    location = '/home/alejo/Dropbox/03 Temporal/03 Research/data/'
+    # --- Step 1 - Data Location ---
+    if os.name == 'nt':  # Windows OS
+        storage = 'D:/'
+    else:  # Ubuntu OS
+        storage = '/media/alejo/Elements/'
 
-    folder = 'Mark10_experiments/'
-    folder = location + folder
+    folder = 'Alejo - Mark10 Gripper Tests/Mark10_experiments/'
+    folder = storage + folder
 
     # --- Fake Apple / Pull-back trials at 0 degrees ---
     # subfolder = 'experiment2_pullingLoad_medSpring_medMagnet/'
@@ -3135,10 +3146,10 @@ def main():
 
 if __name__ == '__main__':
 
-    main()
+    # main()
 
     # orthogonal_load_cell_experiments()
-    # mark10_pullback_experiments()
+    mark10_pullback_experiments()
     # push_load_cell_experiments()
 
     plt.show()
