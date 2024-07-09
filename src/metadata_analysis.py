@@ -250,16 +250,18 @@ def df_categorical_stats(df, cat_name, cat_value, x_filter_name, x_filter_values
 
 
 def icra24_analysis():
-    """ This script is the main used for the plots of ICRA24 paper
+    """ This script is the main used for ICRA24 paper plots
     ICRA 2024 Contributed paper 2508: Dynamic evaluation of a suction based gripper for fruit picking using a physical twin
     """
 
-    # ------ Dataset Location ------
-    # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"
-    # folder = '/home/alejo/Documents/research/data/suction_gripper/'
-    # folder = '/home/alejo/Dropbox/03 Temporal/03 Research/data/suction_gripper/'        # ArmFarm laptop - Ubuntu
-    folder = 'C:/Users/avela/Dropbox/03 Temporal/03 Research/data/suction_gripper/'     # Personal Laptop - windows
-    # dataset = "MEDIUM_STIFFNESS/"
+    ### Step 1 - Data Location: External Drive 'Alejo HD1' ###
+    if os.name == 'nt':  # Windows OS
+        storage = 'D:/'
+    else:  # Ubuntu OS
+        storage = '/media/alejo/Elements/'
+
+    folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/04 - 2023 summer - suctionCup gripper/all_json_files/'
+    folder = storage + folder
     dataset = ''
 
     # ------ Read or Build DataFrame with all the json files ------
@@ -443,9 +445,8 @@ def success_counter():
 
 def main():
 
-    # icra24_analysis()
-
-    success_counter()
+    icra24_analysis()
+    # success_counter()
 
 
 if __name__ == '__main__':
