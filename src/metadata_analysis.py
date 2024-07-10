@@ -250,6 +250,74 @@ def df_categorical_stats(df, cat_name, cat_value, x_filter_name, x_filter_values
         plt.tight_layout()
 
 
+def success_counter(location, subfolders, filter):
+
+    # --- Variables to keep track of labels
+    a_success = 0
+    b_unsuccess = 0
+    c_unsuccess = 0
+    d_success = 0
+    e_success = 0
+
+    ### Step2: Sweep data to get the statistics ###
+    for subfolder in subfolders:
+
+        for filename in os.listdir(location + subfolder):
+
+            if filename.endswith(".json") and not filename.startswith("vacuum_test"):
+                # print('\n' + CGREEN + "Experiment # %i" %exp)
+                # print(filename)
+
+                with open(location + subfolder + filename, 'r') as json_file:
+
+                    # Extract dictionaries
+                    json_dict = json.load(json_file)
+                    general_info = json_dict['general']
+                    robot_info = json_dict['robot']
+                    proxy_info = json_dict['proxy']
+                    labels = json_dict['labels']
+
+                    # Extract values
+                    sampling_point = general_info['sampling point']
+                    x_offset = robot_info['position noise command [m]'][0]
+                    yaw = general_info['yaw']
+                    stiffness = rename_level(proxy_info['branch stiffness']) + '_stiffness'
+                    strength = rename_level(proxy_info['stem force']) + '_strength'
+                    cup_a = labels['suction cup a']
+                    cup_b = labels['suction cup b']
+                    cup_c = labels['suction cup c']
+                    result = labels['apple pick result']
+
+                    mode = robot_info['actuation mode']
+
+                    # print("(a) Successful pick: after pick pattern")
+                    # print("(b) Un-successful: Apple picked but apple it fell afterwards")
+                    # print("(c) Un-successful: Apple not picked")
+                    # print("(d) Successful pick: before pick pattern ")
+                    # print("(e) Successful pick: apple tweaked while closing fingers")
+
+                    if mode == filter[1]:
+
+                        if result == 'a':
+                            a_success += 1
+                        elif result == 'b':
+                            b_unsuccess += 1
+                        elif result == 'c':
+                            c_unsuccess += 1
+                            print(filename)
+                        elif result == 'd':
+                            d_success += 1
+                        elif result == 'e':
+                            e_success += 1
+
+    successful_pics = a_success + d_success + e_success
+    unsuccessful_picks = b_unsuccess + c_unsuccess
+
+    print('\n\n', subfolders)
+    print("Successful trials: %i, Un-successful trials: %i" % (successful_pics, unsuccessful_picks))
+    print(a_success, b_unsuccess, c_unsuccess, d_success, e_success)
+
+
 ####################### FUNCTIONS FOR SPECIFIC EXPERIMENTS AND PUBLICATIONS #############
 def icra24_analysis():
     """ This script is the main used for ICRA24 paper plots
@@ -369,7 +437,7 @@ def icra24_analysis():
     plt.show()
 
 
-def success_counter():
+def proxy_occlusions():
 
     ### Step 1: Data Location: Hard Drive (ALEJO HD1) ###
     if os.name == 'nt':     # Windows OS
@@ -381,82 +449,41 @@ def success_counter():
     # subfolders = ['FINGER_GRIPPER_EXPERIMENTS_rep1/', 'FINGER_GRIPPER_EXPERIMENTS_rep2/']
     # subfolders = ['DUAL_GRIPPER_EXPERIMENTS_rep1/', 'DUAL_GRIPPER_EXPERIMENTS_rep2/']
 
-    ### Leaf Occlusion Trials
-    # folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/06 - 2024 summer - occlusion trials/'
-    # subfolders = ['leaf_occlusions/']
-    ### Apple Clusters
+    ### Apple Clusters Trials ###
     folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/06 - 2024 summer - occlusion trials/'
     subfolders = ['cluster_occlusions/']
+    loc = location + folder
+    success_counter(loc, subfolders)
 
-    location = location + folder
+    ### Leaf Occlusion Trials ###
+    folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/06 - 2024 summer - occlusion trials/'
+    subfolders = ['leaf_occlusions/']
+    loc = location + folder
+    success_counter(loc, subfolders)
 
-    print(subfolders)
 
-    # --- Variables to keep track of labels
-    a_success = 0
-    b_unsuccess = 0
-    c_unsuccess = 0
-    d_success = 0
-    e_success = 0
+def prosser_data():
 
-    ### Step2: Sweep data to get the statistics ###
-    for subfolder in subfolders:
+    ### Step 1: Data Location: Hard Drive (ALEJO HD1) ###
+    if os.name == 'nt':     # Windows OS
+        location = 'D:/'
+    else:                   # Ubuntu OS
+        location = '/media/alejo/Elements/'
 
-        for filename in os.listdir(location + subfolder):
+    ### Apple Clusters Trials ###
+    folder = '/Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/'
+    subfolders = ['Dataset - apple picks/']
+    loc = location + folder
+    success_counter(loc, subfolders, filter=['mode', 'dual'])
 
-            if filename.endswith(".json") and not filename.startswith("vacuum_test"):
-                # print('\n' + CGREEN + "Experiment # %i" %exp)
-                # print(filename)
 
-                with open(location + subfolder + filename, 'r') as json_file:
-
-                    # Extract dictionaries
-                    json_dict = json.load(json_file)
-                    general_info = json_dict['general']
-                    robot_info = json_dict['robot']
-                    proxy_info = json_dict['proxy']
-                    labels = json_dict['labels']
-
-                    # Extract values
-                    sampling_point = general_info['sampling point']
-                    x_offset = robot_info['position noise command [m]'][0]
-                    yaw = general_info['yaw']
-                    stiffness = rename_level(proxy_info['branch stiffness']) + '_stiffness'
-                    strength = rename_level(proxy_info['stem force']) + '_strength'
-                    cup_a = labels['suction cup a']
-                    cup_b = labels['suction cup b']
-                    cup_c = labels['suction cup c']
-                    result = labels['apple pick result']
-
-                    # print("(a) Successful pick: after pick pattern")
-                    # print("(b) Un-successful: Apple picked but apple it fell afterwards")
-                    # print("(c) Un-successful: Apple not picked")
-                    # print("(d) Successful pick: before pick pattern ")
-                    # print("(e) Successful pick: apple tweaked while closing fingers")
-
-                    if result == 'a':
-                        a_success += 1
-                    elif result == 'b':
-                        b_unsuccess += 1
-                    elif result == 'c':
-                        c_unsuccess += 1
-                        print (filename)
-                    elif result == 'd':
-                        d_success += 1
-                    elif result == 'e':
-                        e_success += 1
-
-    successful_pics = a_success + d_success + e_success
-    unsuccessful_picks = b_unsuccess + c_unsuccess
-
-    print("Successful trials: %i, Un-successful trials: %i" %(successful_pics, unsuccessful_picks))
-    print(a_success, b_unsuccess, c_unsuccess, d_success, e_success)
+##########################################################################################
 
 
 def main():
-
     # icra24_analysis()
-    success_counter()
+    # proxy_occlusions()
+    prosser_data()
 
 
 if __name__ == '__main__':
