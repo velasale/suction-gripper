@@ -32,6 +32,7 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plo
 
     # Create figure
     fig = plt.figure(figsize=(8, 6))
+    fig = plt.figure(figsize=(6, 6))
     exp_prefix = 'loremipsum'
 
     for mode, tag, color, marker, style in zip(gripper_modes, tags, colors, markers, linestyles):
@@ -149,10 +150,16 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plo
 
     # Read suction reference values
     if 'suction' not in tags:
-        # suction_folder = ('C:/Users/avela/Dropbox/03 Temporal/03 Research/data/Mark10_experiments/'
-        #                   'suction_reference_values/')
 
-        suction_folder = '/home/alejo/Dropbox/03 Temporal/03 Research/data/Mark10_experiments/suction_reference_values/'
+        ### Step 1 - Data Location ###
+        if os.name == 'nt':  # Windows OS
+            storage = 'D:/'
+        else:  # Ubuntu OS
+            storage = '/media/alejo/Elements/'
+
+        suction_folder = 'Alejo - Mark10 Gripper Tests/Mark10_experiments/suction_reference_values/'
+        suction_folder = storage + suction_folder
+
         max_forces = []
         for file in sorted(os.listdir(suction_folder)):
             trial_df = pd.read_excel(suction_folder + file, index_col=0)
@@ -380,7 +387,7 @@ def push_load_cell_experiments(folder):
     # Convert into array to circumvent the list size misalignment
     array = np.array(fingers_data, dtype=object)
 
-    fig = plt.figure(figsize=(8, 6))
+    fig = plt.figure(figsize=(6, 6))
     plt.boxplot(array, labels=['A', 'B', 'C', 'All'])
     plt.xlabel('Finger')
     plt.ylabel('Force [N]')
@@ -493,7 +500,7 @@ if __name__ == '__main__':
 
     ### Step 2 - Subfunctions ###
     # orthogonal_load_cell_experiments(folder)
-    # push_load_cell_experiments(folder)
-    mark10_pullback_experiments(folder)
+    push_load_cell_experiments(folder)
+    # mark10_pullback_experiments(folder)
 
     plt.show()
