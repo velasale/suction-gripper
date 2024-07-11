@@ -379,7 +379,7 @@ def push_load_cell_experiments(folder):
 
         fingers_data.append(finger_max_vals)
 
-        fig = plt.figure(figsize=(8, 6))
+        fig = plt.figure(figsize=(6, 6))
         plt.boxplot(finger_max_vals)
 
     fingers_data.append(all_fingers_max_vals)
@@ -500,7 +500,7 @@ if __name__ == '__main__':
 
     ### Step 2 - Subfunctions ###
     # orthogonal_load_cell_experiments(folder)
-    push_load_cell_experiments(folder)
-    # mark10_pullback_experiments(folder)
+    # push_load_cell_experiments(folder)
+    mark10_pullback_experiments(folder)
 
     plt.show()

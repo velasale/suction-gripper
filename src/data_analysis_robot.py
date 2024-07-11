@@ -41,7 +41,7 @@ from tqdm import tqdm
 
 ######## Self developed imports ########
 # from ros_scripts import *
-from plot_scripts import *
+# from plot_scripts import *
 
 import logging
 logging_format = "[%(asctime)s - %(levelname)s] %(message)s"
@@ -1665,7 +1665,7 @@ class ApplePickTrial:
                     axis[i, 2].text(event, 0, label, rotation=90, color='black')
                     axis[i, 2].set_xlabel("Elapsed Time [sec]")
 
-    def plot_only_pressure(self, start_time=0, type='single_plot'):
+    def plot_only_pressure(self, start_time=0,type='single_plot'):
         """
         Plots only pressure readings
         @param type: 'single' to have the three suction cup plots in a single figure
@@ -1702,7 +1702,7 @@ class ApplePickTrial:
         event_y = self.event_values
 
         ### Step3: Adapt event's labels for paper purposes (if needed) ###
-        picking_time = 31
+        picking_time = 81.4
         cnt = 0
         flag = 0
         for i, j in zip(event_x, event_y):
@@ -1811,7 +1811,7 @@ class ApplePickTrial:
         event_y = self.event_values
 
         ### Step3: Adapt events' labels for paper purposes (if needed) ####
-        picking_time = 31
+        picking_time = 81.4
         cnt = 0
         flag = 0
         for i, j in zip(event_x, event_y):
@@ -2397,7 +2397,7 @@ def proxy_trials():
         pass
     else:
         print("csvs net to be generated from bag file")
-        bag_to_csvs(location + file + ".bag")
+        # bag_to_csvs(location + file + ".bag")
 
     # --- 3. Create Experiment Object
     json_file = open(location + file + '.json')
@@ -2415,8 +2415,8 @@ def proxy_trials():
     experiment.get_features()
 
     # --- 6. Plot
-    experiment.plot_only_pressure(start_time=15)
-    experiment.plot_only_total_force(start_time=15)
+    experiment.plot_only_pressure(start_time=0)
+    experiment.plot_only_total_force(start_time=0)
     plt.show()
 
 
