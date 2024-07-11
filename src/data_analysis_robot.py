@@ -1665,7 +1665,7 @@ class ApplePickTrial:
                     axis[i, 2].text(event, 0, label, rotation=90, color='black')
                     axis[i, 2].set_xlabel("Elapsed Time [sec]")
 
-    def plot_only_pressure(self, type='single_plot'):
+    def plot_only_pressure(self, start_time=0, type='single_plot'):
         """
         Plots only pressure readings
         @param type: 'single' to have the three suction cup plots in a single figure
@@ -1690,7 +1690,6 @@ class ApplePickTrial:
         # pressure_values = self.pressure_values
 
         ### Step2: Crop data if needed ###
-        start_time = 65
         cropped_times1, cropped_values1 = crop_lists(start_time, self.pressure_sc1_elapsed_time, self.pressure_sc1_values)
         cropped_times2, cropped_values2 = crop_lists(start_time, self.pressure_sc2_elapsed_time, self.pressure_sc2_values)
         cropped_times3, cropped_values3 = crop_lists(start_time, self.pressure_sc3_elapsed_time, self.pressure_sc3_values)
@@ -1703,7 +1702,7 @@ class ApplePickTrial:
         event_y = self.event_values
 
         ### Step3: Adapt event's labels for paper purposes (if needed) ###
-        picking_time = 81.4
+        picking_time = 31
         cnt = 0
         flag = 0
         for i, j in zip(event_x, event_y):
@@ -1791,7 +1790,7 @@ class ApplePickTrial:
             plt.legend(fontsize=FONTSIZE)
             plt.tight_layout()
 
-    def plot_only_total_force(self):
+    def plot_only_total_force(self, start_time=0):
         """Plots only force readings (forces and moments)"""
 
         ### Step1: Plot Parameters ###
@@ -1805,7 +1804,6 @@ class ApplePickTrial:
         plt.figure(figsize=FIGURESIZE)
 
         ### Step2: Crop data if needed ###
-        start_time = 65
         force_time, sumforce_values = crop_lists(start_time, self.wrench_elapsed_time,
                                                      self.wrench_netforce_relative_values)
 
@@ -1813,7 +1811,7 @@ class ApplePickTrial:
         event_y = self.event_values
 
         ### Step3: Adapt events' labels for paper purposes (if needed) ####
-        picking_time = 81.4
+        picking_time = 31
         cnt = 0
         flag = 0
         for i, j in zip(event_x, event_y):
@@ -2378,7 +2376,7 @@ def proxy_trials():
 
     folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/06 - 2024 summer - occlusion trials/cluster_occlusions/'
     location = storage + folder
-    file = '20240628_proxy_sample_2_yaw_85_offset_0_rep_0_stiff_medium_force_medium'
+    file = '20240628_proxy_sample_0_yaw_85_offset_0_rep_0_stiff_medium_force_medium'
 
     ### ICRA24 Figures ###
     # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"  # Fig.5 ICRA24
@@ -2417,8 +2415,8 @@ def proxy_trials():
     experiment.get_features()
 
     # --- 6. Plot
-    experiment.plot_only_pressure()
-    experiment.plot_only_total_force()
+    experiment.plot_only_pressure(start_time=15)
+    experiment.plot_only_total_force(start_time=15)
     plt.show()
 
 
