@@ -36,7 +36,7 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plo
     exp_prefix = 'loremipsum'
 
     for mode, tag, color, marker, style in zip(gripper_modes, tags, colors, markers, linestyles):
-        print('\nMode: ', mode)
+        print('\n########################## Mode: %s #########################' %(mode))
         stepses = []
         mean_max_forces = []
         sdv_max_forces = []
@@ -76,7 +76,6 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plo
                 for file in sorted(os.listdir(location)):
 
                     if file.startswith(exp_prefix):
-                        print('\nFile: ', file)
 
                         # Step 3: Open file and turn into dataframe
                         trial_df = pd.read_excel(location + file, index_col=0)
@@ -90,8 +89,10 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plo
                         # plt.show()
 
                         # Read minimum value and subtract initial one
-                        max_pull = abs(trial_df['Load [N]'].iat[0] - min(trial_df['Load [N]']))
-                        print('Max pull force: ', max_pull)
+                        max_pull = round(abs(trial_df['Load [N]'].iat[0] - min(trial_df['Load [N]'])),2)
+
+                        # print('File: ', file)
+                        # print('Max pull force: ', max_pull)
                         max_forces.append(max_pull)
 
                         # Keep track of successful pick values
@@ -101,19 +102,20 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plo
                         if tag == 'V' or tag == 'suction':
                             suction_picks.append(max_pull)
 
-            print(max_forces)
+            print("\nList of Max forces", max_forces)
 
             stepses.append(steps)
             # stepses.append(steps/max(variable_list))
 
-            mean_max_forces.append(abs(np.mean(max_forces)))
-            sdv_max_forces.append(abs(np.std(max_forces)))
+            mean_max_forces.append(round(abs(np.mean(max_forces)),2))
+            sdv_max_forces.append(round(abs(np.std(max_forces)),2))
 
             max_forces_data.append(max_forces)
 
-        print('\n', mode)
-        print(stepses)
-        print(mean_max_forces)
+        print('--- Results summary of the actuation mode:---')
+        print('Steps:', stepses)
+        print('Mean Value:', mean_max_forces)
+        print('SD:', sdv_max_forces)
 
         if plot_type == 'bandgap':
             # Plot each mode series with a band gap
@@ -382,6 +384,8 @@ def push_load_cell_experiments(folder):
         fig = plt.figure(figsize=(6, 6))
         plt.boxplot(finger_max_vals)
 
+    print('Mean and Deviation of all fingers:', round(np.mean(all_fingers_max_vals),1), round(np.std(all_fingers_max_vals),1))
+
     fingers_data.append(all_fingers_max_vals)
 
     # Convert into array to circumvent the list size misalignment
@@ -500,7 +504,7 @@ if __name__ == '__main__':
 
     ### Step 2 - Subfunctions ###
     # orthogonal_load_cell_experiments(folder)
-    # push_load_cell_experiments(folder)
+    push_load_cell_experiments(folder)
     mark10_pullback_experiments(folder)
 
     plt.show()
