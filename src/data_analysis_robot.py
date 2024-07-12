@@ -1712,7 +1712,10 @@ class ApplePickTrial:
         event_y = self.event_values
 
         ### Step3: Adapt event's labels for paper purposes (if needed) ###
-        picking_time = 24.8
+        force_time, sumforce_values = crop_lists(start_time, self.wrench_elapsed_time,
+                                                 self.wrench_netforce_relative_values)
+        picking_time = force_time[np.argmax(sumforce_values)]
+
         cnt = 0
         flag = 0
         for i, j in zip(event_x, event_y):
@@ -1795,16 +1798,16 @@ class ApplePickTrial:
             ax2 = ax.twinx()
             ax2.plot(force_time, sumforce_values, linewidth=2, color='red', label='net force')
             ax2.set_ylabel("Force [N]", fontsize=FONTSIZE)
-            ax2.set_ylim([0, 20])
+            ax2.set_ylim([0, 50])
             ax2.tick_params(axis='y', labelsize=TICKSIZE)
             ax2.legend(loc='upper right', fontsize=TICKSIZE)
 
             # --- Plot experiment events for reference ---
             for event, label in zip(event_x, event_y):
                 plt.axvline(x=event, color='black', linestyle='--', linewidth=1.5)
-                plt.text(event, 2, label.lower(), rotation=45, color='black', fontsize=TICKSIZE)
+                plt.text(event, 5, label.lower(), rotation=45, color='black', fontsize=TICKSIZE)
 
-            plt.xlim([start_time, 35])
+            plt.xlim([start_time,max(force_time)])
             # plt.xlim([0, 16])       # Fig.5 ICRA24
             # plt.xlim([0, 50])        # Fig.8 ICRA24
             plt.title(self.filename)
@@ -2398,13 +2401,17 @@ def proxy_trials():
     else:  # Ubuntu OS
         storage = '/media/alejo/Elements/'
 
-    folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/06 - 2024 summer - occlusion trials/cluster_occlusions/'
-    file = '20240628_proxy_sample_0_yaw_85_offset_0_rep_0_stiff_medium_force_medium'
+    ### Proxy - Clusters ###
+    # folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/06 - 2024 summer - occlusion trials/cluster_occlusions/'
+    # file = '20240628_proxy_sample_0_yaw_85_offset_0_rep_0_stiff_medium_force_medium'
 
-    folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/06 - 2024 summer - occlusion trials/leaf_occlusions/'
-    file = '2024072_proxy_sample_6_rep3_yaw_25_offset_0_rep_0_stiff_medium_force_medium'
+    ### Proxy - Leaves ###
+    # folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/06 - 2024 summer - occlusion trials/leaf_occlusions/'
+    # file = '2024072_proxy_sample_6_rep3_yaw_25_offset_0_rep_0_stiff_medium_force_medium'
 
-    location = storage + folder
+    ### Prosser trials ###
+    folder = '/Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/Dataset - apple picks/'
+    file = '2023111_realapple25_mode_dual_attempt_1_orientation_0_yaw_0'
 
     ### ICRA24 Figures ###
     # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"  # Fig.5 ICRA24
@@ -2418,6 +2425,7 @@ def proxy_trials():
     # file = '20230922_realapple3_attempt_1_orientation_0_yaw_0'
     # file = '20230922_realapple2_attempt_1_orientation_0_yaw_0'
 
+    location = storage + folder
 
     # --- 2. Turn bag into csvs if needed
     if os.path.isdir(location + file):
