@@ -58,15 +58,26 @@ def all_close(goal, actual, tolerance):
 
 
 def main():
+
+    print("Make sure that you have ROS-RVIZ running")
     try:
 
         print("Replicating in RVIZ the original positions of the real apples picked")
 
         gripper = RoboticGripper()
 
-        # ... Step 1: Read the txt file with all the coordinates
-        location = '/media/alejo/Elements/Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/Probe/'
+        ### Step 1: Read the txt file with all the coordinates ###
+        ### Data Storage Media ###
+        if os.name == 'nt':  # Windows OS
+            storage = 'D:/'
+        else:  # Ubuntu OS
+            storage = '/media/alejo/Elements/'      # External Hard Drive ALEJO HD1"
+
+        ### Prosser folder ###
+        folder = 'Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/Probe/'
         file = '20231101_apples_coords.csv'
+
+        location = storage + folder
         with open(location + file, 'r') as f:
             apples_coords = list(csv.reader(f, delimiter=","))
         apples_coords.pop(0)  # Remove header
@@ -74,12 +85,12 @@ def main():
         apples = len(apples_coords)
         print('\nThe number of apples were:', apples)
 
-        # ... Place all the apples and stems
+        ### Step2: Place apples and stems in RVIZ environment ###
         for i in range(apples):
 
             apple_coords = apples_coords[i]
 
-            # --- Save properties into experiment class
+            # --- Save properties into trial class
             gripper.APPLE_DIAMETER = float(apple_coords[1])
             gripper.APPLE_HEIGHT = float(apple_coords[2])
             gripper.APPLE_SOUTH_POLE_COORD = slist_into_flist(apple_coords[3])
