@@ -1016,6 +1016,16 @@ class ApplePickTrial:
             ax.set_zlabel('z[m]')
             ax.plot3D(x, y, z, 'black', linewidth='0.5')
 
+            # X axis over time
+            fig = plt.figure()
+            plt.plot(counter, x)
+            plt.title('EEF distance in x axis [m] \n' + self.filename)
+
+            # Y axis over time
+            fig = plt.figure()
+            plt.plot(counter, y)
+            plt.title('EEF distance in y axis [m] \n' + self.filename)
+
             # Z axis over time
             fig = plt.figure()
             plt.plot(counter, z)
@@ -1067,17 +1077,17 @@ class ApplePickTrial:
             u = eef_x_vector[0]
             v = eef_x_vector[1]
             w = eef_x_vector[2]
-            ax.quiver(x, y, z, u, v, w, length=1, color='red')
+            # ax.quiver(x, y, z, u, v, w, length=1, color='red')
 
             u = eef_y_vector[0]
             v = eef_y_vector[1]
             w = eef_y_vector[2]
-            ax.quiver(x, y, z, u, v, w, length=1, color='green')
+            # ax.quiver(x, y, z, u, v, w, length=1, color='green')
 
             u = eef_z_vector[0]
             v = eef_z_vector[1]
             w = eef_z_vector[2]
-            ax.quiver(x, y, z, u, v, w, length=1, color='blue')
+            # ax.quiver(x, y, z, u, v, w, length=1, color='blue')
 
             ax.text(x, y, z, "eef", color='black', size=10, zorder=1)
 
@@ -1675,10 +1685,10 @@ class ApplePickTrial:
 
         ### Step1: Plot Parameters ###
         icra24_figure5_fonts = 24
-        icra22_figure5_size = (14, 5)
+        icra22_figure5_size = (13, 5)
 
         FONTSIZE = icra24_figure5_fonts
-        TICKSIZE = icra24_figure5_fonts - 8
+        TICKSIZE = icra24_figure5_fonts - 6
         FIGURESIZE = icra22_figure5_size
 
         lines = itertools.cycle(('dotted', 'dashed', 'dashdot'))
@@ -1702,7 +1712,7 @@ class ApplePickTrial:
         event_y = self.event_values
 
         ### Step3: Adapt event's labels for paper purposes (if needed) ###
-        picking_time = 24.8
+        picking_time = 81.4
         cnt = 0
         flag = 0
         for i, j in zip(event_x, event_y):
@@ -1761,48 +1771,33 @@ class ApplePickTrial:
 
         elif type == 'single_plot':
 
+            plt.figure(figsize=FIGURESIZE)
             plt.rc('font', family='serif')
-            fig, ax = plt.subplots(figsize=FIGURESIZE)
-
             cnt = 0
 
-            #### Plot pressure signals ####
+            # Plot pressure signals
             for pressure_time, pressure_value, pressure_label in zip(pressure_times, pressure_values, pressure_labels):
-                # plt.plot(pressure_time, pressure_value, linewidth=2, label=pressure_label, linestyle=next(lines), color=next(colors))
-                ax.plot(pressure_time, pressure_value, linewidth=2, label=pressure_label, linestyle=next(lines), color=next(colors))
+                plt.plot(pressure_time, pressure_value, linewidth=2, label=pressure_label, linestyle=next(lines), color=next(colors))
                 cnt += 1
-            ax.set_ylabel("Pressure [kPa]", fontsize=FONTSIZE)
-            ax.set_xlabel("Elapsed Time [sec]", fontsize=FONTSIZE)
-            ax.set_ylim([0, 110])
-            ax.tick_params(axis='x', labelsize=TICKSIZE)
-            ax.tick_params(axis='y', labelsize=TICKSIZE)
-            ax.legend(loc='upper left', fontsize=TICKSIZE)
 
-            #### Plot force ####
-            ### Step2: Crop data if needed ###
-            force_time, sumforce_values = crop_lists(start_time, self.wrench_elapsed_time,
-                                                     self.wrench_netforce_relative_values)
-            ax2 = ax.twinx()
-            ax2.plot(force_time, sumforce_values, linewidth=2, color='red', label='net force')
-            ax2.set_ylabel("Force [N]", fontsize=FONTSIZE)
-            ax2.set_ylim([0, 20])
-            ax2.tick_params(axis='y', labelsize=TICKSIZE)
-            ax2.legend(loc='upper right', fontsize=TICKSIZE)
-
-            # --- Plot experiment events for reference ---
+            # Plot experiment events for reference
             for event, label in zip(event_x, event_y):
                 plt.axvline(x=event, color='black', linestyle='--', linewidth=1.5)
-                plt.text(event, 2, label.lower(), rotation=45, color='black', fontsize=TICKSIZE)
+                plt.text(event, 5, label.lower(), rotation=45, color='black', fontsize=TICKSIZE)
 
-            plt.xlim([start_time, 35])
+            plt.xlabel("Elapsed Time [sec]", fontsize=FONTSIZE)
+            plt.ylabel("Pressure [kPa]", fontsize=FONTSIZE)
+            plt.ylim([0, 110])
+
+            # plt.xlim([0, 25])
             # plt.xlim([0, 16])       # Fig.5 ICRA24
             # plt.xlim([0, 50])        # Fig.8 ICRA24
-
             plt.title(self.filename)
 
+            plt.yticks(fontsize=TICKSIZE)
+            plt.xticks(fontsize=TICKSIZE)
             plt.grid()
-            # plt.legend(fontsize=FONTSIZE)
-
+            plt.legend(fontsize=FONTSIZE)
             plt.tight_layout()
 
     def plot_only_total_force(self, start_time=0):
@@ -2389,13 +2384,13 @@ def proxy_trials():
     else:  # Ubuntu OS
         storage = '/media/alejo/Elements/'
 
-    folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/06 - 2024 summer - occlusion trials/cluster_occlusions/'
-    file = '20240628_proxy_sample_0_yaw_85_offset_0_rep_0_stiff_medium_force_medium'
+    ### Occlusion trials ###
+    # folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/06 - 2024 summer - occlusion trials/cluster_occlusions/'
+    # file = '20240628_proxy_sample_0_yaw_85_offset_0_rep_0_stiff_medium_force_medium'
 
-    folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/06 - 2024 summer - occlusion trials/leaf_occlusions/'
-    file = '2024072_proxy_sample_6_rep3_yaw_25_offset_0_rep_0_stiff_medium_force_medium'
-
-    location = storage + folder
+    ### Prosser trials ###
+    folder = '/Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/Dataset - apple picks/'
+    file = '2023111_realapple1_mode_dual_attempt_1_orientation_0_yaw_0'
 
     ### ICRA24 Figures ###
     # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"  # Fig.5 ICRA24
@@ -2409,6 +2404,7 @@ def proxy_trials():
     # file = '20230922_realapple3_attempt_1_orientation_0_yaw_0'
     # file = '20230922_realapple2_attempt_1_orientation_0_yaw_0'
 
+    location = storage + folder
 
     # --- 2. Turn bag into csvs if needed
     if os.path.isdir(location + file):
@@ -2434,8 +2430,8 @@ def proxy_trials():
     experiment.get_features()
 
     # --- 6. Plot
-    experiment.plot_only_pressure(start_time=8)
-    # experiment.plot_only_total_force(start_time=15)
+    experiment.plot_only_pressure(start_time=0)
+    experiment.plot_only_total_force(start_time=0)
     plt.show()
 
 
@@ -2527,6 +2523,7 @@ def real_trials():
                 ### STEP 4: Apply filter
                 # if pick != 'c':         # c: unsuccessful
                 if pick == 'c':
+                # if file == '2023111_realapple1_mode_dual_attempt_1_orientation_0_yaw_0':
                 # if True:
                 # if mode == 'suction':
 
