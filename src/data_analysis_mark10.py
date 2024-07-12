@@ -102,7 +102,8 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plo
                         if tag == 'V' or tag == 'suction':
                             suction_picks.append(max_pull)
 
-            print("\nList of Max forces", max_forces)
+            print("\nMax forces", max_forces)
+            print('Mean of max forces: %.2f +/- %.2f' %(np.mean(max_forces), np.std(max_forces)))
 
             stepses.append(steps)
             # stepses.append(steps/max(variable_list))
