@@ -2411,7 +2411,7 @@ def proxy_trials():
 
     ### Prosser trials ###
     folder = '/Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/Dataset - apple picks/'
-    file = '2023111_realapple25_mode_dual_attempt_1_orientation_0_yaw_0'
+    file = '2023111_realapple10_mode_dual_attempt_1_orientation_0_yaw_0'
 
     ### ICRA24 Figures ###
     # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"  # Fig.5 ICRA24
