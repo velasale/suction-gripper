@@ -474,7 +474,7 @@ def prosser_data():
     folder = '/Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/'
     subfolders = ['Dataset - apple picks/']
     loc = location + folder
-    success_counter(loc, subfolders, filter=['mode', 'dual'])
+    success_counter(loc, subfolders, filter=['mode', 'suction'])
 
 
 ##########################################################################################
@@ -482,8 +482,8 @@ def prosser_data():
 
 def main():
     # icra24_analysis()
-    proxy_occlusions()
-    # prosser_data()
+    # proxy_occlusions()
+    prosser_data()
 
 
 if __name__ == '__main__':
