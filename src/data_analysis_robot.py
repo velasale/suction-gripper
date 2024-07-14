@@ -35,6 +35,7 @@ from bagpy import bagreader
 from sklearn.metrics import r2_score
 from sklearn.cluster import KMeans
 from sklearn.linear_model import LinearRegression
+from sklearn import cluster, datasets, mixture
 import pyautogui
 
 from tqdm import tqdm
@@ -42,6 +43,7 @@ from tqdm import tqdm
 ######## Self developed imports ########
 # from ros_scripts import *
 # from plot_scripts import *
+from datascience_concepts import *
 
 import logging
 logging_format = "[%(asctime)s - %(levelname)s] %(message)s"
@@ -187,6 +189,26 @@ def crop_lists(lower_bound, time_list, value_list):
             cropped_value_list.append(j)
 
     return cropped_time_list, cropped_value_list
+
+
+def gmm_plot(data, labels, colors, linestyles):
+    Y = data.to_numpy()
+    X = np.atleast_2d(Y).T
+    X.reshape(-1, 1)
+
+    gmm = mixture.GaussianMixture(n_components=2, random_state=0).fit(X)
+    means = gmm.means_
+    covariances = gmm.covariances_
+    weights = gmm.weights_
+
+
+    # Plot individual PDFs
+    x = np.linspace(np.min(X), np.max(X), 1000)[:, np.newaxis]
+    for i in range(len(means)):
+        pdf_values = weights[i] * gaussian_pdf(x, means[i], covariances[i])
+        plt.plot(x, pdf_values, label=labels[i], color=colors[i], linestyle=linestyles[i])
+    plt.legend()
+
 
 
 # ------------------------ FORWARD KINEMATICS FUNCTIONS -------------------------------
@@ -1486,9 +1508,9 @@ class ApplePickTrial:
             self.errors.append("Cup collapsed after retrieve")
 
     def suction_engagement(self, vacuum_thr=60):
-        # Check sensor values and see whether the cup was engaged or not
+        # Reads sensor values to see whether the cup was engaged or not
 
-        # STEP 1: Find index when cups allegedly engaged with apple
+        #### STEP 1: Find index when cups allegedly engaged with apple ###
         idx=0
         for count, event in enumerate(self.event_values):
             if event == 'Labeling cups':
@@ -1497,7 +1519,7 @@ class ApplePickTrial:
 
         time_of_index = self.event_elapsed_time[idx]
 
-        # STEP 2: Find the index but in the pressure signals, having time as ref
+        #### STEP 2: Find the index but in the pressure signals, having time as ref ###
         pressure_index = 0
         for count, value in enumerate(self.pressure_sc3_elapsed_time):
             if value > time_of_index:
@@ -1513,7 +1535,7 @@ class ApplePickTrial:
         logging.debug('Elapsed time @ engagement: %.2f sec (index %i)' % (time_of_index, pressure_index))
         logging.debug('Engagement Values: %.1f, %.1f, %.1f' % (self.sc1_value_at_engagement, self.sc2_value_at_engagement, self.sc3_value_at_engagement))
 
-        # STEP 3: Set labels accodring to the vacuum threshold
+        ### STEP 3: Set labels accodring to the vacuum threshold ###
         sc_a_sensor_label = 'no'
         sc_b_sensor_label = 'no'
         sc_c_sensor_label = 'no'
@@ -2471,15 +2493,15 @@ def real_trials():
     # folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'  # ArmFarm laptop - Hard Drive C
 
     # --- Field Trials at prosser --- #
-    # folder = 'Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/'
+    folder = 'Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/'
     # subfolders = ['Dataset - apple grasps/', 'Dataset - apple picks/']
-    # subfolders = ['Dataset - apple grasps/']
+    subfolders = ['Dataset - apple grasps/']
     # subfolders = ['Dataset - apple picks/']
 
     # --- Proxy trials --- #
-    folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/05 - 2024 winter - finger and dual trials/'
+    # folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/05 - 2024 winter - finger and dual trials/'
     # subfolders = ['FINGER_GRIPPER_EXPERIMENTS_rep1/']
-    subfolders = ['DUAL_GRIPPER_EXPERIMENTS_rep1/', 'DUAL_GRIPPER_EXPERIMENTS_rep2/']
+    # subfolders = ['DUAL_GRIPPER_EXPERIMENTS_rep1/', 'DUAL_GRIPPER_EXPERIMENTS_rep2/']
 
     # --- ICRA24 accompanying video
     # file = '20230731_proxy_sample_6_yaw_45_rep_0_stiff_low_force_low'
@@ -2502,8 +2524,7 @@ def real_trials():
 
     folder = storage + folder
 
-    ### Step 3: Sweep all bag files, and for each one do next
-
+    ### Step 3: Sweep all bag files, and for each one do next ###
     for subfolder in subfolders:
 
         location = folder + subfolder
@@ -2537,7 +2558,7 @@ def real_trials():
                 experiment.filename = file
                 logging.debug('metadata: %s' %experiment.metadata['general'])
 
-                ### STEP 3: Check conditions from metadata to continue with the analysis
+                ### STEP 3: Check conditions from metadata to continue with analysis
                 mode = experiment.metadata['robot']['actuation mode']
                 pick = experiment.metadata['labels']['apple pick result']
 
@@ -2558,7 +2579,7 @@ def real_trials():
                         experiment.pick_points(plots='no')
                         experiment.pick_forces()
                         experiment.pick_stiffness(plots='no')
-                    # experiment.suction_engagement()
+                    experiment.suction_engagement()
 
                     ### STEP 6: Append variables of interest
                     stiffnesses.append(experiment.stiffness)
@@ -2642,9 +2663,9 @@ def real_trials():
 
     if len(apple_ids) > 1:
         list_to_hist(offsets, 'Offset from apple center [mm]')
-        list_to_hist(sc1_values_at_eng, 'ScA - Pressure [kPa]')
-        list_to_hist(sc2_values_at_eng, 'ScB - Pressure [kPa]')
-        list_to_hist(sc3_values_at_eng, 'ScC - Pressure [kPa]')
+        list_to_hist(sc1_values_at_eng, 'ScA - Pressure [kPa]', False)
+        list_to_hist(sc2_values_at_eng, 'ScB - Pressure [kPa]', False)
+        list_to_hist(sc3_values_at_eng, 'ScC - Pressure [kPa]', False)
 
         fig = plt.figure()
         df = pd.DataFrame(np.array(([sc1_values_at_eng, sc2_values_at_eng, sc3_values_at_eng])).transpose(), columns=['scA', 'scB', 'scC'])
@@ -2652,7 +2673,33 @@ def real_trials():
         plt.xlabel('Suction cup')
         plt.ylabel('Air pressure [kPa]')
 
+        fig, axes = plt.subplots()
+        axes.violinplot(dataset = [df['scA'].values,
+                                   df['scB'].values,
+                                   df['scC'].values])
+        axes.yaxis.grid(True)
+        axes.set_xlabel('Suction Cup')
+        axes.set_ylabel('Pressure [KPa]')
 
+        #### Use GMM to split the data of engaged and disengaged suction cups
+        fig = plt.figure()
+
+        labels = ['scA engaged', 'scA disengaged']
+        colors = ['green', 'green']
+        linestyles = ['solid', 'dashed']
+        gmm_plot(df['scA'], labels, colors, linestyles)
+
+        labels = ['scB engaged', 'scB disengaged']
+        colors = ['red', 'red']
+        linestyles = ['solid', 'dashed']
+        gmm_plot(df['scB'], labels, colors, linestyles)
+
+        labels = ['scC engaged', 'scC disengaged']
+        colors = ['blue', 'blue']
+        linestyles = ['solid', 'dashed']
+        gmm_plot(df['scC'], labels, colors, linestyles)
+
+        plt.xlabel('Air pressure [KPa]')
 
 
     plt.show(block=False)
@@ -2665,7 +2712,7 @@ def real_trials():
 
 def main():
 
-    ### Step1: Ste the debugger ###
+    ### Step1: Set debugger ###
     logging.getLogger('matplotlib.font_manager').disabled = True
     # Comment out this line for all DEBUG-level messages to be suppressed
     # logging.getLogger().setLevel(logging.DEBUG)
@@ -2674,7 +2721,7 @@ def main():
     plt.rcParams["font.family"] = "serif"
     plt.rcParams["font.serif"] = ["Times New Roman"]
 
-    ### Step3: Uncomment the desired experiment ###
+    ### Step3: Uncomment desired experiment ###
     # circle_plots(1,1,1)
     # noise_experiments('horizontal')
     # noise_experiments('vertical')
