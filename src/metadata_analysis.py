@@ -481,9 +481,9 @@ def prosser_data():
 
 
 def main():
-    # icra24_analysis()
+    icra24_analysis()
     # proxy_occlusions()
-    prosser_data()
+    # prosser_data()
 
 
 if __name__ == '__main__':

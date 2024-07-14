@@ -36,7 +36,7 @@ from visualization_msgs.msg import Marker, MarkerArray
 import cv2
 
 ## --- Self developed imports
-from data_analysis import *
+from data_analysis_robot import *
 from ros_scripts import *
 from plot_scripts import *
 
@@ -80,7 +80,7 @@ def draw_cross_hair():
 
 
 def plot_vacuum(filename):
-    """Simply plots vacuum using methods and functions from data_analysis.py"""
+    """Simply plots vacuum using methods and functions from data_analysis_robot.py"""
 
     bag_to_csvs(filename + ".bag")
     metadata = read_json(filename + ".json")

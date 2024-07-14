@@ -2493,15 +2493,20 @@ def real_trials():
     # folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'  # ArmFarm laptop - Hard Drive C
 
     # --- Field Trials at prosser --- #
-    folder = 'Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/'
+    # folder = 'Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/'
     # subfolders = ['Dataset - apple grasps/', 'Dataset - apple picks/']
-    subfolders = ['Dataset - apple grasps/']
+    # subfolders = ['Dataset - apple grasps/']
     # subfolders = ['Dataset - apple picks/']
 
     # --- Proxy trials --- #
-    # folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/05 - 2024 winter - finger and dual trials/'
+    folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/05 - 2024 winter - finger and dual trials/'
     # subfolders = ['FINGER_GRIPPER_EXPERIMENTS_rep1/']
     # subfolders = ['DUAL_GRIPPER_EXPERIMENTS_rep1/', 'DUAL_GRIPPER_EXPERIMENTS_rep2/']
+    subfolders = ['DUAL_GRIPPER_EXPERIMENTS_rep2/']
+
+    # --- Occlusion trials --- #
+    folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/06 - 2024 summer - occlusion trials/'
+    subfolders = ['leaf_occlusions/']
 
     # --- ICRA24 accompanying video
     # file = '20230731_proxy_sample_6_yaw_45_rep_0_stiff_low_force_low'
@@ -2533,7 +2538,7 @@ def real_trials():
                 logging.debug('------------- Filename: %s ------------' %file)
                 only_name = file.split('.bag')[0]  # remove extension
                 file = only_name
-                print(file)
+                print('\n\n', file)
 
                 # Extract apple's id
                 try:

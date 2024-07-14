@@ -240,11 +240,11 @@ def bag_to_pngs(input_dir, bag_file, cam_topic, output_folder='/pngs'):
         # print(t)
         cv_img = bridge.imgmsg_to_cv2(msg, "bgr8")
 
-        # Add white background for the text
-        # img_height, img_width, __ = cv_img.shape
-        # cv2.rectangle(cv_img, (0, img_height), (250, img_height - 40), (255, 255, 255), -1)
+        ### Add white background for the text ###
+        img_height, img_width, __ = cv_img.shape
+        cv2.rectangle(cv_img, (0, img_height), (250, img_height - 40), (255, 255, 255), -1)
 
-        # Add elapsed time as text at the bottom of the image
+        ### Add elapsed time as text at the bottom of the image ###
         if count == 0:
             initial_time_stamp = t
 
@@ -340,83 +340,54 @@ def datetime_simplified():
 def main():
 
     #################### Small tutorial to use 'bag_to_video' #################
-    # --- Step 1: Provide file ---
 
-    # --- Lab's Laptop - Hard Drive A ---
-    folder = '/home/alejo/gripper_ws/src/suction-gripper/data/'
-    # --- Lab's Laptop - Hard Drive B ---
-    # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"
-    # --- Lab's Laptop - Hard Drive C ---
-    folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'
-
-    # subfolder = "LOW_STIFFNESS/"
-    # subfolder = "MEDIUM_STIFFNESS/"
-    # subfolder = "HIGH_STIFFNESS/"
-    subfolder = ''
-
-    # file = '2023096_realapple9_attempt3.bag'
-    # file = '20230920_realapple2_orientation_0_yaw_0.bag'
-    # file = '20230922_realapple2_attempt_2_orientation_0_yaw_0.bag'
+    ### Step 1 - Data Location ###
+    if os.name == 'nt':  # Windows OS
+        storage = 'D:/'
+    else:  # Ubuntu OS
+        storage = '/media/alejo/Elements/'
 
     # --- Trials used for ICRA24 media ---
-    storage = '/media/alejo/Elements/'
-    folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/04 - 2023 summer - suctionCup gripper/LOW STIFFNESS/'
-    location = storage + folder
+    # folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/04 - 2023 summer - suctionCup gripper/LOW STIFFNESS/'
 
     # --- Prosser Data ---
-    storage = '/media/alejo/Elements'
-    folder = '/Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/Dataset - apple picks/'
-    location = storage + folder
-
-    file = '2023111_realapple7_mode_dual_attempt_1_orientation_0_yaw_0.bag'
-
+    folder = 'Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/Dataset - apple picks/'
+    # file = '2023111_realapple7_mode_dual_attempt_1_orientation_0_yaw_0.bag'
 
     # --- Proxy Data ---
-    folder = '/media/alejo/Elements/Alejo - Apple Pick Data/Apple Proxy Picks/05 - 2024 winter - finger and dual trials/FINGER_GRIPPER_EXPERIMENTS_rep2/'
-
-    # file = '20230731_proxy_sample_4_yaw_45_rep_0_stiff_low_force_medium.bag'
-    # file = '20230731_proxy_sample_5_yaw_45_rep_0_stiff_low_force_medium.bag'
-    # file = '20230731_proxy_sample_5_yaw_45_rep_0_stiff_low_force_low.bag'
-    # file = '2023082_proxy_sample_5_yaw_45_rep_0_stiff_high_force_low.bag'
-    # file = '2023083_proxy_sample_5_yaw_45_rep_1_stiff_high_force_medium.bag'
-
-    # file = '20230922_realapple3_attempt_1_orientation_0_yaw_0.bag'
-    # file = '20230922_realapple2_attempt_1_orientation_0_yaw_0.bag'
-    # file = '2023111_realapple21_mode_dual_attempt_3_orientation_0_yaw_0.bag'
-
-    # --- Data Location ---
-    # folder = '/media/alejo/Elements/Prosser_Data/'
-    # subfolder = 'Dataset - apple grasps/'
+    # folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/05 - 2024 winter - finger and dual trials/FINGER_GRIPPER_EXPERIMENTS_rep2/'
 
     # --- Occlusions ----
-    folder = '/media/alejo/Elements/Alejo - Apple Pick Data/Apple Proxy Picks/06 - 2024 summer - occlusion trials/cluster_occlusions/'
+    # folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/06 - 2024 summer - occlusion trials/cluster_occlusions/'
+
+    location = storage + folder
 
     open_batch = 'yes'
 
     if open_batch == 'yes':
         # --- Opening bags in a batch ---
-        for filename in os.listdir(folder + subfolder):
+        for filename in os.listdir(location):
             if filename.endswith(".bag"):
                 print(filename)
 
                 # --- Skip if there is already a folder
                 just_name = filename.split('.', 1)[0]
                 print(just_name)
-                if Path(folder + subfolder + just_name).is_dir():
+                if Path(location + just_name).is_dir():
                     print('there is already a folder with this name')
                     continue
 
-                # --- Extract topics
+                # --- Otherwise extract topics
                 print('there is not a folder yet')
                 topic = "/camera/image_raw"
-                bag_to_pngs(folder + subfolder, filename, topic,'/pngs_inhand_cam')
+                bag_to_pngs(location, filename, topic,'/pngs_inhand_cam')
 
                 topic = "/usb_cam/image_raw"
-                bag_to_pngs(folder + subfolder, filename, topic, '/pngs_fixed_cam')
+                bag_to_pngs(location, filename, topic, '/pngs_fixed_cam')
 
-                bag_to_video(folder + subfolder, filename, topic)
+                bag_to_video(location, filename, topic)
 
-                bag_to_csvs(folder + subfolder + filename)
+                bag_to_csvs(location + filename)
 
     else:
         # --- Open a single bag file ---
