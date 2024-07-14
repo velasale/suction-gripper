@@ -127,32 +127,33 @@ def list_to_hist(list, x_label, plot_norm=True):
 
     if len(list) > 0:
 
-        # Step 1: Convert data into a numpy array
+        #### Step 1: Convert data into a numpy array ###
         values = np.array(list)
         kmeans = KMeans(n_clusters=3, random_state=0).fit(values.reshape(-1,1))
         clusters = kmeans.cluster_centers_
 
-        # Step 2: Get some features from the data
+        ### Step 2: Get some features from the data ###
         median = round(np.median(list), 2)
 
         # Step 3: PLot histogram
         fig = plt.figure()
         plt.title('Sample size: ' + str(len(list)) + ', Median: ' + str(median))
+        plt.axvline(median, color='k', linestyle='dashed')
+        # plt.text(median, 0.0, str(median))
         plt.xlabel(x_label)
-
 
         # Step 4: Fit a normal distribution
         # Source: https://stackoverflow.com/questions/20011122/fitting-a-normal-distribution-to-1d-data
         if plot_norm == True:
 
-            plt.hist(values, density=True)  # density True for normalized curves
+            plt.hist(values, rwidth=0.9, alpha=0.7, bins='auto', density=True)  # density True for normalized curves
             mu, std = norm.fit(values)
             xmin, xmax = plt.xlim()
             x = np.linspace(xmin, xmax, 100)
             p = norm.pdf(x, mu, std)
             plt.plot(x, p, 'k', linewidth=2)
         else:
-            plt.hist(values)
+            plt.hist(values, rwidth=0.9, alpha=0.7, bins='auto',)
 
     else:
         print('no data')
@@ -1685,10 +1686,10 @@ class ApplePickTrial:
 
         ### Step1: Plot Parameters ###
         icra24_figure5_fonts = 24
-        icra22_figure5_size = (14, 5)
+        icra22_figure5_size = (14, 4)
 
-        FONTSIZE = icra24_figure5_fonts
-        TICKSIZE = icra24_figure5_fonts - 8
+        FONTSIZE = 18
+        TICKSIZE = 16
         FIGURESIZE = icra22_figure5_size
 
         lines = itertools.cycle(('dotted', 'dashed', 'dashdot'))
@@ -1805,7 +1806,7 @@ class ApplePickTrial:
             # --- Plot experiment events for reference ---
             for event, label in zip(event_x, event_y):
                 plt.axvline(x=event, color='black', linestyle='--', linewidth=1.5)
-                plt.text(event, 5, label.lower(), rotation=45, color='black', fontsize=TICKSIZE)
+                plt.text(event, 10, label.lower(), rotation=45, color='black', fontsize=TICKSIZE)
 
             plt.xlim([start_time,max(force_time)])
             # plt.xlim([0, 16])       # Fig.5 ICRA24
@@ -2411,7 +2412,8 @@ def proxy_trials():
 
     ### Prosser trials ###
     folder = '/Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/Dataset - apple picks/'
-    file = '2023111_realapple10_mode_dual_attempt_1_orientation_0_yaw_0'
+    # file = '2023111_realapple1_mode_dual_attempt_1_orientation_0_yaw_0'
+    file = '2023111_realapple1_mode_suction_attempt_1_orientation_0_yaw_0'
 
     ### ICRA24 Figures ###
     # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"  # Fig.5 ICRA24
@@ -2468,12 +2470,16 @@ def real_trials():
     # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"     # ArmFarm laptop - Hard Drive B
     # folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'  # ArmFarm laptop - Hard Drive C
 
-    folder = 'Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/'
-    folder = storage + folder
+    # --- Field Trials at prosser --- #
+    # folder = 'Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/'
+    # subfolders = ['Dataset - apple grasps/', 'Dataset - apple picks/']
+    # subfolders = ['Dataset - apple grasps/']
+    # subfolders = ['Dataset - apple picks/']
 
-    # folder = 'D:/Prosser_Data/'
-    # subfolder = 'Dataset - apple grasps/'
-    # subfolder = 'Dataset - apple picks/'
+    # --- Proxy trials --- #
+    folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/05 - 2024 winter - finger and dual trials/'
+    # subfolders = ['FINGER_GRIPPER_EXPERIMENTS_rep1/']
+    subfolders = ['DUAL_GRIPPER_EXPERIMENTS_rep1/', 'DUAL_GRIPPER_EXPERIMENTS_rep2/']
 
     # --- ICRA24 accompanying video
     # file = '20230731_proxy_sample_6_yaw_45_rep_0_stiff_low_force_low'
@@ -2494,15 +2500,9 @@ def real_trials():
     sc2_values_at_eng = []
     sc3_values_at_eng = []
 
-    ### Step 3: Sweep all bag files, and for each one do next
-    # subfolders= ['Dataset - apple grasps/', 'Dataset - apple picks/']
-    # subfolders = ['Dataset - apple grasps/']
-    subfolders = ['Dataset - apple picks/']
+    folder = storage + folder
 
-    # --- Proxy verification ---
-    # folder = '/media/alejo/Elements/Alejo - Apple Pick Data/Apple Proxy Picks/05 - 2024 winter - finger and dual trials/'
-    # subfolders = ['FINGER_GRIPPER_EXPERIMENTS_rep1/']
-    # subfolders = ['DUAL_GRIPPER_EXPERIMENTS_rep1/', 'DUAL_GRIPPER_EXPERIMENTS_rep2/']
+    ### Step 3: Sweep all bag files, and for each one do next
 
     for subfolder in subfolders:
 
@@ -2542,9 +2542,10 @@ def real_trials():
                 pick = experiment.metadata['labels']['apple pick result']
 
                 ### STEP 4: Apply filter
+                # a,d,e: successful, b,c: un-successful
                 # if pick != 'c':         # c: unsuccessful
-                if pick == 'c':
-                # if True:
+                # if pick == 'a' or pick == 'd' or pick == 'e':     # Successful picks
+                if True:
                 # if mode == 'suction':
 
                     ### STEP 4: Read values from 'csv'
@@ -2553,9 +2554,10 @@ def real_trials():
                     ### STEP 5: Get features for the experiment
                     experiment.get_features()
                     experiment.eef_location(plots='no')
-                    experiment.pick_points(plots='no')
-                    experiment.pick_forces()
-                    experiment.pick_stiffness(plots='no')
+                    if subfolder != 'Dataset - apple grasps/':
+                        experiment.pick_points(plots='no')
+                        experiment.pick_forces()
+                        experiment.pick_stiffness(plots='no')
                     # experiment.suction_engagement()
 
                     ### STEP 6: Append variables of interest
@@ -2578,11 +2580,11 @@ def real_trials():
                     if experiment.offset_eef_apple < 100:       # Record of the offset between eef and apple
                         offsets.append(experiment.offset_eef_apple)
 
-                    ### STEP 7: Single experiment plots
+                    ### STEP 7: Single trial plots
                     # experiment.plot_only_pressure(type='single')
                     # experiment.plot_only_total_force()
 
-    ### STEP 8: Grouped experiments plots
+    ### STEP 8: Grouped trial plots
     if len(stiffnesses) > 1:
 
         print('Stiffness MEAN, MEDIAN: ', round(np.mean(stiffnesses), 2), round(np.median(stiffnesses), 2))
@@ -2608,15 +2610,17 @@ def real_trials():
         plt.grid()
 
         ### Violinplots
-        fig = plt.figure()
-        plt.violinplot(stiffnesses, showmedians=True)
-        plt.title('Branch Stiffness (NormalForce / Travelled Distance) [N/m]')
-        plt.grid()
-
-        fig = plt.figure()
-        plt.violinplot(max_netForces, showmedians=True)
-        plt.title('Max Net Forces [N]')
-        plt.grid()
+        # fig = plt.figure()
+        # plt.violinplot(stiffnesses, showmedians=True)
+        # stiff_median = np.median(stiffnesses)
+        # plt.title('Branch Stiffness (NormalForce / Travelled Distance) [N/m]')
+        # plt.text(1+0.01, stiff_median+10, str(round(stiff_median, 2)), fontsize=12)
+        # plt.grid()
+        #
+        # fig = plt.figure()
+        # plt.violinplot(max_netForces, showmedians=True)
+        # plt.title('Max Net Forces [N]')
+        # plt.grid()
 
         ### Scatter Plots
         fig = plt.figure()
@@ -2637,7 +2641,7 @@ def real_trials():
         print('Offsets: ', offsets)
 
     if len(apple_ids) > 1:
-        list_to_hist(offsets, 'Offset from apple [mm]')
+        list_to_hist(offsets, 'Offset from apple center [mm]')
         list_to_hist(sc1_values_at_eng, 'ScA - Pressure [kPa]')
         list_to_hist(sc2_values_at_eng, 'ScB - Pressure [kPa]')
         list_to_hist(sc3_values_at_eng, 'ScC - Pressure [kPa]')
@@ -2647,6 +2651,9 @@ def real_trials():
         df.boxplot(column=['scA', 'scB', 'scC'])
         plt.xlabel('Suction cup')
         plt.ylabel('Air pressure [kPa]')
+
+
+
 
     plt.show(block=False)
     plt.ion()
@@ -2658,11 +2665,16 @@ def real_trials():
 
 def main():
 
+    ### Step1: Ste the debugger ###
     logging.getLogger('matplotlib.font_manager').disabled = True
     # Comment out this line for all DEBUG-level messages to be suppressed
     # logging.getLogger().setLevel(logging.DEBUG)
 
-    # --- Simply choose the desired experiment by un-commenting it ---
+    ### Step2: Adjust plot parameters (for papers) ###
+    plt.rcParams["font.family"] = "serif"
+    plt.rcParams["font.serif"] = ["Times New Roman"]
+
+    ### Step3: Uncomment the desired experiment ###
     # circle_plots(1,1,1)
     # noise_experiments('horizontal')
     # noise_experiments('vertical')
@@ -2671,10 +2683,10 @@ def main():
     # noise_experiments_pitch(exp_type='horizontal', radius=radius, variable=variable)
     # simple_suction_experiment()
 
-    proxy_trials()
-    # real_trials()
+    # proxy_trials()
+    real_trials()
 
-    # --- Build video from pngs and a plot beside of it with a vertical line running ---
+    ### Step4: Build video from pngs and a plot beside of it with a vertical line running ###
     # plot_and_video()
 
     # TODO: Compare results between  get_detach_values() and get_forces_at_pick()
