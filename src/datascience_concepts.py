@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import random
 from matplotlib.ticker import PercentFormatter
 from scipy.stats import binom
-import statistics as st
+# import statistics as st
 
 from sklearn import cluster, datasets, mixture
 
@@ -221,6 +221,6 @@ def central_limit_theorem():
 
 if __name__ == '__main__':
     # kalman_filter_example()
-    # gmm_example()
+    gmm_example()
     # binomial_pdf()
-    central_limit_theorem()
+    # central_limit_theorem()
