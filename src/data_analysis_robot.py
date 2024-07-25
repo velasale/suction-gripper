@@ -14,7 +14,7 @@ import scipy
 from scipy.ndimage import gaussian_filter, median_filter
 import scipy.stats as st
 from scipy.stats import norm
-
+import seaborn as sns
 import matplotlib.font_manager
 
 
@@ -129,33 +129,43 @@ def list_to_hist(list, x_label, plot_norm=True):
 
     if len(list) > 0:
 
-        #### Step 1: Convert data into a numpy array ###
+        ### Step 1: Convert data into a numpy array ###
         values = np.array(list)
         kmeans = KMeans(n_clusters=3, random_state=0).fit(values.reshape(-1,1))
         clusters = kmeans.cluster_centers_
 
         ### Step 2: Get some features from the data ###
         median = round(np.median(list), 2)
+        stdev = round(np.std(list),2)
 
-        # Step 3: PLot histogram
-        fig = plt.figure()
-        plt.title('Sample size: ' + str(len(list)) + ', Median: ' + str(median))
+        ### Step 3: PLot histogram ###
+        fig, ax = plt.subplots()
+        plt.title('Sample: ' + str(len(list)) + ', Median: ' + str(median) + '+/-' + str(stdev))
         plt.axvline(median, color='k', linestyle='dashed')
         # plt.text(median, 0.0, str(median))
         plt.xlabel(x_label)
 
-        # Step 4: Fit a normal distribution
+        ### Step 3.1: Fit a normal distribution ###
         # Source: https://stackoverflow.com/questions/20011122/fitting-a-normal-distribution-to-1d-data
         if plot_norm == True:
 
-            plt.hist(values, rwidth=0.9, alpha=0.7, bins='auto', density=True)  # density True for normalized curves
+            ### Keep left y-axis for frecuency
+            ax.hist(values, rwidth=0.9, alpha=0.7, bins='auto')  # density True for normalized curves
+            ax.set_ylabel('Frecuency')
+
+            ### Normalize and make right x-axis for the probability function distribution (pfd)
             mu, std = norm.fit(values)
             xmin, xmax = plt.xlim()
             x = np.linspace(xmin, xmax, 100)
             p = norm.pdf(x, mu, std)
-            plt.plot(x, p, 'k', linewidth=2)
+            ax2 = ax.twinx()
+            ax2.plot(x, p, 'k', linewidth=2)
+
         else:
             plt.hist(values, rwidth=0.9, alpha=0.7, bins='auto',)
+
+        plt.tight_layout()
+        plt.grid()
 
     else:
         print('no data')
@@ -821,6 +831,7 @@ class ApplePickTrial:
         self.eef_travel = []
         self.offset_eef_apple = []
         self.stiffness = 0
+        self.stiffness_lr_rvalue = 0
 
         self.wrench_idx_start_pick = 0
         self.wrench_idx_end_pick = 0
@@ -830,6 +841,8 @@ class ApplePickTrial:
         self.max_netForce_at_pick = 0
         self.theta_at_pick = 0
         self.travel_at_pick = 0
+
+
 
         # --------------- Apple properties
         self.apple_id = apple_id
@@ -1230,7 +1243,17 @@ class ApplePickTrial:
 
         if plots == 'yes':
             fig = plt.figure()
-            plt.plot(self.eef_travel, new_force_list)
+
+            ### list length check ###
+            l1 = len(self.eef_travel)
+            l2 = len(new_force_list)
+            if l1 != l2:
+                min_length = min(l1, l2)
+                print('List lengths: ',l1, l2, min(l1, l2))
+                plt.plot(self.eef_travel[0:min_length], new_force_list[0:min_length])
+            else:
+                plt.plot(self.eef_travel, new_force_list)
+
             plt.title('z-Force vs Net distance travelled\n' + self.filename)
             plt.plot([min_force_loc,max_force_loc], [min_force, max_force], linestyle='dotted')
             text = 'LR Stiffness: ' + str(int(lr_stiffness.slope)) + 'N/m' + ' (Rvalue: ' + str(round(lr_stiffness.rvalue, 2)) +')'
@@ -1240,6 +1263,7 @@ class ApplePickTrial:
             plt.ylabel('zForce @ EEF [m]')
 
         self.stiffness = stiffness
+        self.stiffness_lr_rvalue = lr_stiffness.rvalue
         self.travel_at_pick = delta_travel
 
     # ----------- METHODS FOR EEF POSE W.R.T APPLE ---------
@@ -2493,20 +2517,20 @@ def real_trials():
     # folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'  # ArmFarm laptop - Hard Drive C
 
     # --- Field Trials at prosser --- #
-    # folder = 'Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/'
+    folder = 'Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/'
     # subfolders = ['Dataset - apple grasps/', 'Dataset - apple picks/']
     # subfolders = ['Dataset - apple grasps/']
-    # subfolders = ['Dataset - apple picks/']
+    subfolders = ['Dataset - apple picks/']
 
     # --- Proxy trials --- #
-    folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/05 - 2024 winter - finger and dual trials/'
+    # folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/05 - 2024 winter - finger and dual trials/'
     # subfolders = ['FINGER_GRIPPER_EXPERIMENTS_rep1/']
     # subfolders = ['DUAL_GRIPPER_EXPERIMENTS_rep1/', 'DUAL_GRIPPER_EXPERIMENTS_rep2/']
-    subfolders = ['DUAL_GRIPPER_EXPERIMENTS_rep2/']
+    # subfolders = ['DUAL_GRIPPER_EXPERIMENTS_rep2/']
 
     # --- Occlusion trials --- #
-    folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/06 - 2024 summer - occlusion trials/'
-    subfolders = ['leaf_occlusions/']
+    # folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/06 - 2024 summer - occlusion trials/'
+    # subfolders = ['leaf_occlusions/']
 
     # --- ICRA24 accompanying video
     # file = '20230731_proxy_sample_6_yaw_45_rep_0_stiff_low_force_low'
@@ -2583,11 +2607,12 @@ def real_trials():
                     if subfolder != 'Dataset - apple grasps/':
                         experiment.pick_points(plots='no')
                         experiment.pick_forces()
-                        experiment.pick_stiffness(plots='no')
+                        experiment.pick_stiffness(plots='yes')
                     experiment.suction_engagement()
 
                     ### STEP 6: Append variables of interest
-                    stiffnesses.append(experiment.stiffness)
+                    if experiment.stiffness_lr_rvalue > 0.95:
+                        stiffnesses.append(experiment.stiffness)
                     max_normalForces.append(experiment.max_normalForce_at_pick)
                     max_tangentialForces.append(experiment.max_tangentialForce_at_pick)
                     max_netForces.append(experiment.max_netForce_at_pick)
@@ -2706,13 +2731,15 @@ def real_trials():
 
         plt.xlabel('Air pressure [KPa]')
 
+    ### Choice 1 for plotting ####
+    plt.show()
 
-    plt.show(block=False)
-    plt.ion()
-    # plt.show()
-    plt.pause(0.001)  # Pause for interval seconds.
-    input("\nhit[enter] to end.")
-    plt.close('all')  # all open plots are correctly closed after each run
+    ### Choice 2 for plotting ###
+    # plt.show(block=False)
+    # plt.ion()
+    # plt.pause(0.001)  # Pause for interval seconds.
+    # input("\nhit[enter] to end.")
+    # plt.close('all')  # all open plots are correctly closed after each run
 
 
 def main():
@@ -2725,6 +2752,8 @@ def main():
     ### Step2: Adjust plot parameters (for papers) ###
     plt.rcParams["font.family"] = "serif"
     plt.rcParams["font.serif"] = ["Times New Roman"]
+    plt.rcParams["font.size"] = 20
+    plt.rc('legend', fontsize=14)  # using a size in points
 
     ### Step3: Uncomment desired experiment ###
     # circle_plots(1,1,1)
