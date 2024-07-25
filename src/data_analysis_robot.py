@@ -2518,9 +2518,9 @@ def real_trials():
 
     # --- Field Trials at prosser --- #
     folder = 'Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/'
-    # subfolders = ['Dataset - apple grasps/', 'Dataset - apple picks/']
+    subfolders = ['Dataset - apple grasps/', 'Dataset - apple picks/']
     # subfolders = ['Dataset - apple grasps/']
-    subfolders = ['Dataset - apple picks/']
+    # subfolders = ['Dataset - apple picks/']
 
     # --- Proxy trials --- #
     # folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/05 - 2024 winter - finger and dual trials/'
@@ -2607,7 +2607,7 @@ def real_trials():
                     if subfolder != 'Dataset - apple grasps/':
                         experiment.pick_points(plots='no')
                         experiment.pick_forces()
-                        experiment.pick_stiffness(plots='yes')
+                        experiment.pick_stiffness(plots='no')
                     experiment.suction_engagement()
 
                     ### STEP 6: Append variables of interest
