@@ -209,6 +209,7 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plo
     plt.xlabel(xlabel)
     plt.ylabel('Force [N]')
     # plt.title('Gripper pulling force [N] vs ' + xlabel)
+    plt.tight_layout()
 
 
 def locate_index_of_deltas_v2(data, intercept=0.5):
@@ -490,9 +491,9 @@ if __name__ == '__main__':
     ### Adjust plot parameters (for papers) ###
     plt.rcParams["font.family"] = "serif"
     plt.rcParams["font.serif"] = ["Times New Roman"]
-    plt.rcParams["font.size"] = 16
+    plt.rcParams["font.size"] = 20
     plt.rcParams["font.weight"] = 'light'
-    plt.rc('legend', fontsize=14)  # using a size in points
+    plt.rc('legend', fontsize=15)  # using a size in points
 
     ### Step 1 - Data Location ###
     if os.name == 'nt':     # Windows OS
@@ -506,6 +507,6 @@ if __name__ == '__main__':
     ### Step 2 - Subfunctions ###
     # orthogonal_load_cell_experiments(folder)
     push_load_cell_experiments(folder)
-    mark10_pullback_experiments(folder)
+    # mark10_pullback_experiments(folder)
 
     plt.show()
