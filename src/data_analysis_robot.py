@@ -172,7 +172,14 @@ def list_to_hist(list, x_label, plot_norm=True):
 
 
 def relative_values(original_list, reference_value):
-    "Subtracts a value from all the elements of a list. Handy for converting time stamps"
+    """
+    Subtracts a reference value from all the elements of a list.
+    For instance, time stamps are difficult to read. Instead read the elapsed time by
+    subtracting the first reading from each reading
+    @param original_list:
+    @param reference_value:
+    @return:
+    """
 
     relative_list = [None] * len(original_list)
     for i in range(len(original_list)):
@@ -180,6 +187,21 @@ def relative_values(original_list, reference_value):
 
     return relative_list
 
+def time_between_events(first_event, second_event, events_list, time_list):
+
+    ### Find indexes
+    first_time = 0
+    second_time = 0
+    for time, event in zip(time_list, events_list):
+
+        if event == first_event:
+            first_time = time
+        elif event == second_event:
+            second_time = time
+
+    elapsed_time = second_time - first_time
+
+    return elapsed_time
 
 def crop_lists(lower_bound, time_list, value_list):
     """
@@ -842,7 +864,7 @@ class ApplePickTrial:
         self.theta_at_pick = 0
         self.travel_at_pick = 0
 
-
+        self.time_closing_fingers = 0
 
         # --------------- Apple properties
         self.apple_id = apple_id
@@ -926,6 +948,7 @@ class ApplePickTrial:
         """Basically run all the methods"""
 
         self.elapsed_times()
+        # self.time_closing_fingers = time_between_events('Closing fingers', 'Retrieve', self.event_values, self.event_elapsed_time)
 
         # -------- Pressure Features ----------
         # self.get_atmospheric_pressure()
@@ -2458,8 +2481,8 @@ def proxy_trials():
 
     ### Prosser trials ###
     folder = '/Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/Dataset - apple picks/'
-    # file = '2023111_realapple1_mode_dual_attempt_1_orientation_0_yaw_0'
-    file = '2023111_realapple1_mode_suction_attempt_1_orientation_0_yaw_0'
+    file = '2023111_realapple1_mode_dual_attempt_1_orientation_0_yaw_0'
+    # file = '2023111_realapple1_mode_suction_attempt_1_orientation_0_yaw_0'
 
     ### ICRA24 Figures ###
     # folder = "/media/alejo/DATA/SUCTION_GRIPPER_EXPERIMENTS/"  # Fig.5 ICRA24
@@ -2501,6 +2524,8 @@ def proxy_trials():
     # --- 6. Plot
     experiment.plot_only_pressure(start_time=0)
     experiment.plot_only_total_force(start_time=0)
+
+    print(experiment.time_closing_fingers)
     plt.show()
 
 
@@ -2764,8 +2789,8 @@ def main():
     # noise_experiments_pitch(exp_type='horizontal', radius=radius, variable=variable)
     # simple_suction_experiment()
 
-    # proxy_trials()
-    real_trials()
+    proxy_trials()
+    # real_trials()
 
     ### Step4: Build video from pngs and a plot beside of it with a vertical line running ###
     # plot_and_video()
