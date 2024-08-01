@@ -39,7 +39,7 @@ initial_stepper_distance = 50
 pitch = 2/1000              # [m]
 starts = 4
 diameter = 8/1000           # [m]
-mu = 0.20                   # Brass (Nut material) and Steel (Screw material)
+mu = 0.2                   # Brass (Nut material) and Steel (Screw material)
 beta = 0.968                # ACME Thread geometry parameter  = cos(14.5deg)
 d_m = diameter - pitch/2    # mean diameter[m]
 l = pitch * starts          # pitch [m]
@@ -50,7 +50,8 @@ T = 0.4                     # N.m
 efficiency = 1            # From friction, manufacturing tolerances,
 factor = (l + math.pi * mu * d_m / beta) / (math.pi * d_m - mu * l / beta)
 F_nut = (2 * T / d_m) * factor * efficiency
-print('Given a torque motor of %.2f [Nm], the output force is: %.2f F_nut' %(T,F_nut))
+print('Given a torque motor of %.2f [Nm], the nut force is: %.2f F_nut' %(T, F_nut))
+print('The power screw factor is: ', factor)
 
 x = []
 y = []
@@ -80,7 +81,8 @@ for i in range(150):
     y.append(ratio)
 
     # --- APPROACH 1: Given the Motor Torque, find the output force
-    F_out = F_nut * ratio
+    efficiency = 1.0
+    F_out = F_nut * ratio * efficiency
     f_outs.append(F_out)
     f_outs_per_finger.append(F_out/3)
 
@@ -99,7 +101,7 @@ ax.set_ylabel('Force transmission ratio Fout/Fnut')
 ax.legend(loc='lower right')
 plt.grid()
 ax2 = ax.twinx()
-ax2.plot(x, levers, label='Angle', linestyle='dashed')
+ax2.plot(x, levers, label=r"$\alpha$ + $\theta$", linestyle='dashed')
 ax2.set_ylabel(r"$\alpha$ + $\theta$ [deg]")
 ax2.legend(loc='upper left')
 plt.tight_layout()
@@ -118,7 +120,8 @@ thr_force = thr_press * (10 ** 2) / 1e6
 print(thr_force)
 # plt.hlines(y=thr_force, xmin=1285, xmax=1425, linestyles='--', lw=2, label='Apple Bruising threshold')
 plt.hlines(y=thr_force, xmin=min(x), xmax=max(x), linestyles='--', lw=2, label='apple bruising threshold')
-plt.ylim([0, 50])
+plt.ylim([0, 35])
+plt.xlim([52, 60])
 plt.legend()
 plt.grid()
 plt.tight_layout()
