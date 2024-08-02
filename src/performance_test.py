@@ -1573,10 +1573,41 @@ def real_picks(gripper=RoboticGripper()):
                 print("\n... Saving metadata in *yaml file")
 
 
+def pressure_control():
+
+    # --- Step 1: Instantiate robot ---
+    gripper = RoboticGripper()
+
+    # --- Start recording bagfile ---
+
+    # --- Open Valve ---
+    if gripper.ACTUATION_MODE != 'fingers':
+        print("\n... Applying vacuum")
+        gripper.publish_event("Vacuum On")
+        service_call("openValve")
+
+    # --- Simple rotation ---
+    engagement = False
+    while engagement is False:
+
+        # --- Sense: Pressure Readings ---
+        gripper.ps1
+        gripper.ps2
+        gripper.ps3
+
+        # --- Think: We use Olivia's Function ---
+        speed = olivia(gripper.ps1, gripper.ps2, gripper.ps3)
+
+        # --- Act
+
+
+
+
 
 if __name__ == '__main__':
-    main()
+    # main()
     # scan_apples()
-
     # real_picks()
     # just record camera
+
+    pressure_control()
