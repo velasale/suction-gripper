@@ -428,34 +428,7 @@ class RoboticGripper():
         self.PICK_PATTERN = 'a'
 
 
-
-
-
-
-    def check_real_noise(self):
-        """ Gets real noise"""
-
-        ideal_pose = self.start_pose.pose
-
-        # --- Step 1: Read current pose
-        tf_buffer = tf2_ros.Buffer()
-        listener = tf2_ros.TransformListener(tf_buffer)
-
-        current_pose_plframe = self.move_group.get_current_pose()
-        current_pose_plframe.header.stamp = rospy.Time(0)
-
-        # --- Step 2: Transform current pose into easy c-frame
-        try:
-            cur_pose_ezframe = tf_buffer.transform(current_pose_plframe, "eef", rospy.Duration(1))
-        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-            raise
-
-        self.noize_x_real = cur_pose_ezframe.pose.position.x - ideal_pose.position.x
-        self.noize_y_real = cur_pose_ezframe.pose.position.y - ideal_pose.position.y
-        self.noize_z_real = cur_pose_ezframe.pose.position.z - ideal_pose.position.z
-
-        # TODO prints
-
+    ### General Purpose methods ###
     def save_metadata(self, filename):
         """
         Create json file and save it with the same name as the bag file
@@ -520,6 +493,30 @@ class RoboticGripper():
         @return:
         """
         self.event_publisher.publish(event)
+
+    def check_real_noise(self):
+        """ Reads eef cartesian noise"""
+
+        ideal_pose = self.start_pose.pose
+
+        # --- Step 1: Read current pose
+        tf_buffer = tf2_ros.Buffer()
+        listener = tf2_ros.TransformListener(tf_buffer)
+
+        current_pose_plframe = self.move_group.get_current_pose()
+        current_pose_plframe.header.stamp = rospy.Time(0)
+
+        # --- Step 2: Transform current pose into easy c-frame
+        try:
+            cur_pose_ezframe = tf_buffer.transform(current_pose_plframe, "eef", rospy.Duration(1))
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            raise
+
+        self.noize_x_real = cur_pose_ezframe.pose.position.x - ideal_pose.position.x
+        self.noize_y_real = cur_pose_ezframe.pose.position.y - ideal_pose.position.y
+        self.noize_z_real = cur_pose_ezframe.pose.position.z - ideal_pose.position.z
+
+        # TODO prints
 
 
     ### Labeling methods ###
