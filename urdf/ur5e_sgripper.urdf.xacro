@@ -21,10 +21,11 @@
     <link name="eef" doc="point at ___cm from the palm"    />      
 
     <!-- Describe the interface between the robot and the gripper -->
+    <!-- The gripper is rotated -15deg (-0.261rad) w.r.t. tool -->
     <joint name="robotiq_coupler_joint" type="fixed">
     <parent link="tool0" />
     <child link="suction_gripper" />
-    <origin xyz="0 0 0.162" rpy="1.5708 0 0.44" />
+    <origin xyz="0 0 0.162" rpy="1.5708 0 -0.261" />
     </joint>
 
     <!-- Describe the interface between the world and the tables -->
