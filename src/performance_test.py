@@ -39,6 +39,7 @@ import cv2
 from data_analysis_robot import *
 from ros_scripts import *
 from plot_scripts import *
+from PressureTest import *
 
 
 def slist_into_flist(string_list):
@@ -427,15 +428,144 @@ class RoboticGripper():
         # --- Pick Pattern
         self.PICK_PATTERN = 'a'
 
-    def read_pressure1(self, msg):
-        self.ps1 = msg.data
 
-    def read_pressure2(self, msg):
-        self.ps2 = msg.data
+    ### General Purpose methods ###
+    def save_metadata(self, filename):
+        """
+        Create json file and save it with the same name as the bag file
+        @param filename:
+        @return:
+        """
+        if self.PICK_PATTERN == 'a':
+            pick_pattern = 'straight retreat'
+        elif self.PICK_PATTERN == 'b':
+            pick_pattern = 'rotate and retreat'
+        elif self.PICK_PATTERN == 'c':
+            pick_pattern = 'flex and retreat'
 
-    def read_pressure3(self, msg):
-        self.ps3 = msg.data
+        # --- Organize metatada
+        experiment_info = {
+            "general": {
+                "date": str(datetime.datetime.now()),
+                "person": self.PERSON,
+                "experiment type": self.TYPE,
+                "sampling point": self.sample,
+                "repetition": str(self.repetition),
+                "yaw": self.yaw,
+                "pick pattern": str(pick_pattern),
+            },
+            "robot": {
+                "robot": self.ROBOT_NAME,
+                "suction cup": self.SUCTION_CUP_NAME,
+                "pressure at compressor": self.pressure_at_compressor,
+                "pressure at valve": self.pressure_at_valve,
+                "gripper's ideal position": str(self.gripper_pose.position),
+                "gripper's ideal orientation [quaternian]": str(self.gripper_pose.orientation),
+                "position noise command [m]": self.position_noise,
+                "orientation noise commmand ": self.orientation_noise,
+                "tracks being used": self.GRIPPER_TRACKS,
+                "actuation mode": self.ACTUATION_MODE,
+            },
+            "proxy": {
+                "branch stiffness": self.SPRING_STIFFNESS_LEVEL,
+                "stem force": self.MAGNET_FORCE_LEVEL,
+                "apple diameter": self.APPLE_DIAMETER,
+                "apple height": self.APPLE_HEIGHT,
+                "apple pose": self.apple_pose,
+                "stem pose": self.stem_pose,
+            },
+            "labels": {
+                "suction cup a": self.cupA_engaged,
+                "suction cup b": self.cupB_engaged,
+                "suction cup c": self.cupC_engaged,
+                "apple pick result": self.pick_result
+            }
+        }
 
+        # --- Save metadata in file
+        filename += ".json"
+        with open(filename, "w") as outfile:
+            json.dump(experiment_info, outfile, indent=4)
+
+    def publish_event(self, event):
+        """
+        Handy method to have the code events saved within the bagfile
+        @param event:
+        @return:
+        """
+        self.event_publisher.publish(event)
+
+    def check_real_noise(self):
+        """ Reads eef cartesian noise"""
+
+        ideal_pose = self.start_pose.pose
+
+        # --- Step 1: Read current pose
+        tf_buffer = tf2_ros.Buffer()
+        listener = tf2_ros.TransformListener(tf_buffer)
+
+        current_pose_plframe = self.move_group.get_current_pose()
+        current_pose_plframe.header.stamp = rospy.Time(0)
+
+        # --- Step 2: Transform current pose into easy c-frame
+        try:
+            cur_pose_ezframe = tf_buffer.transform(current_pose_plframe, "eef", rospy.Duration(1))
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            raise
+
+        self.noize_x_real = cur_pose_ezframe.pose.position.x - ideal_pose.position.x
+        self.noize_y_real = cur_pose_ezframe.pose.position.y - ideal_pose.position.y
+        self.noize_z_real = cur_pose_ezframe.pose.position.z - ideal_pose.position.z
+
+        # TODO prints
+
+
+    ### Labeling methods ###
+    def label_cups(self):
+        """Method to label if the suction cups engaged with the apple after the initial approach"""
+
+        # https://stackoverflow.com/questions/287871/how-do-i-print-colored-text-to-the-terminal
+        CRED = '\033[91m'
+        CGREEN = '\033[92m'
+        CEND = '\033[0m'
+
+        print("\n**** Label the engagement of the suction cups ****")
+
+        print("Is Suction" + CGREEN + " cup-A " + CEND + "engaged? yes or no")
+        state = ''
+        while (state != 'yes' and state != 'no'):
+            state = input()
+        self.cupA_engaged = state
+
+        print("Is Suction" + CGREEN + " cup-B " + CEND + "engaged? yes or no")
+        state = ''
+        while (state != 'yes' and state != 'no'):
+            state = input()
+        self.cupB_engaged = state
+
+        print("Is Suction" + CGREEN + " cup-C " + CEND + "engaged? yes or no")
+        state = ''
+        while (state != 'yes' and state != 'no'):
+            state = input()
+        self.cupC_engaged = state
+
+    def label_pick(self):
+        """Method to label the result of the apple pick"""
+
+        print("\n How was the apple pick?:")
+        print("(a) Successful pick: after pick pattern")
+        print("(b) Un-successful: Apple picked but apple it fell afterwards")
+        print("(c) Un-successful: Apple not picked")
+        print("(d) Successful pick: before pick pattern ")
+        print("(e) Successful pick: apple tweaked while closing fingers")
+
+        result = ''
+        while (result != 'a' and result != 'b' and result != 'c' and result != 'd' and result != 'e'):
+            result = input()
+        self.pick_result = result
+
+
+    #### Pose Control methods ####
     def go_to_starting_position_sphere(self, index):
         """
         Places the end effector tangent to a sphere, and at the indexed point
@@ -741,138 +871,6 @@ class RoboticGripper():
 
         return success
 
-    def check_real_noise(self):
-        """ Gets real noise"""
-
-        ideal_pose = self.start_pose.pose
-
-        # --- Step 1: Read current pose
-        tf_buffer = tf2_ros.Buffer()
-        listener = tf2_ros.TransformListener(tf_buffer)
-
-        current_pose_plframe = self.move_group.get_current_pose()
-        current_pose_plframe.header.stamp = rospy.Time(0)
-
-        # --- Step 2: Transform current pose into easy c-frame
-        try:
-            cur_pose_ezframe = tf_buffer.transform(current_pose_plframe, "eef", rospy.Duration(1))
-        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-            raise
-
-        self.noize_x_real = cur_pose_ezframe.pose.position.x - ideal_pose.position.x
-        self.noize_y_real = cur_pose_ezframe.pose.position.y - ideal_pose.position.y
-        self.noize_z_real = cur_pose_ezframe.pose.position.z - ideal_pose.position.z
-
-        # TODO prints
-
-    def save_metadata(self, filename):
-        """
-        Create json file and save it with the same name as the bag file
-        @param filename:
-        @return:
-        """
-        if self.PICK_PATTERN == 'a':
-            pick_pattern = 'straight retreat'
-        elif self.PICK_PATTERN == 'b':
-            pick_pattern = 'rotate and retreat'
-        elif self.PICK_PATTERN == 'c':
-            pick_pattern = 'flex and retreat'
-
-        # --- Organize metatada
-        experiment_info = {
-            "general": {
-                "date": str(datetime.datetime.now()),
-                "person": self.PERSON,
-                "experiment type": self.TYPE,
-                "sampling point": self.sample,
-                "repetition": str(self.repetition),
-                "yaw": self.yaw,
-                "pick pattern": str(pick_pattern),
-            },
-            "robot": {
-                "robot": self.ROBOT_NAME,
-                "suction cup": self.SUCTION_CUP_NAME,
-                "pressure at compressor": self.pressure_at_compressor,
-                "pressure at valve": self.pressure_at_valve,
-                "gripper's ideal position": str(self.gripper_pose.position),
-                "gripper's ideal orientation [quaternian]": str(self.gripper_pose.orientation),
-                "position noise command [m]": self.position_noise,
-                "orientation noise commmand ": self.orientation_noise,
-                "tracks being used": self.GRIPPER_TRACKS,
-                "actuation mode": self.ACTUATION_MODE,
-            },
-            "proxy": {
-                "branch stiffness": self.SPRING_STIFFNESS_LEVEL,
-                "stem force": self.MAGNET_FORCE_LEVEL,
-                "apple diameter": self.APPLE_DIAMETER,
-                "apple height": self.APPLE_HEIGHT,
-                "apple pose": self.apple_pose,
-                "stem pose": self.stem_pose,
-            },
-            "labels": {
-                "suction cup a": self.cupA_engaged,
-                "suction cup b": self.cupB_engaged,
-                "suction cup c": self.cupC_engaged,
-                "apple pick result": self.pick_result
-            }
-        }
-
-        # --- Save metadata in file
-        filename += ".json"
-        with open(filename, "w") as outfile:
-            json.dump(experiment_info, outfile, indent=4)
-
-    def publish_event(self, event):
-        """
-        Handy method to have the code events saved within the bagfile
-        @param event:
-        @return:
-        """
-        self.event_publisher.publish(event)
-
-    def label_cups(self):
-        """Method to label if the suction cups engaged with the apple after the initial approach"""
-
-        # https://stackoverflow.com/questions/287871/how-do-i-print-colored-text-to-the-terminal
-        CRED = '\033[91m'
-        CGREEN = '\033[92m'
-        CEND = '\033[0m'
-
-        print("\n**** Label the engagement of the suction cups ****")
-
-        print("Is Suction" + CGREEN + " cup-A " + CEND + "engaged? yes or no")
-        state = ''
-        while (state != 'yes' and state != 'no'):
-            state = input()
-        self.cupA_engaged = state
-
-        print("Is Suction" + CGREEN + " cup-B " + CEND + "engaged? yes or no")
-        state = ''
-        while (state != 'yes' and state != 'no'):
-            state = input()
-        self.cupB_engaged = state
-
-        print("Is Suction" + CGREEN + " cup-C " + CEND + "engaged? yes or no")
-        state = ''
-        while (state != 'yes' and state != 'no'):
-            state = input()
-        self.cupC_engaged = state
-
-    def label_pick(self):
-        """Method to label the result of the apple pick"""
-
-        print("\n How was the apple pick?:")
-        print("(a) Successful pick: after pick pattern")
-        print("(b) Un-successful: Apple picked but apple it fell afterwards")
-        print("(c) Un-successful: Apple not picked")
-        print("(d) Successful pick: before pick pattern ")
-        print("(e) Successful pick: apple tweaked while closing fingers")
-
-        result = ''
-        while (result != 'a' and result != 'b' and result != 'c' and result != 'd' and result != 'e'):
-            result = input()
-        self.pick_result = result
-
     def move_normal(self, z, speed_factor=1.0, condition=False):
         """
 
@@ -954,6 +952,110 @@ class RoboticGripper():
 
         return success
 
+
+    # def simple_pitch_roll(self, quat_x, quat_y, magnitude):
+    def simple_pitch_roll(self, PITCH_ANGLE=0, ROLL_ANGLE=0):
+
+        # --- Place marker with text in RVIZ
+        caption = "Adjusting PITCH"
+        self.place_marker_text(pos=[0, 0, 1.5], scale=0.05, text=caption)
+
+        # --- ROS tool for transformation across c-frames
+        tf_buffer = tf2_ros.Buffer()
+        listener = tf2_ros.TransformListener(tf_buffer)
+
+        # --- Step 1: Read the current pose in the planning frame
+        cur_pose_pframe = tf2_geometry_msgs.PoseStamped()
+        cur_pose_pframe.pose = self.move_group.get_current_pose().pose
+        cur_pose_pframe.header.frame_id = self.planning_frame
+        cur_pose_pframe.header.stamp = rospy.Time(0)
+
+        # --- Step 2: Transform current pose into intuitive cframe and add noise
+        try:
+            cur_pose_ezframe = tf_buffer.transform(cur_pose_pframe, 'eef', rospy.Duration(1))
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            raise
+
+        ### APPROACH 1 - EULER ANGLES ###
+        q = [0, 0, 0, 0]
+        q[0] = cur_pose_ezframe.pose.orientation.x
+        q[1] = cur_pose_ezframe.pose.orientation.y
+        q[2] = cur_pose_ezframe.pose.orientation.z
+        q[3] = cur_pose_ezframe.pose.orientation.w
+
+        e = euler_from_quaternion(q)
+        new_pitch = e[1] + math.radians(PITCH_ANGLE)
+        new_roll = e[0] + math.radians(ROLL_ANGLE)
+        q = quaternion_from_euler(new_roll, new_pitch, e[2])
+
+        cur_pose_ezframe.pose.orientation.x = q[0]
+        cur_pose_ezframe.pose.orientation.y = q[1]
+        cur_pose_ezframe.pose.orientation.z = q[2]
+        cur_pose_ezframe.pose.orientation.w = q[3]
+
+        cur_pose_ezframe.pose.position.x = 0
+        cur_pose_ezframe.pose.position.y = 0
+        cur_pose_ezframe.pose.position.z = 0
+
+        ### APPROACH 2 - QUATERNION ###
+        # cur_pose_ezframe.pose.orientation.x *= quat_x
+        # cur_pose_ezframe.pose.orientation.y *= quat_y
+        # cur_pose_ezframe.pose.orientation.z *= 0
+        # cur_pose_ezframe.pose.orientation.w *= magnitude
+
+        cur_pose_ezframe.header.stamp = rospy.Time(0)
+
+        # --- Step 3: Transform goal pose back to planning frame
+        try:
+            goal_pose_pframe = tf_buffer.transform(cur_pose_ezframe, self.planning_frame, rospy.Duration(1))
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            raise
+
+
+        # --- Step 4: Move to the new goal
+        condition = False
+        cnt = 0
+        airp_thr = self.PRESSURE_THRESHOLD
+        cnt_thr = 50
+
+        print("\nEEF pose before", self.move_group.get_current_pose().pose)
+
+        self.move_group.set_pose_target(goal_pose_pframe.pose)
+        self.move_group.go(wait=False)
+        while condition == False:
+            rospy.sleep(.1)
+            # print("Counter: %i, Air Presure %.2f" %(cnt, self.ps1))
+            cnt  +=1
+
+            if self.ps2 < airp_thr or cnt > cnt_thr:
+                self.move_group.stop()
+                condition = True
+
+        print('Suction Cup Engaged')
+        print("\nEEF pose after", self.move_group.get_current_pose().pose)
+
+        self.move_group.clear_pose_targets()    # good practice
+
+        # --- Step 5: Compare poses
+        current_pose = self.move_group.get_current_pose().pose
+        success = all_close(goal_pose_pframe.pose, current_pose, self.TOLERANCE)
+
+        self.check_real_noise()
+
+        return success
+
+
+
+    #### Air-Pressure methods ####
+    def read_pressure1(self, msg):
+        self.ps1 = msg.data
+
+    def read_pressure2(self, msg):
+        self.ps2 = msg.data
+
+    def read_pressure3(self, msg):
+        self.ps3 = msg.data
+
     def suction_cup_test(self):
 
         print("\n **** Testing Vacuum Levels ****")
@@ -1003,6 +1105,7 @@ class RoboticGripper():
         print("\n... Vacuum Preview")
         plot_vacuum(filename)
 
+    #### RVIZ marker methods ###
     def place_marker_text(self, pos=[0, 0, 0], scale=0.01, text='caption', frame='world'):
         """
         Places text as marker in RVIZ
@@ -1164,6 +1267,7 @@ class RoboticGripper():
 
         rate = rospy.Rate(10)
 
+    ### Point sampling methods ###
     def point_sampling_3d(self, n_points=1250):
         """
         This function samples points evenly distributed from the surface of a sphere
@@ -1294,7 +1398,7 @@ class RoboticGripper():
             act_mode = input()
         self.ACTUATION_MODE = act_mode
 
-    ####################### SCANNING FUNCTIONS ###################
+    ### Probe methods ###
 
     def scan_point(self):
         """Transforms the position of the probe's tip into base_link frame"""
@@ -1573,10 +1677,84 @@ def real_picks(gripper=RoboticGripper()):
                 print("\n... Saving metadata in *yaml file")
 
 
+def pressure_control():
+
+    # --- Step 1: Instantiate robot ---
+    gripper = RoboticGripper()
+
+    # --- Start recording bagfile ---
+
+    # --- Open Valve ---
+    if gripper.ACTUATION_MODE != 'fingers':
+        print("\n... Applying vacuum")
+        gripper.publish_event("Vacuum On")
+        service_call("openValve")
+
+
+    # --- Sense: Pressure Readings ---
+    gripper.ps1
+    gripper.ps2
+    gripper.ps3
+    print(gripper.ps1, gripper.ps2, gripper.ps3)
+
+    # --- Think: We use Olivia's Function ---
+    # magnitude, net_angle = olivia(gripper.ps1, gripper.ps2, gripper.ps3)
+    #
+    #
+    # cnt = 0
+    # while cnt < 100:
+    #     gripper.ps1
+    #     gripper.ps2
+    #     gripper.ps3
+    #     print("\nPressure Readings", gripper.ps1, gripper.ps2, gripper.ps3)
+    #     magnitude, net_angle = olivia_test(gripper.ps1, gripper.ps2, gripper.ps3)
+    #     print("Vector Magnitude %.2f, Vector Angle %.2f" % (magnitude, math.degrees(net_angle)))
+    #     rospy.sleep(.5)
+    #     cnt +=1
+    #     print(cnt)
+
+
+    ###################### Approach 1: Euler angles ##############################
+    magnitude = 30
+    net_angle = 180
+    axis_of_rotation = net_angle - 90
+
+    pitch_amount = math.radians(90 - axis_of_rotation)
+    pitch_amount = math.cos(pitch_amount)
+    pitch_angle = magnitude * pitch_amount
+
+    roll_amount = math.radians(90-axis_of_rotation)
+    roll_amount = math.sin(roll_amount)
+    roll_angle = magnitude * roll_amount
+    print('Pitch amount %.3f, Roll amount %.3f' %(pitch_amount, roll_amount))
+
+    # --- Act
+    # Pitch until it reaches the desired pressure #
+    gripper.simple_pitch_roll(pitch_angle, roll_angle)
+    ##################################################################################
+
+
+    ### Approach 2: Quaternion ###
+    # axis_of_rotation_rad = math.radians(axis_of_rotation)
+    # magnitude_rad = math.radians(magnitude)
+    #
+    # quat_x = math.cos(axis_of_rotation_rad)
+    # quat_y = math.sin(axis_of_rotation_rad)
+    #
+    # gripper.simple_pitch_roll(quat_x, quat_y, magnitude_rad)
+
+    # --- Open Valve ---
+    if gripper.ACTUATION_MODE != 'fingers':
+        print("\n... Closing vacuum")
+        gripper.publish_event("Vacuum Off")
+        service_call("closeValve")
+
+
 
 if __name__ == '__main__':
-    main()
+    # main()
     # scan_apples()
-
     # real_picks()
     # just record camera
+
+    pressure_control()

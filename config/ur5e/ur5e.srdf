@@ -10,7 +10,7 @@
     <!--CHAINS: When a chain is specified, all the links along the chain (including endpoints) are included in the group. Additionally, all the joints that are parents to included links are also included. This means that joints along the chain and the parent joint of the base link are included in the group-->
     <!--SUBGROUPS: Groups can also be formed by referencing to already defined group names-->
     <group name="manipulator">
-        <chain base_link="base_link" tip_link="tool0" />
+        <chain base_link="base_link" tip_link="eef" />
     </group>
     <group name="endeffector">
         <link name="tool0" />
@@ -58,6 +58,6 @@
     <disable_collisions link1="wrist_3_link" link2="suction_gripper" reason="Adjacent" />
     
     <!-- Disable collisions of the scene -->
-    <disable_collisions link1="big_table" link2="apple_proxy" reason="Adjancent" />
+    <disable_collisions link1="big_table" link2="apple_proxy" reason="Adjacent" />
 
 </robot>
