@@ -60,6 +60,8 @@ f_outs_per_finger = []
 T_motors = []
 levers = []
 
+displ_thr = 58
+
 for i in range(150):
 
     # --- Vary distance [mm] ---
@@ -82,7 +84,10 @@ for i in range(150):
 
     # --- APPROACH 1: Given the Motor Torque, find the output force
     efficiency = 1.0
-    F_out = F_nut * ratio * efficiency
+    if stepper_distance <= displ_thr:
+        F_out = F_nut * ratio * efficiency
+    else:
+        pass
     f_outs.append(F_out)
     f_outs_per_finger.append(F_out/3)
 
@@ -123,7 +128,7 @@ plt.hlines(y=thr_force, xmin=min(x), xmax=max(x), linestyles='--', lw=2, label='
 plt.ylim([0, 35])
 plt.xlim([52, 60])
 plt.legend()
-plt.grid()
+# plt.grid()
 plt.tight_layout()
 
 fig = plt.figure(figsize=(x_size, y_size))
