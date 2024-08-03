@@ -8,8 +8,8 @@ import scipy as scipy
 def olivia_test(gp1, gp2, gp3):
 
     def vector_math(pressure_array):
-        uA = np.array([np.cos(np.pi/3),np.sin(np.pi/3),0.])  #suction cup 1
-        uB = np.array([0, 1., 0])  #suction cup 2
+        uA = np.array([np.cos(np.pi/3), np.sin(np.pi/3), 0.])  #suction cup 1
+        uB = np.array([-1., 0., 0.])  #suction cup 2
         uC = np.array([np.cos(-np.pi/3), np.sin(-np.pi/3), 0])  #suction cup 3
 
         vA = pressure_array[0]*uA

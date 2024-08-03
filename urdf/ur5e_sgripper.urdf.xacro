@@ -63,10 +63,11 @@
 
 
     <!-- Describe the location of the tip of the suction gripper -->
+    <!-- Offsets: Originally 2cm -->
     <joint name="ideal_eef" type="fixed">
     <parent link="suction_gripper" />
     <child link="eef" />
-    <origin xyz="0 0.02 0" rpy="-1.5708 0 0" />
+    <origin xyz="0 0 0.6" rpy="-1.5708 0 0" />
     </joint>
     
 

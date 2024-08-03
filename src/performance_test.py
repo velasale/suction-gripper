@@ -39,6 +39,7 @@ import cv2
 from data_analysis_robot import *
 from ros_scripts import *
 from plot_scripts import *
+from PressureTest import *
 
 
 def slist_into_flist(string_list):
@@ -952,6 +953,99 @@ class RoboticGripper():
         return success
 
 
+    # def simple_pitch_roll(self, quat_x, quat_y, magnitude):
+    def simple_pitch_roll(self, PITCH_ANGLE=0, ROLL_ANGLE=0):
+
+        # --- Place marker with text in RVIZ
+        caption = "Adjusting PITCH"
+        self.place_marker_text(pos=[0, 0, 1.5], scale=0.05, text=caption)
+
+        # --- ROS tool for transformation across c-frames
+        tf_buffer = tf2_ros.Buffer()
+        listener = tf2_ros.TransformListener(tf_buffer)
+
+        # --- Step 1: Read the current pose in the planning frame
+        cur_pose_pframe = tf2_geometry_msgs.PoseStamped()
+        cur_pose_pframe.pose = self.move_group.get_current_pose().pose
+        cur_pose_pframe.header.frame_id = self.planning_frame
+        cur_pose_pframe.header.stamp = rospy.Time(0)
+
+        # --- Step 2: Transform current pose into intuitive cframe and add noise
+        try:
+            cur_pose_ezframe = tf_buffer.transform(cur_pose_pframe, 'eef', rospy.Duration(1))
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            raise
+
+        ### APPROACH 1 - EULER ANGLES ###
+        q = [0, 0, 0, 0]
+        q[0] = cur_pose_ezframe.pose.orientation.x
+        q[1] = cur_pose_ezframe.pose.orientation.y
+        q[2] = cur_pose_ezframe.pose.orientation.z
+        q[3] = cur_pose_ezframe.pose.orientation.w
+
+        e = euler_from_quaternion(q)
+        new_pitch = e[1] + math.radians(PITCH_ANGLE)
+        new_roll = e[0] + math.radians(ROLL_ANGLE)
+        q = quaternion_from_euler(new_roll, new_pitch, e[2])
+
+        cur_pose_ezframe.pose.orientation.x = q[0]
+        cur_pose_ezframe.pose.orientation.y = q[1]
+        cur_pose_ezframe.pose.orientation.z = q[2]
+        cur_pose_ezframe.pose.orientation.w = q[3]
+
+        cur_pose_ezframe.pose.position.x = 0
+        cur_pose_ezframe.pose.position.y = 0
+        cur_pose_ezframe.pose.position.z = 0
+
+        ### APPROACH 2 - QUATERNION ###
+        # cur_pose_ezframe.pose.orientation.x *= quat_x
+        # cur_pose_ezframe.pose.orientation.y *= quat_y
+        # cur_pose_ezframe.pose.orientation.z *= 0
+        # cur_pose_ezframe.pose.orientation.w *= magnitude
+
+        cur_pose_ezframe.header.stamp = rospy.Time(0)
+
+        # --- Step 3: Transform goal pose back to planning frame
+        try:
+            goal_pose_pframe = tf_buffer.transform(cur_pose_ezframe, self.planning_frame, rospy.Duration(1))
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            raise
+
+
+        # --- Step 4: Move to the new goal
+        condition = False
+        cnt = 0
+        airp_thr = self.PRESSURE_THRESHOLD
+        cnt_thr = 50
+
+        print("\nEEF pose before", self.move_group.get_current_pose().pose)
+
+        self.move_group.set_pose_target(goal_pose_pframe.pose)
+        self.move_group.go(wait=False)
+        while condition == False:
+            rospy.sleep(.1)
+            # print("Counter: %i, Air Presure %.2f" %(cnt, self.ps1))
+            cnt  +=1
+
+            if self.ps2 < airp_thr or cnt > cnt_thr:
+                self.move_group.stop()
+                condition = True
+
+        print('Suction Cup Engaged')
+        print("\nEEF pose after", self.move_group.get_current_pose().pose)
+
+        self.move_group.clear_pose_targets()    # good practice
+
+        # --- Step 5: Compare poses
+        current_pose = self.move_group.get_current_pose().pose
+        success = all_close(goal_pose_pframe.pose, current_pose, self.TOLERANCE)
+
+        self.check_real_noise()
+
+        return success
+
+
+
     #### Air-Pressure methods ####
     def read_pressure1(self, msg):
         self.ps1 = msg.data
@@ -1596,21 +1690,64 @@ def pressure_control():
         gripper.publish_event("Vacuum On")
         service_call("openValve")
 
-    # --- Simple rotation ---
-    engagement = False
-    while engagement is False:
 
-        # --- Sense: Pressure Readings ---
-        gripper.ps1
-        gripper.ps2
-        gripper.ps3
+    # --- Sense: Pressure Readings ---
+    gripper.ps1
+    gripper.ps2
+    gripper.ps3
+    print(gripper.ps1, gripper.ps2, gripper.ps3)
 
-        # --- Think: We use Olivia's Function ---
-        speed = olivia(gripper.ps1, gripper.ps2, gripper.ps3)
+    # --- Think: We use Olivia's Function ---
+    # magnitude, net_angle = olivia(gripper.ps1, gripper.ps2, gripper.ps3)
+    #
+    #
+    # cnt = 0
+    # while cnt < 100:
+    #     gripper.ps1
+    #     gripper.ps2
+    #     gripper.ps3
+    #     print("\nPressure Readings", gripper.ps1, gripper.ps2, gripper.ps3)
+    #     magnitude, net_angle = olivia_test(gripper.ps1, gripper.ps2, gripper.ps3)
+    #     print("Vector Magnitude %.2f, Vector Angle %.2f" % (magnitude, math.degrees(net_angle)))
+    #     rospy.sleep(.5)
+    #     cnt +=1
+    #     print(cnt)
 
-        # --- Act
+
+    ###################### Approach 1: Euler angles ##############################
+    magnitude = 30
+    net_angle = 180
+    axis_of_rotation = net_angle - 90
+
+    pitch_amount = math.radians(90 - axis_of_rotation)
+    pitch_amount = math.cos(pitch_amount)
+    pitch_angle = magnitude * pitch_amount
+
+    roll_amount = math.radians(90-axis_of_rotation)
+    roll_amount = math.sin(roll_amount)
+    roll_angle = magnitude * roll_amount
+    print('Pitch amount %.3f, Roll amount %.3f' %(pitch_amount, roll_amount))
+
+    # --- Act
+    # Pitch until it reaches the desired pressure #
+    gripper.simple_pitch_roll(pitch_angle, roll_angle)
+    ##################################################################################
 
 
+    ### Approach 2: Quaternion ###
+    # axis_of_rotation_rad = math.radians(axis_of_rotation)
+    # magnitude_rad = math.radians(magnitude)
+    #
+    # quat_x = math.cos(axis_of_rotation_rad)
+    # quat_y = math.sin(axis_of_rotation_rad)
+    #
+    # gripper.simple_pitch_roll(quat_x, quat_y, magnitude_rad)
+
+    # --- Open Valve ---
+    if gripper.ACTUATION_MODE != 'fingers':
+        print("\n... Closing vacuum")
+        gripper.publish_event("Vacuum Off")
+        service_call("closeValve")
 
 
 
