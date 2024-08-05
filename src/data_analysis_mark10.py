@@ -327,8 +327,8 @@ def orthogonal_load_cell_experiments(folder):
 def push_load_cell_experiments(folder):
 
     # subfolder = 'experiment1_orthogonalLoad/'
-    # subfolder = 'experiment6_orthogonalLoad_accelStepper/'
-    subfolder = 'experiment12_orthogonalLoad/'
+    subfolder = 'experiment6_orthogonalLoad_accelStepper/'
+    # subfolder = 'experiment12_orthogonalLoad/'
 
     location = folder + subfolder
 
@@ -380,7 +380,6 @@ def push_load_cell_experiments(folder):
             print('Finger Max-values', finger_max_vals)
             print('All fingers accumulated Max-values', all_fingers_max_vals)
 
-
         fingers_data.append(finger_max_vals)
 
         fig = plt.figure(figsize=(6, 6))
@@ -388,18 +387,20 @@ def push_load_cell_experiments(folder):
 
     print('Mean and Deviation of all fingers:', round(np.mean(all_fingers_max_vals),1), round(np.std(all_fingers_max_vals),1))
 
+    ### Make list with all values combined ###
     fingers_data.append(all_fingers_max_vals)
 
-    # Convert into array to circumvent the list size misalignment
-    array = np.array(fingers_data, dtype=object)
+    if subfolder == 'experiment12_orthogonalLoad/':
+        # Convert into array to circumvent the list size misalignment
+        array = np.array(fingers_data, dtype=object)
 
-    fig = plt.figure(figsize=(6, 6))
-    plt.boxplot(array, labels=['A', 'B', 'C', 'All'])
-    plt.xlabel('Finger')
-    plt.ylabel('Force [N]')
-    # plt.title('Normal Force from each finger [N]')
+        fig = plt.figure(figsize=(6, 6))
+        plt.boxplot(array, labels=['A', 'B', 'C', 'All'])
+        plt.xlabel('Finger')
+        plt.ylabel('Force [N]')
+        # plt.title('Normal Force from each finger [N]')
 
-    # Plot the apple bruising threshold
+    ### Plot apple bruising threshold ###
     thr_press = 0.29e6    # Pa (Li et al. 2016)
     finger_width = 20   # mm
     thr_force = thr_press * (10 ** 2)/1e6
@@ -505,8 +506,8 @@ if __name__ == '__main__':
     folder = storage + folder
 
     ### Step 2 - Subfunctions ###
-    # orthogonal_load_cell_experiments(folder)
-    push_load_cell_experiments(folder)
+    orthogonal_load_cell_experiments(folder)
+    # push_load_cell_experiments(folder)
     # mark10_pullback_experiments(folder)
 
     plt.show()
