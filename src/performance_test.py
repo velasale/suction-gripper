@@ -247,7 +247,7 @@ def proxy_picks(gripper):
                         distance = 0.03
                     else:
                         distance = 0.03
-                    move = gripper.move_normal(distance, speed_factor=0.1, condition=True)
+                    move = gripper.move_normal_until_suction(distance, speed_factor=0.1, condition=True)
                     # todo: should we stop saving rosbag to avoid wasting space during labeling?
 
                     # --- Label cup engagement
@@ -265,7 +265,7 @@ def proxy_picks(gripper):
                     # --- Retrieve
                     print("\n... Picking Apple")
                     gripper.publish_event("Retrieve")
-                    move = gripper.move_normal(gripper.RETRIEVE, speed_factor=0.1)
+                    move = gripper.move_normal_until_suction(gripper.RETRIEVE, speed_factor=0.1)
 
                     # --- Label result
                     print("\n... Label the pick result")
@@ -871,10 +871,11 @@ class RoboticGripper():
 
         return success
 
-    def move_normal(self, z, speed_factor=1.0, condition=False):
+    def move_normal_until_suction(self, z, speed_factor=1.0, cups=1, condition=False):
         """
 
         @param z:
+        @param cups: Number of cups that need to engage before stopping
         @param condition: This is meant to stop the movement if the suction cups engage
         @return:
         """
@@ -899,9 +900,9 @@ class RoboticGripper():
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             raise
 
-        print('before',cur_pose_ezframe)
+        # print('before',cur_pose_ezframe)
         cur_pose_ezframe.pose.position.z += z
-        print('after',cur_pose_ezframe)
+        # print('after',cur_pose_ezframe)
         cur_pose_ezframe.header.stamp = rospy.Time(0)
 
         # ---- Step 3: Transform again the goal pose into the planning frame
@@ -932,10 +933,10 @@ class RoboticGripper():
                     if i < airp_thr:
                         thr_cnt += 1
                 # Stop approach when one of these conditions is met
-                if cnt == 50 or thr_cnt >= 2:
+                if cnt == 50 or thr_cnt >= cups:
                     self.move_group.stop()
                     close = True
-                print(cnt, self.ps1, self.ps2, self.ps3)
+                # print(cnt, self.ps1, self.ps2, self.ps3)
                 cnt += 1
             print('finished moving')
         else:
@@ -954,7 +955,7 @@ class RoboticGripper():
 
 
     # def simple_pitch_roll(self, quat_x, quat_y, magnitude):
-    def simple_pitch_roll(self, PITCH_ANGLE=0, ROLL_ANGLE=0):
+    def simple_pitch_roll(self, PITCH_ANGLE=0, ROLL_ANGLE=0, condition=False):
 
         # --- Place marker with text in RVIZ
         caption = "Adjusting PITCH"
@@ -984,9 +985,9 @@ class RoboticGripper():
         q[3] = cur_pose_ezframe.pose.orientation.w
 
         e = euler_from_quaternion(q)
-        new_pitch = e[1] + math.radians(PITCH_ANGLE)
-        new_roll = e[0] + math.radians(ROLL_ANGLE)
-        q = quaternion_from_euler(new_roll, new_pitch, e[2])
+        new_pitch = math.radians(PITCH_ANGLE)
+        new_roll = math.radians(ROLL_ANGLE)
+        q = quaternion_from_euler(new_roll, new_pitch, 0)
 
         cur_pose_ezframe.pose.orientation.x = q[0]
         cur_pose_ezframe.pose.orientation.y = q[1]
@@ -1011,28 +1012,27 @@ class RoboticGripper():
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             raise
 
-
         # --- Step 4: Move to the new goal
-        condition = False
-        cnt = 0
         airp_thr = self.PRESSURE_THRESHOLD
-        cnt_thr = 50
-
-        print("\nEEF pose before", self.move_group.get_current_pose().pose)
 
         self.move_group.set_pose_target(goal_pose_pframe.pose)
-        self.move_group.go(wait=False)
-        while condition == False:
-            rospy.sleep(.1)
-            # print("Counter: %i, Air Presure %.2f" %(cnt, self.ps1))
-            cnt  +=1
+        if condition == True:
+            self.move_group.go(wait=False)
+            close = False
+            cnt = 0
+            cnt_thr = 50
+            while close == False:
+                rospy.sleep(.1)
+                # print("Counter: %i, Air Presure %.2f" %(cnt, self.ps1))
+                cnt  +=1
 
-            if self.ps2 < airp_thr or cnt > cnt_thr:
-                self.move_group.stop()
-                condition = True
+                if (self.ps1 < airp_thr and self.ps2 < airp_thr and self.ps3 < airp_thr) or cnt > cnt_thr:
+                    self.move_group.stop()
+                    close = True
 
-        print('Suction Cup Engaged')
-        print("\nEEF pose after", self.move_group.get_current_pose().pose)
+        else:
+            self.move_group.go(wait=True)
+            self.move_group.stop()
 
         self.move_group.clear_pose_targets()    # good practice
 
@@ -1627,7 +1627,7 @@ def real_picks(gripper=RoboticGripper()):
                 # --- Approach Apple
                 print("\n... Approaching apple")
                 gripper.publish_event("Approach")
-                move = gripper.move_normal(gripper.APPROACH, speed_factor=0.1, condition=True)
+                move = gripper.move_normal_until_suction(gripper.APPROACH, speed_factor=0.1, condition=True)
 
                 # --- Label cup engagement
                 if gripper.ACTUATION_MODE != 'fingers':
@@ -1646,7 +1646,7 @@ def real_picks(gripper=RoboticGripper()):
                 input('Hit Enter to start picking the apple')
                 print("\n... Picking Apple")
                 gripper.publish_event("Retrieve")
-                move = gripper.move_normal(gripper.RETRIEVE, speed_factor=0.1)
+                move = gripper.move_normal_until_suction(gripper.RETRIEVE, speed_factor=0.1)
 
                 # --- Label Result
                 print("\n... Label the pick result")
@@ -1679,75 +1679,106 @@ def real_picks(gripper=RoboticGripper()):
 
 def pressure_control():
 
+    adjust_distance = 0.025
+
     # --- Step 1: Instantiate robot ---
     gripper = RoboticGripper()
 
     # --- Start recording bagfile ---
 
-    # --- Open Valve ---
+
+    ###### STEP 0: INITIAL APPROACH TOWARDS SURFACE ######
+    ### AIR ON ###
     if gripper.ACTUATION_MODE != 'fingers':
         print("\n... Applying vacuum")
         gripper.publish_event("Vacuum On")
         service_call("openValve")
+    ### APPROACH ###
+    print("\n... Approaching apple")
+    move = gripper.move_normal_until_suction(0.05, speed_factor=0.025, cups=1, condition=True)
+
+    ####### STEP 1: CONTROL LOOP ######
+    cnt = 0
+    while cnt < 10:
+
+        ###### STEP 1: SENSE (pressure readings) ######
+        ps1_list = []
+        ps2_list = []
+        ps3_list = []
+        readings = 20
+        for i in range(readings):
+            ps1_list.append(gripper.ps1)
+            ps2_list.append(gripper.ps2)
+            ps3_list.append(gripper.ps3)
+            # print("Pressure Readings: ", gripper.ps1, gripper.ps2, gripper.ps3)
+        ps1_mean = np.mean(ps1_list)
+        ps2_mean = np.mean(ps2_list)
+        ps3_mean = np.mean(ps3_list)
+        print("\nMean pressure readings: ", int(ps1_mean), int(ps2_mean), int(ps3_mean))
+
+        airp_thr = gripper.PRESSURE_THRESHOLD
+        if (ps1_mean < airp_thr and ps2_mean < airp_thr and ps3_mean < airp_thr):
+            print("All suction cups engaged!!!")
+            break
+
+        ###### STEP 2: GO BACK A BIT ######
+        ### AIR OFF ###
+        if gripper.ACTUATION_MODE != 'fingers':
+            print("\n... Closing vacuum")
+            gripper.publish_event("Vacuum Off")
+            service_call("closeValve")
+        ### MOVE BACKWARDS ###
+        time.sleep(0.01)
+        move = gripper.move_normal_until_suction(-0.9*adjust_distance, speed_factor=0.1)
+
+        ###### STEP 3: ADJUST ANGLE ######
+        ### Define rotation magnitude and net angle ###
+        magnitude, net_angle = olivia_test(ps1_mean, ps2_mean, ps3_mean)
+        print("Vector Magnitude %.2f, Vector Angle %.2f" % (magnitude, math.degrees(net_angle)))
+
+        magnitude = magnitude * 0.015
+        net_angle = math.degrees(net_angle)
+
+        ### Find 'Axis of rotation', and euler angles ###
+        axis_of_rotation = net_angle - 90
+        print('Axis of rotation %.0f' % axis_of_rotation)
+        pitch_amount = math.radians(90 - axis_of_rotation)
+        pitch_amount = math.cos(pitch_amount)
+        pitch_angle = magnitude * pitch_amount
+        roll_amount = math.radians(90 - axis_of_rotation)
+        roll_amount = math.sin(roll_amount)
+        roll_angle = magnitude * roll_amount
+
+        print('Pitch amount %.3f, Roll amount %.3f' % (pitch_amount, roll_amount))
+        print('Pitch angle %.3f, Roll angle %.3f' % (pitch_angle, roll_angle))
+
+        ###### STEP 4: ACT ######
+        # Adjust pose #
+        gripper.simple_pitch_roll(pitch_angle, roll_angle, condition=False)
+
+        ###### STEP 5: APPROACH AND CHECK ######
+        ### AIR ON ###
+        if gripper.ACTUATION_MODE != 'fingers':
+            print("\n... Applying vacuum")
+            gripper.publish_event("Vacuum On")
+            service_call("openValve")
+        ### APPROACH ###
+        print("\n... Approaching apple")
+        move = gripper.move_normal_until_suction(1.1*adjust_distance, speed_factor=0.05, cups=2, condition=True)
+
+        cnt +=1
+        print(cnt)
+
+    rospy.sleep(1.0)
 
 
-    # --- Sense: Pressure Readings ---
-    gripper.ps1
-    gripper.ps2
-    gripper.ps3
-    print(gripper.ps1, gripper.ps2, gripper.ps3)
-
-    # --- Think: We use Olivia's Function ---
-    # magnitude, net_angle = olivia(gripper.ps1, gripper.ps2, gripper.ps3)
-    #
-    #
-    # cnt = 0
-    # while cnt < 100:
-    #     gripper.ps1
-    #     gripper.ps2
-    #     gripper.ps3
-    #     print("\nPressure Readings", gripper.ps1, gripper.ps2, gripper.ps3)
-    #     magnitude, net_angle = olivia_test(gripper.ps1, gripper.ps2, gripper.ps3)
-    #     print("Vector Magnitude %.2f, Vector Angle %.2f" % (magnitude, math.degrees(net_angle)))
-    #     rospy.sleep(.5)
-    #     cnt +=1
-    #     print(cnt)
-
-
-    ###################### Approach 1: Euler angles ##############################
-    magnitude = 30
-    net_angle = 180
-    axis_of_rotation = net_angle - 90
-
-    pitch_amount = math.radians(90 - axis_of_rotation)
-    pitch_amount = math.cos(pitch_amount)
-    pitch_angle = magnitude * pitch_amount
-
-    roll_amount = math.radians(90-axis_of_rotation)
-    roll_amount = math.sin(roll_amount)
-    roll_angle = magnitude * roll_amount
-    print('Pitch amount %.3f, Roll amount %.3f' %(pitch_amount, roll_amount))
-
-    # --- Act
-    # Pitch until it reaches the desired pressure #
-    gripper.simple_pitch_roll(pitch_angle, roll_angle)
-    ##################################################################################
-
-
-    ### Approach 2: Quaternion ###
-    # axis_of_rotation_rad = math.radians(axis_of_rotation)
-    # magnitude_rad = math.radians(magnitude)
-    #
-    # quat_x = math.cos(axis_of_rotation_rad)
-    # quat_y = math.sin(axis_of_rotation_rad)
-    #
-    # gripper.simple_pitch_roll(quat_x, quat_y, magnitude_rad)
-
-    # --- Open Valve ---
+    # --- Close Valve ---
     if gripper.ACTUATION_MODE != 'fingers':
         print("\n... Closing vacuum")
         gripper.publish_event("Vacuum Off")
         service_call("closeValve")
+
+
 
 
 
