@@ -5,13 +5,13 @@ plt.rcParams["font.family"] = "serif"
 plt.rcParams["font.serif"] = ["Times New Roman"]
 
 # --- Plot Font Sizes ---
-SMALL_SIZE = 12
-MEDIUM_SIZE = 14
-BIGGER_SIZE = 16
+SMALL_SIZE = 22
+MEDIUM_SIZE = 22
+BIGGER_SIZE = 22
 
 # --- Image size ---
-x_size = 3.5
-y_size = 4
+x_size = 10.5
+y_size = 6.5
 
 plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
 plt.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title
@@ -69,6 +69,7 @@ for i in range(150):
     d = 90 - 7 - stepper_distance
     x.append(stepper_distance)
 
+
     # --- Angles ---
     alfa = math.atan(a / d)
     gamma = math.acos((c ** 2 + b ** 2 - a ** 2 - d ** 2) / (2 * b * c))
@@ -91,6 +92,9 @@ for i in range(150):
     f_outs.append(F_out)
     f_outs_per_finger.append(F_out/3)
 
+    if stepper_distance == 51.5:
+        print('Force ratio at 51.5mm',ratio)
+
     # --- APPROACH 2: Given the Output Force, find the Motor Torque
     F_out2 = 30
     F_nut2 = F_out2 / ratio
@@ -99,26 +103,45 @@ for i in range(150):
 
     # print(d, alfa_deg, ratio)
 
+
+### Figure 1: Force Tranmission Ratio vs Distance ###
+# Source: https://onelinerhub.com/python-matplotlib/how-to-add-third-y-axis
 fig, ax = plt.subplots(figsize=(x_size, y_size))
-ax.plot(x, y, c='r', label='Force ratio')
-ax.set_xlabel('nut travel distance [mm]')
-ax.set_ylabel('Force transmission ratio Fout/Fnut')
-ax.legend(loc='lower right')
-plt.grid()
-ax2 = ax.twinx()
-ax2.plot(x, levers, label=r"$\alpha$ + $\theta$", linestyle='dashed')
-ax2.set_ylabel(r"$\alpha$ + $\theta$ [deg]")
-ax2.legend(loc='upper left')
+twin1 = ax.twinx()
+twin2 = ax.twinx()
+
+twin2.spines.right.set_position(("axes", 1.15))
+
+p1, = ax.plot(x, y, c='k', label=r"$F_{out}$ / $F_{nut}$ ratio", linewidth=2)
+ax.set_xlabel('x [mm]')
+ax.set_ylabel(r"$F_{out}$/$F_{nut}$ ratio [-]")
+# ax.legend(loc='lower left')
+ax.grid()
+
+p2, = twin1.plot(x, levers, label=r"$\alpha$ + $\theta$", linestyle='dashed', c='g', linewidth=2)
+twin1.set_ylabel(r"$\alpha$ + $\theta$ [deg]", c='g')
+# twin1.legend(loc='upper right')
+travel_limit = 59.5
+# ax.vlines(x=travel_limit, ymin=min(y), ymax=max(y), linestyles='dotted', color='k', lw=2, label='apple bruising threshold')
+
+p3, = twin2.plot(x, T_motors, c='b', linestyle='dotted', label='Motor torque', linewidth=2)
+twin2.set_ylabel(r"$T_{motor}$ [N.m]", c='b')
+# twin2.legend(loc='upper left')
+
+ax.tick_params(axis='y', colors=p1.get_color())
+twin1.tick_params(axis='y', colors=p2.get_color())
+twin2.tick_params(axis='y', colors=p3.get_color())
+
 plt.tight_layout()
 
+
+### Figure 2: Push Force vs Distance ###
 fig = plt.figure(figsize=(x_size, y_size))
 # plt.plot(x, f_outs, c='r', label='total')
 plt.plot(x, f_outs_per_finger, c='orange', label='per finger (total/3)')
 plt.xlabel('nut travel distance [mm]')
 plt.ylabel('push force [N]')
 plt.tight_layout()
-
-# Plot apple bruising threshold
 thr_press = 0.29e6  # Pa (Li et al. 2016)
 finger_width = 20  # mm
 thr_force = thr_press * (10 ** 2) / 1e6
@@ -129,13 +152,6 @@ plt.ylim([0, 35])
 plt.xlim([52, 60])
 plt.legend()
 # plt.grid()
-plt.tight_layout()
-
-fig = plt.figure(figsize=(x_size, y_size))
-plt.plot(x, T_motors, c='r')
-plt.xlabel('nut travel distance [mm]')
-plt.ylabel('Motor Torque [N.m]')
-plt.grid()
 plt.tight_layout()
 
 plt.show()
