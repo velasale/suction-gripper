@@ -1,10 +1,14 @@
 # Created by alejo at 7/8/24
 
+### Standard Library imports ###
 import os
 from matplotlib import pyplot as plt
 import pandas as pd
 import numpy as np
 from scipy.ndimage import gaussian_filter, median_filter
+
+### Self developed imports ###
+from dynamic_model import *
 
 
 ################################ HANDY FUNCTIONS ##################################################
@@ -247,8 +251,9 @@ def orthogonal_load_cell_experiments(folder):
 
     folder = folder + subfolder
 
-    # Step 2 - Sweep all diameters
-    diameters = [70, 75, 80]
+    ### Step 2 - Sweep all diameters
+    diameters = [80]    # For the RAL'24 paper figure
+    # diameters = [70, 75, 80]
     # steps_list = [1285, 1300, 1325, 1350, 1375, 1400, 1425]
     nut_travel_list = [52, 54, 56, 58, 60]
 
@@ -262,9 +267,7 @@ def orthogonal_load_cell_experiments(folder):
 
         for nut_travel in nut_travel_list:
             # sufix = str(steps) + 'steps.xlsx'
-
             sufix = str(nut_travel) + 'mm.xlsx'
-
             max_ortho = 'Nan'
 
             for file in sorted(os.listdir(location)):
@@ -303,7 +306,8 @@ def orthogonal_load_cell_experiments(folder):
         print(mean_max_forces)
         lows = np.subtract(mean_max_forces, std_max_forces)
         highs = np.add(mean_max_forces, std_max_forces)
-        plt.plot(nut_travel_distances, mean_max_forces, 'o-', label=('diameter ' + str(diameter)+'mm'))
+        # plt.plot(nut_travel_distances, mean_max_forces, 'o-', label=('diameter ' + str(diameter)+'mm'))
+        plt.plot(nut_travel_distances, mean_max_forces, 'o-', label='real', color='green', lw=2)
         plt.fill_between(nut_travel_distances, lows, highs, alpha=.2)
     plt.grid()
 
@@ -311,16 +315,22 @@ def orthogonal_load_cell_experiments(folder):
     plt.ylabel('Force [N]')
     plt.title('Normal Force from each finger [N]')
 
-    # Plot the apple bruising threshold
+    ### Plot the apple bruising threshold ###
     thr_press = 0.29e6    # Pa (Li et al. 2016)
     finger_width = 20   # mm
     thr_force = thr_press * (10 ** 2)/1e6
     print(thr_force)
     # plt.hlines(y=thr_force, xmin=1285, xmax=1425, linestyles='--', lw=2, label='Apple Bruising threshold')
-    plt.hlines(y=thr_force, xmin=52, xmax=60, linestyles='--', lw=2, label='Apple Bruising threshold')
-    plt.legend()
-    plt.ylim([0, 35])
+    plt.hlines(y=thr_force, xmin=52, xmax=60, linestyles='--', lw=2, label='Apple bruising threshold')
 
+    #### Model plot ###
+    stepper_distance, _, f_outs_per_finger, _, _ = cam_driven_finger_model()
+    plt.plot(stepper_distance, f_outs_per_finger, c='black', label='model', lw=2)
+
+    plt.legend(loc='lower right')
+    plt.ylim([0, 35])
+    plt.xlim([52, 60])
+    plt.tight_layout()
     plt.show()
 
 

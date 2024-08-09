@@ -2619,8 +2619,8 @@ def real_trials():
                 ### STEP 4: Apply filter
                 # a,d,e: successful, b,c: un-successful
                 # if pick != 'c':         # c: unsuccessful
-                # if pick == 'a' or pick == 'd' or pick == 'e':     # Successful picks
-                if True:
+                if pick == 'a' or pick == 'd' or pick == 'e':     # Successful picks
+                # if True:
                 # if mode == 'suction':
 
                     ### STEP 4: Read values from 'csv'
