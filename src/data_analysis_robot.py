@@ -2543,9 +2543,9 @@ def real_trials():
 
     # --- Field Trials at prosser --- #
     folder = 'Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/'
-    subfolders = ['Dataset - apple grasps/', 'Dataset - apple picks/']
+    # subfolders = ['Dataset - apple grasps/', 'Dataset - apple picks/']
     # subfolders = ['Dataset - apple grasps/']
-    # subfolders = ['Dataset - apple picks/']
+    subfolders = ['Dataset - apple picks/']
 
     # --- Proxy trials --- #
     # folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/05 - 2024 winter - finger and dual trials/'
@@ -2653,7 +2653,7 @@ def real_trials():
                     if experiment.sc3_value_at_engagement < air_pres_thr:
                         sc3_values_at_eng.append(experiment.sc3_value_at_engagement)
 
-                    if experiment.offset_eef_apple < 100:       # Record of the offset between eef and apple
+                    if experiment.offset_eef_apple < 50:       # Record of the offset between eef and apple
                         offsets.append(experiment.offset_eef_apple)
 
                     ### STEP 7: Single trial plots
@@ -2680,10 +2680,15 @@ def real_trials():
         plt.title('Branch Stiffness (NormalForce / Travelled Distance) [N/m]')
         plt.grid()
 
+        print('Stiffness Stat Summary', pd.DataFrame(stiffnesses).describe().loc[['min', '25%', '50%', '75%', 'max']])
+
+
         fig = plt.figure()
         plt.boxplot(max_netForces, notch=True, meanline=True)
         plt.title('Max Net Forces [N]')
         plt.grid()
+
+        print('Max Net Force Stat Summary', pd.DataFrame(max_netForces).describe().loc[['min', '25%', '50%', '75%', 'max']])
 
         ### Violinplots
         # fig = plt.figure()
@@ -2715,6 +2720,16 @@ def real_trials():
         list_to_hist(max_netForces, 'Max Net Force [N]')
         print('Apple IDs: ', apple_ids)
         print('Offsets: ', offsets)
+
+        print('Max Tangential Force Stat Summary',
+              pd.DataFrame(max_tangentialForces).describe().loc[['min', '25%', '50%', '75%', 'max']])
+
+        print('Max Normal Force Stat Summary',
+              pd.DataFrame(max_normalForces).describe().loc[['min', '25%', '50%', '75%', 'max']])
+
+        print('Offsets',
+              pd.DataFrame(offsets).describe().loc[['min', '25%', '50%', '75%', 'max']])
+
 
     if len(apple_ids) > 1:
         list_to_hist(offsets, 'Offset from apple center [mm]')
@@ -2789,8 +2804,8 @@ def main():
     # noise_experiments_pitch(exp_type='horizontal', radius=radius, variable=variable)
     # simple_suction_experiment()
 
-    proxy_trials()
-    # real_trials()
+    # proxy_trials()
+    real_trials()
 
     ### Step4: Build video from pngs and a plot beside of it with a vertical line running ###
     # plot_and_video()
