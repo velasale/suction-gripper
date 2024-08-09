@@ -24,6 +24,8 @@ location = storage + folder + file
 apples = pd.read_csv(location, index_col=0)
 apples['Weight [g]'].fillna(apples['Weight [g]'].mean(), inplace=True)      # Fill Nan with mean values
 
+print(apples['Weight [g]'].describe().loc[['min', '25%', '50%', '75%', 'max']])
+print(apples.describe().loc[['min', '25%', '50%', '75%', 'max']])
 
 # --- Step 2: ARRAY OF SUBPLOTS ---
 fig, ax = plt.subplots(1, 3)
@@ -33,3 +35,4 @@ apples.boxplot('Weight [g]', ax=ax[2])
 
 plt.subplots_adjust(wspace=0.75)
 plt.show()
+
