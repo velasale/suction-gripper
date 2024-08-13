@@ -36,7 +36,7 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plo
 
     # Create figure
     fig = plt.figure(figsize=(8, 6))
-    fig = plt.figure(figsize=(6, 6))
+    fig = plt.figure(figsize=(7, 6))
     exp_prefix = 'loremipsum'
 
     for mode, tag, color, marker, style in zip(gripper_modes, tags, colors, markers, linestyles):
@@ -151,9 +151,6 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plo
                    label='Magnet release force [N]', color='red')
         plt.fill_between(stepses, lows, highs, color='red', alpha=.2)
 
-    if plot_type == 'bandgap':
-        # Plot median detachment force
-        plt.hlines(y=16, xmin=xmin, xmax=xmax, linestyle='--', lw=2, label='Median FDF', color='k')
 
     # Read suction reference values
     if 'suction' not in tags:
@@ -185,11 +182,8 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plo
         print('Suction Sdv Max Forces: ', abs(np.std(max_forces)))
         mean_pick_force = np.mean(max_forces)
         sdv_pick_force = np.std(max_forces)
-        lows = np.subtract(mean_pick_force, sdv_pick_force)
-        highs = np.add(mean_pick_force, sdv_pick_force)
-        plt.hlines(y=mean_pick_force, xmin=xmin, xmax=xmax, linestyles='--', lw=1,
-                   label='Suction-cups', color='blue')
-        plt.fill_between(stepses, lows, highs, color='blue', alpha=.2)
+        lows_suction = np.subtract(mean_pick_force, sdv_pick_force)
+        highs_suction = np.add(mean_pick_force, sdv_pick_force)
 
         if 'dual' not in tags:
             # Combined Plots
@@ -201,15 +195,23 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plo
             plt.plot(stepses, both_pick_force, linestyle='dashdot', label='Dual', color='red', marker='v', lw=1)
             plt.fill_between(stepses, lows, highs, color='red', alpha=.2)
 
+        plt.hlines(y=mean_pick_force, xmin=xmin, xmax=xmax, linestyles='--', lw=1,
+                   label='Suction-cups', color='blue')
+        plt.fill_between(stepses, lows_suction, highs_suction, color='blue', alpha=.2)
+
+    if plot_type == 'bandgap':
+        # Plot median detachment force
+        plt.hlines(y=16, xmin=xmin, xmax=xmax, linestyle='--', lw=2, label='Median FDF', color='k')
 
     if plot_type == 'barplot':
         array = np.array(max_forces_data, dtype=object)
         plt.boxplot(array, labels=gripper_modes)
+        plt.axhline(y=16, c='k',linestyle='--', lw=2)
     else:
         plt.legend()
 
     plt.grid()
-    plt.ylim([0, 50])
+    plt.ylim([0, 60])
     plt.xlabel(xlabel)
     plt.ylabel('Force [N]')
     # plt.title('Gripper pulling force [N] vs ' + xlabel)
@@ -256,6 +258,21 @@ def orthogonal_load_cell_experiments(folder):
     # diameters = [70, 75, 80]
     # steps_list = [1285, 1300, 1325, 1350, 1375, 1400, 1425]
     nut_travel_list = [52, 54, 56, 58, 60]
+
+    fig = plt.figure(figsize=(6, 4))
+
+    ### Plot the apple bruising threshold ###
+    thr_press = 0.29e6  # Pa (Li et al. 2016)
+    finger_width = 20  # mm
+    thr_force = thr_press * (10 ** 2) / 1e6
+    thr_force = 30
+    print(thr_force)
+    # plt.hlines(y=thr_force, xmin=1285, xmax=1425, linestyles='--', lw=2, label='Apple Bruising threshold')
+    plt.hlines(y=thr_force, xmin=52, xmax=60, linestyles='--', lw=2, label='Apple bruising threshold')
+
+    #### Model plot ###
+    stepper_distance, _, f_outs_per_finger, _, _ = cam_driven_finger_model()
+    plt.plot(stepper_distance, f_outs_per_finger, c='black', label='Model', lw=2)
 
     for diameter in diameters:
         location = folder
@@ -307,25 +324,14 @@ def orthogonal_load_cell_experiments(folder):
         lows = np.subtract(mean_max_forces, std_max_forces)
         highs = np.add(mean_max_forces, std_max_forces)
         # plt.plot(nut_travel_distances, mean_max_forces, 'o-', label=('diameter ' + str(diameter)+'mm'))
-        plt.plot(nut_travel_distances, mean_max_forces, 'o-', label='real', color='green', lw=2)
+        plt.plot(nut_travel_distances, mean_max_forces, 'o-', label='Real', color='green', lw=2)
         plt.fill_between(nut_travel_distances, lows, highs, alpha=.2)
     plt.grid()
 
-    plt.xlabel('Nut travel distance [mm]')
+    plt.xlabel('x [mm]')
     plt.ylabel('Force [N]')
-    plt.title('Normal Force from each finger [N]')
+    # plt.title('Normal Force from each finger [N]')
 
-    ### Plot the apple bruising threshold ###
-    thr_press = 0.29e6    # Pa (Li et al. 2016)
-    finger_width = 20   # mm
-    thr_force = thr_press * (10 ** 2)/1e6
-    print(thr_force)
-    # plt.hlines(y=thr_force, xmin=1285, xmax=1425, linestyles='--', lw=2, label='Apple Bruising threshold')
-    plt.hlines(y=thr_force, xmin=52, xmax=60, linestyles='--', lw=2, label='Apple bruising threshold')
-
-    #### Model plot ###
-    stepper_distance, _, f_outs_per_finger, _, _ = cam_driven_finger_model()
-    plt.plot(stepper_distance, f_outs_per_finger, c='black', label='model', lw=2)
 
     plt.legend(loc='lower right')
     plt.ylim([0, 35])
@@ -472,7 +478,7 @@ def mark10_pullback_experiments(folder):
                      ['Fingers'],
                  [0, 5, 10, 15, 20],
                  10,
-                 'Fruit equator offset [mm]'
+                 'Fruit offset [mm]'
                  )
 
     # ---- ANGLES ----
@@ -504,7 +510,7 @@ if __name__ == '__main__':
     plt.rcParams["font.serif"] = ["Times New Roman"]
     plt.rcParams["font.size"] = 20
     plt.rcParams["font.weight"] = 'light'
-    plt.rc('legend', fontsize=15)  # using a size in points
+    plt.rc('legend', fontsize=16)  # using a size in points
 
     ### Step 1 - Data Location ###
     if os.name == 'nt':     # Windows OS
@@ -516,8 +522,8 @@ if __name__ == '__main__':
     folder = storage + folder
 
     ### Step 2 - Subfunctions ###
-    orthogonal_load_cell_experiments(folder)
+    # orthogonal_load_cell_experiments(folder)
     # push_load_cell_experiments(folder)
-    # mark10_pullback_experiments(folder)
+    mark10_pullback_experiments(folder)
 
     plt.show()
