@@ -192,9 +192,8 @@ def proxy_picks(gripper):
                     # --- Move to Ideal Starting Position
                     input("\n *** Press Enter to Continue with Sample %i, Yaw %i, Offset %f, Rep %i ***" %(sample, yaw, offset, rep))
                     gripper.repetition = rep
-                    pose, move = gripper.go_to_starting_position_sphere(sample)
-
-                    gripper.gripper_pose = pose
+                    # pose, move = gripper.go_to_starting_position_sphere(sample)
+                    # gripper.gripper_pose = pose
 
                     # draw_cross_hair() #TODO
 
@@ -955,7 +954,7 @@ class RoboticGripper():
 
 
     # def simple_pitch_roll(self, quat_x, quat_y, magnitude):
-    def simple_pitch_roll(self, PITCH_ANGLE=0, ROLL_ANGLE=0, condition=False):
+    def simple_pitch_roll(self, PITCH_ANGLE=0, ROLL_ANGLE=0, fixed_cup='SCA', condition=False):
 
         # --- Place marker with text in RVIZ
         caption = "Adjusting PITCH"
@@ -972,10 +971,24 @@ class RoboticGripper():
         cur_pose_pframe.header.stamp = rospy.Time(0)
 
         # --- Step 2: Transform current pose into intuitive cframe and add noise
+
+        if fixed_cup == 'SCA':
+            cup_frame = 'eef_SCA'
+        elif fixed_cup == 'SCB':
+            cup_frame = 'eef_SCB'
+        elif fixed_cup == 'SCC':
+            cup_frame = 'eef_SCC'
+
         try:
-            cur_pose_ezframe = tf_buffer.transform(cur_pose_pframe, 'eef', rospy.Duration(1))
+            cur_pose_ezframe = tf_buffer.transform(cur_pose_pframe, cup_frame, rospy.Duration(1))
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             raise
+
+        cup_distance_to_center = 0.032
+
+        # cur_pose_ezframe.pose.position.x -= cup_distance_to_center*math.sin(math.radians(PITCH_ANGLE))
+        # cur_pose_ezframe.pose.position.y = 0
+        # cur_pose_ezframe.pose.position.z += 0 #.012
 
         ### APPROACH 1 - EULER ANGLES ###
         q = [0, 0, 0, 0]
@@ -994,9 +1007,6 @@ class RoboticGripper():
         cur_pose_ezframe.pose.orientation.z = q[2]
         cur_pose_ezframe.pose.orientation.w = q[3]
 
-        cur_pose_ezframe.pose.position.x = 0
-        cur_pose_ezframe.pose.position.y = 0
-        cur_pose_ezframe.pose.position.z = 0
 
         ### APPROACH 2 - QUATERNION ###
         # cur_pose_ezframe.pose.orientation.x *= quat_x
@@ -1680,6 +1690,7 @@ def real_picks(gripper=RoboticGripper()):
 def pressure_control():
 
     adjust_distance = 0.025
+    adjust_distance = 0
 
     # --- Step 1: Instantiate robot ---
     gripper = RoboticGripper()
@@ -1736,8 +1747,13 @@ def pressure_control():
         magnitude, net_angle = olivia_test(ps1_mean, ps2_mean, ps3_mean)
         print("Vector Magnitude %.2f, Vector Angle %.2f" % (magnitude, math.degrees(net_angle)))
 
+
         magnitude = magnitude * 0.015
         net_angle = math.degrees(net_angle)
+
+        # DEBUGGING W.R.T. B
+        net_angle = 240
+        magnitude = 15
 
         ### Find 'Axis of rotation', and euler angles ###
         axis_of_rotation = net_angle - 90
@@ -1754,7 +1770,7 @@ def pressure_control():
 
         ###### STEP 4: ACT ######
         # Adjust pose #
-        gripper.simple_pitch_roll(pitch_angle, roll_angle, condition=False)
+        gripper.simple_pitch_roll(pitch_angle, roll_angle, 'SCA', condition=False)
 
         ###### STEP 5: APPROACH AND CHECK ######
         ### AIR ON ###

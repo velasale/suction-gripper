@@ -18,14 +18,17 @@
     <!-- Here is where you define the scene and how the cframes are related -->
 
     <link name="world"  />
-    <link name="eef" doc="point at ___cm from the palm"    />      
+    <link name="eef" doc="point at ___cm from the palm"    />
+    <link name="eef_SCA" doc="point at ___cm from the palm"    />
+    <link name="eef_SCB" doc="point at ___cm from the palm"    />
+    <link name="eef_SCC" doc="point at ___cm from the palm"    />
 
     <!-- Describe the interface between the robot and the gripper -->
     <!-- The gripper is rotated -15deg (-0.261rad) w.r.t. tool -->
     <joint name="robotiq_coupler_joint" type="fixed">
     <parent link="tool0" />
     <child link="suction_gripper" />
-    <origin xyz="0 0 0.162" rpy="1.5708 0 -0.261" />
+    <origin xyz="0 0 0.177" rpy="1.5708 0 -0.261" />
     </joint>
 
     <!-- Describe the interface between the world and the tables -->
@@ -67,8 +70,34 @@
     <joint name="ideal_eef" type="fixed">
     <parent link="suction_gripper" />
     <child link="eef" />
-    <origin xyz="0 0.04 0" rpy="-1.5708 0 0" />
+    <origin xyz="0 0.012 0" rpy="-1.5708 0 0" />
     </joint>
+
+    <!-- Describe the location of the suction cups -->
+    <!-- Offsets: Originally 2cm (Warning!!! w.r.t. y axis) -->
+    <joint name="ideal_eef_SCA" type="fixed">
+    <parent link="eef" />
+    <child link="eef_SCA" />
+    <origin xyz="+0.016 +0.027128 0" rpy="0 0 0" />
+    </joint>
+
+    <!-- Describe the location of the suction cups -->
+    <!-- Offsets: Originally 2cm (Warning!!! w.r.t. y axis) -->
+    <joint name="ideal_eef_SCB" type="fixed">
+    <parent link="eef" />
+    <child link="eef_SCB" />
+    <origin xyz="-0.032 0 0" rpy="0 0 0" />
+    </joint>
+
+    <!-- Describe the location of the suction cups -->
+    <!-- Offsets: Originally 2cm (Warning!!! w.r.t. y axis) -->
+    <joint name="ideal_eef_SCC" type="fixed">
+    <parent link="eef" />
+    <child link="eef_SCC" />
+    <origin xyz="+0.016 -0.027128 0" rpy="0 0 0" />
+    </joint>
+
+
     
 
 </robot>
