@@ -1118,6 +1118,19 @@ class RoboticGripper():
 
     def center_of_rotation(self, pA, pB, pC):
 
+        # Case A
+        if VVVV < self.PRESSURE_THRESHOLD..
+
+        # Case B
+
+        # Case C
+
+        # Case A & B
+
+        # Case A & C
+
+        # Case B & C
+
 
         return x,y
 
