@@ -1115,6 +1115,12 @@ class RoboticGripper():
         print("\n... Vacuum Preview")
         plot_vacuum(filename)
 
+
+    def center_of_rotation(self, pA, pB, pC):
+
+
+        return x,y
+
     #### RVIZ marker methods ###
     def place_marker_text(self, pos=[0, 0, 0], scale=0.01, text='caption', frame='world'):
         """
@@ -1767,6 +1773,8 @@ def pressure_control():
 
         print('Pitch amount %.3f, Roll amount %.3f' % (pitch_amount, roll_amount))
         print('Pitch angle %.3f, Roll angle %.3f' % (pitch_angle, roll_angle))
+
+        ### Find Center of rotation
 
         ###### STEP 4: ACT ######
         # Adjust pose #
