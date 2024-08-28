@@ -370,6 +370,7 @@ class RoboticGripper():
         self.SUCTION_CUP_GIVE = 0.010
         self.SUCTION_CUP_RADIUS = 0.021 / 2
         self.PRESSURE_THRESHOLD = 600
+        self.SCUP_DISTANCE_TOCENTER = 0.032
         self.YAW_OFFSET = math.radians(15)      # In order for the x-axis to be aligned with suction cup B and C
         self.GRIPPER_TRACKS = "v8 70_80"
         self.ACTUATION_MODE = "dual"
@@ -1119,20 +1120,30 @@ class RoboticGripper():
     def center_of_rotation(self, pA, pB, pC):
 
         # Case A
-        if VVVV < self.PRESSURE_THRESHOLD..
-
+        if pA < self.PRESSURE_THRESHOLD:
+            x = np.cos(np.pi / 3) * self.SCUP_DISTANCE_TOCENTER
+            y = np.sin(np.pi / 3) * self.SCUP_DISTANCE_TOCENTER
         # Case B
-
+        if pB < self.PRESSURE_THRESHOLD:
+            x = -self.SCUP_DISTANCE_TOCENTER
+            y = 0
         # Case C
-
+        if pC < self.PRESSURE_THRESHOLD:
+            x = np.cos(-np.pi / 3) * self.SCUP_DISTANCE_TOCENTER
+            y = np.sin(-np.pi / 3) * self.SCUP_DISTANCE_TOCENTER
         # Case A & B
-
+        if pA < self.PRESSURE_THRESHOLD and pB < self.PRESSURE_THRESHOLD:
+            x = (1 / 2) * ((pA + pC - (2 * pB)) / (pA - (2 * pC) + pB)) * self.SCUP_DISTANCE_TOCENTER
+            y = (np.sqrt(3) / 2) * ((pA - pC) / (pA - (2 * pC) + pB)) * self.SCUP_DISTANCE_TOCENTER
         # Case A & C
-
+        if pA < self.PRESSURE_THRESHOLD and pC < self.PRESSURE_THRESHOLD:
+            x = (1 / 2) * self.SCUP_DISTANCE_TOCENTER
+            y = (np.sqrt(3) / 2) * ((pA - pC) / (pA + pC - (2 * pB))) * self.SCUP_DISTANCE_TOCENTER
         # Case B & C
-
-
-        return x,y
+        if pB < self.PRESSURE_THRESHOLD and pC < self.PRESSURE_THRESHOLD:
+            x = (-1 / 2) * ((pA + pC - (2 * pB)) / ((2 * pA) - pC - pB)) * self.SCUP_DISTANCE_TOCENTER
+            y = (-np.sqrt(3) / 2) * ((pA - pC) / ((2 * pA) - pC - pB)) * self.SCUP_DISTANCE_TOCENTER
+        return x, y
 
     #### RVIZ marker methods ###
     def place_marker_text(self, pos=[0, 0, 0], scale=0.01, text='caption', frame='world'):
