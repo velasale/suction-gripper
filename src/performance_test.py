@@ -955,7 +955,7 @@ class RoboticGripper():
 
 
     # def simple_pitch_roll(self, quat_x, quat_y, magnitude):
-    def simple_pitch_roll(self, PITCH_ANGLE=0, ROLL_ANGLE=0, fixed_cup='SCA', condition=False):
+    def simple_pitch_roll(self, axis, angle, cor, fixed_cup='SCA', condition=False):
 
         # --- Place marker with text in RVIZ
         caption = "Adjusting PITCH"
@@ -985,7 +985,13 @@ class RoboticGripper():
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             raise
 
-        cup_distance_to_center = 0.032
+        ### TRANSFORM AXIS-ANGLE representation into QUATERNION ###
+        s = math.sin(math.radians(angle/2))
+        c = math.cos(math.radians(angle/2))
+        q[0] = s * math.cos(math.radians(axis))
+        q[1] = s * math.sin(math.radians(axis))
+        q[2] = 0        #
+        q[3] = c
 
         # cur_pose_ezframe.pose.position.x -= cup_distance_to_center*math.sin(math.radians(PITCH_ANGLE))
         # cur_pose_ezframe.pose.position.y = 0
@@ -1799,6 +1805,7 @@ def pressure_control():
         print('Pitch angle %.3f, Roll angle %.3f' % (pitch_angle, roll_angle))
 
         ### Find Center of rotation
+        x,y = gripper.center_of_rotation(ps1_mean, ps2_mean, ps3_mean)
 
         ###### STEP 4: ACT ######
         # Adjust pose #
