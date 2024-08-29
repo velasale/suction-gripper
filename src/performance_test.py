@@ -955,7 +955,7 @@ class RoboticGripper():
 
 
     # def simple_pitch_roll(self, quat_x, quat_y, magnitude):
-    def simple_pitch_roll(self, axis, angle, cor, fixed_cup='SCA', condition=False):
+    def simple_pitch_roll(self, axis, angle, cor, condition=False):
 
         # --- Place marker with text in RVIZ
         caption = "Adjusting PITCH"
@@ -973,59 +973,56 @@ class RoboticGripper():
 
         # --- Step 2: Transform current pose into intuitive cframe and add noise
 
-        if fixed_cup == 'SCA':
-            cup_frame = 'eef_SCA'
-        elif fixed_cup == 'SCB':
-            cup_frame = 'eef_SCB'
-        elif fixed_cup == 'SCC':
-            cup_frame = 'eef_SCC'
+        # if fixed_cup == 'SCA':
+        #     cup_frame = 'eef_SCA'
+        # elif fixed_cup == 'SCB':
+        #     cup_frame = 'eef_SCB'
+        # elif fixed_cup == 'SCC':
+        #     cup_frame = 'eef_SCC'
 
+        ### Step 1: Translate
         try:
-            cur_pose_ezframe = tf_buffer.transform(cur_pose_pframe, cup_frame, rospy.Duration(1))
+            cur_pose_ezframe_step1 = tf_buffer.transform(cur_pose_pframe, 'eef', rospy.Duration(1))
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            raise
+        cur_pose_ezframe_step1.pose.position.x -= cor[0]
+        cur_pose_ezframe_step1.pose.position.y -= cor[1]
+
+        ### Step 2: Rotate
+        try:
+            cur_pose_ezframe_step2 = tf_buffer.transform(cur_pose_ezframe_step1, 'eef', rospy.Duration(1))
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             raise
 
         ### TRANSFORM AXIS-ANGLE representation into QUATERNION ###
+        # https: // robotics.stackexchange.com / questions / 101253 / ur5 - how - to - convert - axis - angles - to - quaternions
         s = math.sin(math.radians(angle/2))
         c = math.cos(math.radians(angle/2))
+        q = [0, 0, 0, 0]
         q[0] = s * math.cos(math.radians(axis))
         q[1] = s * math.sin(math.radians(axis))
-        q[2] = 0        #
+        q[2] = 0
         q[3] = c
 
-        # cur_pose_ezframe.pose.position.x -= cup_distance_to_center*math.sin(math.radians(PITCH_ANGLE))
-        # cur_pose_ezframe.pose.position.y = 0
-        # cur_pose_ezframe.pose.position.z += 0 #.012
+        cur_pose_ezframe_step2.pose.orientation.x = q[0]
+        cur_pose_ezframe_step2.pose.orientation.y = q[1]
+        cur_pose_ezframe_step2.pose.orientation.z = q[2]
+        cur_pose_ezframe_step2.pose.orientation.w = q[3]
 
-        ### APPROACH 1 - EULER ANGLES ###
-        q = [0, 0, 0, 0]
-        q[0] = cur_pose_ezframe.pose.orientation.x
-        q[1] = cur_pose_ezframe.pose.orientation.y
-        q[2] = cur_pose_ezframe.pose.orientation.z
-        q[3] = cur_pose_ezframe.pose.orientation.w
+        cur_pose_ezframe_step2.header.stamp = rospy.Time(0)
 
-        e = euler_from_quaternion(q)
-        new_pitch = math.radians(PITCH_ANGLE)
-        new_roll = math.radians(ROLL_ANGLE)
-        q = quaternion_from_euler(new_roll, new_pitch, 0)
+        ### Step 3: Translate again
+        try:
+            cur_pose_ezframe_step3 = tf_buffer.transform(cur_pose_ezframe_step2, 'eef', rospy.Duration(1))
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            raise
+        cur_pose_ezframe_step3.pose.position.x += cor[0]
+        cur_pose_ezframe_step3.pose.position.y += cor[1]
 
-        cur_pose_ezframe.pose.orientation.x = q[0]
-        cur_pose_ezframe.pose.orientation.y = q[1]
-        cur_pose_ezframe.pose.orientation.z = q[2]
-        cur_pose_ezframe.pose.orientation.w = q[3]
-
-
-        ### APPROACH 2 - QUATERNION ###
-        # cur_pose_ezframe.pose.orientation.x *= quat_x
-        # cur_pose_ezframe.pose.orientation.y *= quat_y
-        # cur_pose_ezframe.pose.orientation.z *= 0
-        # cur_pose_ezframe.pose.orientation.w *= magnitude
-
-        cur_pose_ezframe.header.stamp = rospy.Time(0)
 
         # --- Step 3: Transform goal pose back to planning frame
         try:
-            goal_pose_pframe = tf_buffer.transform(cur_pose_ezframe, self.planning_frame, rospy.Duration(1))
+            goal_pose_pframe = tf_buffer.transform(cur_pose_ezframe_step3, self.planning_frame, rospy.Duration(1))
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             raise
 
@@ -1125,6 +1122,8 @@ class RoboticGripper():
 
     def center_of_rotation(self, pA, pB, pC):
 
+        x = 0
+        y = 0
         # Case A
         if pA < self.PRESSURE_THRESHOLD:
             x = np.cos(np.pi / 3) * self.SCUP_DISTANCE_TOCENTER
@@ -1726,7 +1725,7 @@ def real_picks(gripper=RoboticGripper()):
 def pressure_control():
 
     adjust_distance = 0.025
-    adjust_distance = 0
+
 
     # --- Step 1: Instantiate robot ---
     gripper = RoboticGripper()
@@ -1755,6 +1754,7 @@ def pressure_control():
         readings = 20
         for i in range(readings):
             ps1_list.append(gripper.ps1)
+
             ps2_list.append(gripper.ps2)
             ps3_list.append(gripper.ps3)
             # print("Pressure Readings: ", gripper.ps1, gripper.ps2, gripper.ps3)
@@ -1774,6 +1774,7 @@ def pressure_control():
             print("\n... Closing vacuum")
             gripper.publish_event("Vacuum Off")
             service_call("closeValve")
+
         ### MOVE BACKWARDS ###
         time.sleep(0.01)
         move = gripper.move_normal_until_suction(-0.9*adjust_distance, speed_factor=0.1)
@@ -1788,8 +1789,8 @@ def pressure_control():
         net_angle = math.degrees(net_angle)
 
         # DEBUGGING W.R.T. B
-        net_angle = 240
-        magnitude = 15
+        # net_angle = 240
+        # magnitude = 15
 
         ### Find 'Axis of rotation', and euler angles ###
         axis_of_rotation = net_angle - 90
@@ -1809,7 +1810,7 @@ def pressure_control():
 
         ###### STEP 4: ACT ######
         # Adjust pose #
-        gripper.simple_pitch_roll(pitch_angle, roll_angle, 'SCA', condition=False)
+        gripper.simple_pitch_roll(axis_of_rotation, magnitude, [x,y], condition=False)
 
         ###### STEP 5: APPROACH AND CHECK ######
         ### AIR ON ###
@@ -1817,6 +1818,7 @@ def pressure_control():
             print("\n... Applying vacuum")
             gripper.publish_event("Vacuum On")
             service_call("openValve")
+
         ### APPROACH ###
         print("\n... Approaching apple")
         move = gripper.move_normal_until_suction(1.1*adjust_distance, speed_factor=0.05, cups=2, condition=True)
