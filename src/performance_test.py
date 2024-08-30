@@ -272,12 +272,6 @@ def proxy_picks(gripper):
                     gripper.label_pick()
                     # todo: should we stop saving rosbag to avoid wasting space during labeling?
 
-                    # --- Open Fingers
-                    if gripper.ACTUATION_MODE != 'suction':
-                        # input('Hit Enter to open the fingers')
-                        gripper.publish_event("Opening fingers")
-                        service_call("openFingers")
-                        time.sleep(0.05)
 
                     # --- Close Valve
                     if gripper.ACTUATION_MODE != 'fingers':
@@ -1724,8 +1718,8 @@ def real_picks(gripper=RoboticGripper()):
 
 def pressure_control():
 
-    adjust_distance = 0.025
-
+    adjust_distance = 0.005
+    adjust_distance = 0.0
 
     # --- Step 1: Instantiate robot ---
     gripper = RoboticGripper()
@@ -1741,7 +1735,7 @@ def pressure_control():
         service_call("openValve")
     ### APPROACH ###
     print("\n... Approaching apple")
-    move = gripper.move_normal_until_suction(0.05, speed_factor=0.025, cups=1, condition=True)
+    move = gripper.move_normal_until_suction(0.20, speed_factor=0.010, cups=1, condition=True)
 
     ####### STEP 1: CONTROL LOOP ######
     cnt = 0
@@ -1754,7 +1748,6 @@ def pressure_control():
         readings = 20
         for i in range(readings):
             ps1_list.append(gripper.ps1)
-
             ps2_list.append(gripper.ps2)
             ps3_list.append(gripper.ps3)
             # print("Pressure Readings: ", gripper.ps1, gripper.ps2, gripper.ps3)
@@ -1777,33 +1770,19 @@ def pressure_control():
 
         ### MOVE BACKWARDS ###
         time.sleep(0.01)
-        move = gripper.move_normal_until_suction(-0.9*adjust_distance, speed_factor=0.1)
+        move = gripper.move_normal_until_suction(-0.9*adjust_distance, speed_factor=0.025)
 
         ###### STEP 3: ADJUST ANGLE ######
         ### Define rotation magnitude and net angle ###
         magnitude, net_angle = olivia_test(ps1_mean, ps2_mean, ps3_mean)
         print("Vector Magnitude %.2f, Vector Angle %.2f" % (magnitude, math.degrees(net_angle)))
 
-
         magnitude = magnitude * 0.015
         net_angle = math.degrees(net_angle)
 
-        # DEBUGGING W.R.T. B
-        # net_angle = 240
-        # magnitude = 15
-
-        ### Find 'Axis of rotation', and euler angles ###
+        ### Find 'Axis of rotation' ###
         axis_of_rotation = net_angle - 90
         print('Axis of rotation %.0f' % axis_of_rotation)
-        pitch_amount = math.radians(90 - axis_of_rotation)
-        pitch_amount = math.cos(pitch_amount)
-        pitch_angle = magnitude * pitch_amount
-        roll_amount = math.radians(90 - axis_of_rotation)
-        roll_amount = math.sin(roll_amount)
-        roll_angle = magnitude * roll_amount
-
-        print('Pitch amount %.3f, Roll amount %.3f' % (pitch_amount, roll_amount))
-        print('Pitch angle %.3f, Roll angle %.3f' % (pitch_angle, roll_angle))
 
         ### Find Center of rotation
         x,y = gripper.center_of_rotation(ps1_mean, ps2_mean, ps3_mean)
@@ -1821,13 +1800,30 @@ def pressure_control():
 
         ### APPROACH ###
         print("\n... Approaching apple")
-        move = gripper.move_normal_until_suction(1.1*adjust_distance, speed_factor=0.05, cups=2, condition=True)
+        move = gripper.move_normal_until_suction(1.1*adjust_distance, speed_factor=0.01, cups=2, condition=True)
 
         cnt +=1
         print(cnt)
 
-    rospy.sleep(1.0)
+    time.sleep(0.01)
 
+    # Deploy Fingers
+    # --- Close Fingers
+    if gripper.ACTUATION_MODE != 'suction':
+        gripper.publish_event("Closing fingers")
+        service_call("closeFingers")
+
+    # --- Retrieve
+    print("\n... Picking Apple")
+    gripper.publish_event("Retrieve")
+    move = gripper.move_normal_until_suction(gripper.RETRIEVE, speed_factor=0.1)
+
+    # --- Open Fingers
+    if gripper.ACTUATION_MODE != 'suction':
+        # input('Hit Enter to open the fingers')
+        gripper.publish_event("Opening fingers")
+        service_call("openFingers")
+        time.sleep(0.01)
 
     # --- Close Valve ---
     if gripper.ACTUATION_MODE != 'fingers':
