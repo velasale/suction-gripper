@@ -977,29 +977,29 @@ class RoboticGripper():
         cur_pose_pframe.header.frame_id = self.planning_frame
         cur_pose_pframe.header.stamp = rospy.Time(0)
 
-        # Step 2: Transform current pose into intuitive cframe and add noise
+        # Step 2: Transform current pose into intuitive cframe
+        # A - Translate
         try:
             cur_pose_ezframe_step1 = tf_buffer.transform(cur_pose_pframe, 'eef', rospy.Duration(1))
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            rospy.logerr(f"Transformation error: {e}")
             raise
         cur_pose_ezframe_step1.pose.position.x -= cor[0]
         cur_pose_ezframe_step1.pose.position.y -= cor[1]
 
-        ### Step 2: Rotate
+        # B -  Rotate
         try:
             cur_pose_ezframe_step2 = tf_buffer.transform(cur_pose_ezframe_step1, 'eef', rospy.Duration(1))
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            rospy.logerr(f"Transformation error: {e}")
             raise
 
-        ### TRANSFORM AXIS-ANGLE representation into QUATERNION ###
+        # Convert axis-angle representation to quaternion
         # https: // robotics.stackexchange.com / questions / 101253 / ur5 - how - to - convert - axis - angles - to - quaternions
-        s = math.sin(math.radians(angle/2))
-        c = math.cos(math.radians(angle/2))
-        q = [0, 0, 0, 0]
-        q[0] = s * math.cos(math.radians(axis))
-        q[1] = s * math.sin(math.radians(axis))
-        q[2] = 0
-        q[3] = c
+        angle_rad = math.radians(angle / 2)
+        s = math.sin(angle_rad)
+        c = math.cos(angle_rad)
+        q = [s * math.cos(math.radians(axis)), s * math.sin(math.radians(axis)), 0, c]
 
         cur_pose_ezframe_step2.pose.orientation.x = q[0]
         cur_pose_ezframe_step2.pose.orientation.y = q[1]
@@ -1008,46 +1008,46 @@ class RoboticGripper():
 
         cur_pose_ezframe_step2.header.stamp = rospy.Time(0)
 
-        ### Step 3: Translate again
+        # C - Translate back to origin
         try:
             cur_pose_ezframe_step3 = tf_buffer.transform(cur_pose_ezframe_step2, 'eef', rospy.Duration(1))
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            rospy.logerr(f"Transformation error: {e}")
             raise
         cur_pose_ezframe_step3.pose.position.x += cor[0]
         cur_pose_ezframe_step3.pose.position.y += cor[1]
 
-
-        # --- Step 3: Transform goal pose back to planning frame
+        # Step 3: Transform goal pose back to planning frame
         try:
             goal_pose_pframe = tf_buffer.transform(cur_pose_ezframe_step3, self.planning_frame, rospy.Duration(1))
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            rospy.logerr(f"Transformation error: {e}")
             raise
 
-        # --- Step 4: Move to the new goal
-        airp_thr = self.PRESSURE_THRESHOLD
-
+        # Step 4: Move to the new goal
+        pressure_threshold = self.PRESSURE_THRESHOLD
         self.move_group.set_pose_target(goal_pose_pframe.pose)
-        if condition == True:
+
+        if condition:
             self.move_group.go(wait=False)
             close = False
             cnt = 0
-            cnt_thr = 50
-            while close == False:
+            max_attempts = 50
+            while not close:
                 rospy.sleep(.1)
                 # print("Counter: %i, Air Presure %.2f" %(cnt, self.ps1))
-                cnt  +=1
+                cnt += 1
 
-                if (self.ps1 < airp_thr and self.ps2 < airp_thr and self.ps3 < airp_thr) or cnt > cnt_thr:
+                if (self.ps1 < airp_thr and self.ps2 < airp_thr and self.ps3 < airp_thr) or cnt > max_attempts:
                     self.move_group.stop()
                     close = True
-
         else:
             self.move_group.go(wait=True)
             self.move_group.stop()
 
-        self.move_group.clear_pose_targets()    # good practice
+        self.move_group.clear_pose_targets()    # Good practice: clear psoe targets
 
-        # --- Step 5: Compare poses
+        # Step 5: Compare current pose with the goal pose
         current_pose = self.move_group.get_current_pose().pose
         success = all_close(goal_pose_pframe.pose, current_pose, self.TOLERANCE)
 
