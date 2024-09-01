@@ -1056,7 +1056,6 @@ class RoboticGripper():
         return success
 
 
-
     #### Air-Pressure methods ####
     def read_pressure1(self, msg):
         self.ps1 = msg.data
@@ -1724,27 +1723,26 @@ def pressure_control():
     adjust_distance = 0.005
     adjust_distance = 0.0
 
-    # --- Step 1: Instantiate robot ---
+    # Instantiate gripper
     gripper = RoboticGripper()
 
-    # --- Start recording bagfile ---
+    # Start recording bagfile
 
-
-    ###### STEP 0: INITIAL APPROACH TOWARDS SURFACE ######
-    ### AIR ON ###
+    # Step 1: Initial approach to fruit
+    # A - Turn vacuum on
     if gripper.ACTUATION_MODE != 'fingers':
         print("\n... Applying vacuum")
         gripper.publish_event("Vacuum On")
         service_call("openValve")
-    ### APPROACH ###
+    # B - Move in a straight line
     print("\n... Approaching apple")
     move = gripper.move_normal_until_suction(0.20, speed_factor=0.010, cups=1, condition=True)
 
-    ####### STEP 1: CONTROL LOOP ######
+    # Step 2: Control loop
     cnt = 0
     while cnt < 10:
 
-        ###### STEP 1: SENSE (pressure readings) ######
+        # A - Sense: Pressure Readings
         ps1_list = []
         ps2_list = []
         ps3_list = []
@@ -1753,14 +1751,13 @@ def pressure_control():
             ps1_list.append(gripper.ps1)
             ps2_list.append(gripper.ps2)
             ps3_list.append(gripper.ps3)
-            # print("Pressure Readings: ", gripper.ps1, gripper.ps2, gripper.ps3)
         ps1_mean = np.mean(ps1_list)
         ps2_mean = np.mean(ps2_list)
         ps3_mean = np.mean(ps3_list)
         print("\nMean pressure readings: ", int(ps1_mean), int(ps2_mean), int(ps3_mean))
 
-        airp_thr = gripper.PRESSURE_THRESHOLD
-        if (ps1_mean < airp_thr and ps2_mean < airp_thr and ps3_mean < airp_thr):
+        threshold = gripper.PRESSURE_THRESHOLD
+        if (ps1_mean < threshold and ps2_mean < threshold and ps3_mean < threshold):
             print("All suction cups engaged!!!")
             break
 
