@@ -1761,26 +1761,24 @@ def pressure_control():
             print("All suction cups engaged!!!")
             break
 
-        ###### STEP 2: GO BACK A BIT ######
-        ### AIR OFF ###
+        # B - Temporarily disengage from fruit
+        # Switch air off
         if gripper.ACTUATION_MODE != 'fingers':
             print("\n... Closing vacuum")
             gripper.publish_event("Vacuum Off")
             service_call("closeValve")
-
-        ### MOVE BACKWARDS ###
+        # Move back
         time.sleep(0.01)
         move = gripper.move_normal_until_suction(-0.9*adjust_distance, speed_factor=0.025)
 
-        ###### STEP 3: ADJUST ANGLE ######
-        ### Define rotation magnitude and net angle ###
+        # C - Adjust pose
+        # Net Air Pressure magnitude and orientation
         magnitude, net_angle = olivia_test(ps1_mean, ps2_mean, ps3_mean)
         print("Vector Magnitude %.2f, Vector Angle %.2f" % (magnitude, math.degrees(net_angle)))
 
-        magnitude = magnitude * 0.015
+        Kp = 0.015
+        magnitude = magnitude * Kp
         net_angle = math.degrees(net_angle)
-
-        ### Find 'Axis of rotation' ###
         axis_of_rotation = net_angle - 90
         print('Axis of rotation %.0f' % axis_of_rotation)
 
