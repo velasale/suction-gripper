@@ -950,6 +950,18 @@ class RoboticGripper():
 
     # def simple_pitch_roll(self, quat_x, quat_y, magnitude):
     def simple_pitch_roll(self, axis, angle, cor, condition=False):
+        """
+            Adjusts the pitch and roll of the robotic arm.
+
+            Parameters:
+                axis (float): The axis around which to rotate.
+                angle (float): The angle to rotate.
+                cor (list of float): The center of rotation.
+                condition (bool, optional): If True, perform an additional check before stopping. Defaults to False.
+
+            Returns:
+                bool: True if the adjustment was successful, False otherwise.
+            """
 
         # --- Place marker with text in RVIZ
         caption = "Adjusting PITCH"
@@ -959,22 +971,13 @@ class RoboticGripper():
         tf_buffer = tf2_ros.Buffer()
         listener = tf2_ros.TransformListener(tf_buffer)
 
-        # --- Step 1: Read the current pose in the planning frame
+        # Step 1: Read the current pose in the planning frame
         cur_pose_pframe = tf2_geometry_msgs.PoseStamped()
         cur_pose_pframe.pose = self.move_group.get_current_pose().pose
         cur_pose_pframe.header.frame_id = self.planning_frame
         cur_pose_pframe.header.stamp = rospy.Time(0)
 
-        # --- Step 2: Transform current pose into intuitive cframe and add noise
-
-        # if fixed_cup == 'SCA':
-        #     cup_frame = 'eef_SCA'
-        # elif fixed_cup == 'SCB':
-        #     cup_frame = 'eef_SCB'
-        # elif fixed_cup == 'SCC':
-        #     cup_frame = 'eef_SCC'
-
-        ### Step 1: Translate
+        # Step 2: Transform current pose into intuitive cframe and add noise
         try:
             cur_pose_ezframe_step1 = tf_buffer.transform(cur_pose_pframe, 'eef', rospy.Duration(1))
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
