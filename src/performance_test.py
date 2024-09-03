@@ -1720,11 +1720,26 @@ def real_picks(gripper=RoboticGripper()):
 
 def pressure_control():
 
-    adjust_distance = 0.005
-    adjust_distance = 0.0
+    # Parameters
+    ADJUST_DISTANCE = 0.0
+    ADJUST_SPEED_FACTOR = 0.03
+    APPROACH_DISTANCE = 0.20
+    APPROACH_SPEED_FACTOR = 0.01
+    TIME_SLEEP_FOR_ROSSERIAL = 0.005
+    MAX_ATTEMPTS = 10
+    KP = 0.015
 
     # Instantiate gripper
     gripper = RoboticGripper()
+
+    # Input from user
+    # sequence 1: vac on / sense / rotate
+    # sequence 2: vac on / sense / vac off / rotate
+    # sequence 3: vac on / sense / vac off / back / rotate / approach
+    print("Experiment sequence (1, 2 or 3)")
+    sequence = 0
+    while (sequence != 1 and sequence != 2 and sequence != 2):
+        sequence = input()
 
     # Start recording bagfile
 
@@ -1736,11 +1751,11 @@ def pressure_control():
         service_call("openValve")
     # B - Move in a straight line
     print("\n... Approaching apple")
-    move = gripper.move_normal_until_suction(0.20, speed_factor=0.010, cups=1, condition=True)
+    move = gripper.move_normal_until_suction(APPROACH_DISTANCE, APPROACH_SPEED_FACTOR, cups=1, condition=True)
 
     # Step 2: Control loop
     cnt = 0
-    while cnt < 10:
+    while cnt < MAX_ATTEMPTS:
 
         # A - Sense: Pressure Readings
         ps1_list = []
@@ -1761,37 +1776,34 @@ def pressure_control():
             print("All suction cups engaged!!!")
             break
 
-        # B - Temporarily disengage from fruit
-        # Switch air off
-        if gripper.ACTUATION_MODE != 'fingers':
+        # B - Switch air off (depending on sequence)
+        if seq == 2 or seq == 3:
+            # Switch air off
             print("\n... Closing vacuum")
             gripper.publish_event("Vacuum Off")
             service_call("closeValve")
-        # Move back
-        time.sleep(0.01)
-        move = gripper.move_normal_until_suction(-0.9*adjust_distance, speed_factor=0.025)
+            time.sleep(TIME_SLEEP_FOR_ROSSERIAL)
 
-        # C - Adjust pose
+        # C - Move back (depending on sequence)
+        if seq == 3:
+            # Move back a bit
+            move = gripper.move_normal_until_suction(-0.9*ADJUST_DISTANCE, ADJUST_SPEED_FACTOR)
+
+        # D - Adjust pose
         # Net Air Pressure magnitude and orientation
         magnitude, net_angle = olivia_test(ps1_mean, ps2_mean, ps3_mean)
-        print("Vector Magnitude %.2f, Vector Angle %.2f" % (magnitude, math.degrees(net_angle)))
-
-        Kp = 0.015
-        magnitude = magnitude * Kp
+        print("P_SUM magnitude %.2f, P_SUM angle %.2f" % (magnitude, math.degrees(net_angle)))
+        magnitude = magnitude * KP
         net_angle = math.degrees(net_angle)
         axis_of_rotation = net_angle - 90
         print('Axis of rotation %.0f' % axis_of_rotation)
-
-        ### Find Center of rotation
+        # Find Center of rotation
         x,y = gripper.center_of_rotation(ps1_mean, ps2_mean, ps3_mean)
-
-        ###### STEP 4: ACT ######
-        # Adjust pose #
+        # Adjust pose
         gripper.simple_pitch_roll(axis_of_rotation, magnitude, [x,y], condition=False)
 
-        ###### STEP 5: APPROACH AND CHECK ######
-        ### AIR ON ###
-        if gripper.ACTUATION_MODE != 'fingers':
+        # E - Switch air on (depending on sequence)
+        if seq == 2 or seq == 3:
             print("\n... Applying vacuum")
             gripper.publish_event("Vacuum On")
             service_call("openValve")
@@ -1828,6 +1840,7 @@ def pressure_control():
         print("\n... Closing vacuum")
         gripper.publish_event("Vacuum Off")
         service_call("closeValve")
+
 
 
 
