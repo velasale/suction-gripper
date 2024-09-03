@@ -1725,6 +1725,7 @@ def pressure_control():
     ADJUST_SPEED_FACTOR = 0.03
     APPROACH_DISTANCE = 0.20
     APPROACH_SPEED_FACTOR = 0.01
+    FRUITPICK_SPEED_FACTOR = 0.02
     TIME_SLEEP_FOR_ROSSERIAL = 0.005
     MAX_ATTEMPTS = 10
     KP = 0.015
@@ -1741,7 +1742,27 @@ def pressure_control():
     while (sequence != 1 and sequence != 2 and sequence != 2):
         sequence = input()
 
+    print("Branch stiffness (high or low")
+    stiffness = ''
+    while (stiffness != 'high' and sequence != 'low'):
+        stiffness = input()
+
     # Start recording bagfile
+    location = '/media/alejo/Elements/'
+    folder = 'Alejo - Experiments in Progress/'
+    name = (datetime_simplified()
+            + "_stf_" + str(stiffness)
+            + "_seq_" + str(sequence)
+            )
+    filename = location + folder + name
+
+    topics_without_cameras = ["wrench", "joint_states",
+                              "experiment_steps",
+                              "/gripper/distance",
+                              "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3"]
+    command, rosbag_process = start_rosbag(filename, topics_without_cameras)
+    print("\n... Start recording Rosbag")
+    time.sleep(1)
 
     # Step 1: Initial approach to fruit
     # A - Turn vacuum on
@@ -1786,7 +1807,7 @@ def pressure_control():
 
         # C - Move back (depending on sequence)
         if seq == 3:
-            # Move back a bit
+            print("\n... Moving back a bit")
             move = gripper.move_normal_until_suction(-0.9*ADJUST_DISTANCE, ADJUST_SPEED_FACTOR)
 
         # D - Adjust pose
@@ -1807,40 +1828,40 @@ def pressure_control():
             print("\n... Applying vacuum")
             gripper.publish_event("Vacuum On")
             service_call("openValve")
+            time.sleep(TIME_SLEEP_FOR_ROSSERIAL)
 
-        ### APPROACH ###
-        print("\n... Approaching apple")
-        move = gripper.move_normal_until_suction(1.1*adjust_distance, speed_factor=0.01, cups=2, condition=True)
+        # F - Approach again (depending on sequence
+        if seq == 3:
+            print("\n... Approaching apple")
+            move = gripper.move_normal_until_suction(1.1*ADJUST_DISTANCE, ADJUST_SPEED_FACTOR, cups=2, condition=True)
 
         cnt +=1
         print(cnt)
 
     time.sleep(0.01)
 
-    # Deploy Fingers
-    # --- Close Fingers
-    if gripper.ACTUATION_MODE != 'suction':
-        gripper.publish_event("Closing fingers")
-        service_call("closeFingers")
+    # Step 3: Deploy Fingers
+    rint("\n... Deploying fingers")
+    gripper.publish_event("Closing fingers")
+    service_call("closeFingers")
 
-    # --- Retrieve
+    # Step 4: Pick Apple
     print("\n... Picking Apple")
     gripper.publish_event("Retrieve")
-    move = gripper.move_normal_until_suction(gripper.RETRIEVE, speed_factor=0.1)
+    move = gripper.move_normal_until_suction(gripper.RETRIEVE, FRUITPICK_SPEED_FACTOR)
 
-    # --- Open Fingers
-    if gripper.ACTUATION_MODE != 'suction':
-        # input('Hit Enter to open the fingers')
-        gripper.publish_event("Opening fingers")
-        service_call("openFingers")
-        time.sleep(0.01)
+    # Step 5: Open fingers
+    print("\n... Opening fingers")
+    gripper.publish_event("Opening fingers")
+    service_call("openFingers")
+    time.sleep(0.01)
 
-    # --- Close Valve ---
-    if gripper.ACTUATION_MODE != 'fingers':
-        print("\n... Closing vacuum")
-        gripper.publish_event("Vacuum Off")
-        service_call("closeValve")
+    # Step 6: Close Air
+    print("\n... Closing vacuum")
+    gripper.publish_event("Vacuum Off")
+    service_call("closeValve")
 
+    # Step 7: Finish saving bagfile
 
 
 
