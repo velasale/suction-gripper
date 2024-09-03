@@ -1720,6 +1720,9 @@ def real_picks(gripper=RoboticGripper()):
 
 def pressure_control():
 
+    # Instantiate gripper
+    gripper = RoboticGripper()
+
     # Parameters
     ADJUST_DISTANCE = 0.0
     ADJUST_SPEED_FACTOR = 0.03
@@ -1729,9 +1732,9 @@ def pressure_control():
     TIME_SLEEP_FOR_ROSSERIAL = 0.005
     MAX_ATTEMPTS = 10
     KP = 0.015
+    gripper.apple_pose = [  ,   ,   , 0.00, 0.00, 0.00]
 
-    # Instantiate gripper
-    gripper = RoboticGripper()
+
 
     # Input from user
     # sequence 1: vac on / sense / rotate
@@ -1746,13 +1749,21 @@ def pressure_control():
     stiffness = ''
     while (stiffness != 'high' and sequence != 'low'):
         stiffness = input()
+        gripper.SPRING_STIFFNESS_LEVEL = stiffness
+
+    print("Initial offset (1cm or 2cm)")
+    offset = 0
+    while(offset != 1 or offset != 2):
+        offset = input()
 
     # Start recording bagfile
     location = '/media/alejo/Elements/'
     folder = 'Alejo - Experiments in Progress/'
     name = (datetime_simplified()
             + "_stf_" + str(stiffness)
+            + "_offset_"
             + "_seq_" + str(sequence)
+            + "_rep_" + str('todo')
             )
     filename = location + folder + name
 
@@ -1862,7 +1873,13 @@ def pressure_control():
     service_call("closeValve")
 
     # Step 7: Finish saving bagfile
+    stop_rosbag(command, rosbag_process)
+    print("\n... Stop recording Rosbag")
+    time.sleep(1)
 
+    # Save metadata in yaml file
+    gripper.save_metadata(filename)
+    print("\n... Saving metadata in *yaml file")
 
 
 if __name__ == '__main__':
