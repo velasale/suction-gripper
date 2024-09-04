@@ -320,7 +320,8 @@ class RoboticGripper():
         self.ps2 = 1000.00
         self.ps3_sub = rospy.Subscriber('/gripper/pressure/sc3', UInt16, self.read_pressure3, queue_size=1)
         self.ps3 = 1000.00
-
+        self.tof_sub = rospy.Subscriber('/gripper/distance', UInt16, self.read_tof_distance, queue_size=1)
+        self.tof_distance = 1000.00
 
         planning_frame = move_group.get_planning_frame()
         print("=========== Planning frame: %s" % planning_frame)
@@ -925,6 +926,11 @@ class RoboticGripper():
                 rospy.sleep(.1)  # Sleep .1 second
                 thr_cnt = 0
 
+                if self.tof_distance < 100:
+                    print("\n... Applying vacuum")
+                    self.publish_event("Vacuum On")
+                    service_call("openValve")
+
                 # Check if air-pressure sensors are below the threshold
                 for i in [self.ps1, self.ps2, self.ps3]:
                     if i < airp_thr:
@@ -1031,8 +1037,8 @@ class RoboticGripper():
         pressure_threshold = self.PRESSURE_THRESHOLD
         self.move_group.set_pose_target(goal_pose_pframe.pose)
 
-        self.move_group.set_max_acceleration_scaling_factor(1)
-        self.move_group.set_max_velocity_scaling_factor(1)
+        self.move_group.set_max_acceleration_scaling_factor(speed_factor)
+        self.move_group.set_max_velocity_scaling_factor(speed_factor)
 
         if condition:
             self.move_group.go(wait=False)
@@ -1071,6 +1077,9 @@ class RoboticGripper():
 
     def read_pressure3(self, msg):
         self.ps3 = msg.data
+
+    def read_tof_distance(self, msg):
+        self.tof_distance = msg.data
 
     def suction_cup_test(self):
 
@@ -1730,18 +1739,22 @@ def pressure_control():
     gripper = RoboticGripper()
 
     # Parameters
-    ADJUST_DISTANCE = 0.02
-    ADJUST_SPEED_FACTOR = 0.25
+    SERVO_ADJUST_DISTANCE = 0.01
+    SERVO_ADJUST_SPEEDFACTOR = 0.35
+
     APPROACH_DISTANCE = 0.20
     APPROACH_SPEED_FACTOR = 0.0005
+
     FRUITPICK_SPEED_FACTOR = 0.02
-    TIME_SLEEP_FOR_ROSSERIAL = 0.015
+    TIME_SLEEP_FOR_ROSSERIAL = 0.020
     MAX_ATTEMPTS = 10
     KP = 0.015
-    gripper.apple_pose = [-0.43, -0.30 , 1.135 , 0.00, 0.00, 0.00]
+    # gripper.apple_pose = [-0.43, -0.30 , 1.135 , 0.00, 0.00, 0.00]
+    gripper.apple_pose = [-0.285, -0.30, 1.135, 0.00, 0.00, 0.00]
 
     # TODO: Why is not placeing ballons until it moves?
-    gripper.go_to_preliminary_position([-7.13, -54.61, 113.66, 266.56, 83.48, 50])
+    # gripper.go_to_preliminary_position([-7.13, -54.61, 113.66, 266.56, 83.48, 50])
+    gripper.go_to_preliminary_position([-22.9, -54.64, 115.79, 261.28, 71.74, 56.84])
 
 
     # Place Apple in Rviz
@@ -1766,9 +1779,9 @@ def pressure_control():
         stiffness = input()
         gripper.SPRING_STIFFNESS_LEVEL = stiffness
 
-    print("Choose initial offset (1cm or 2cm):")
+    print("Choose initial offset (1cm or 2cm or 3cm):")
     offset = ''
-    while (offset != '1' and offset != '2'):
+    while (offset != '1' and offset != '2' and offset != '3'):
         offset = input()
 
 
@@ -1796,14 +1809,15 @@ def pressure_control():
     time.sleep(1)
 
     # Step 1: Initial approach to fruit
-    # A - Turn vacuum on
-    if gripper.ACTUATION_MODE != 'fingers':
-        print("\n... Applying vacuum")
-        gripper.publish_event("Vacuum On")
-        service_call("openValve")
-    # B - Move in a straight line
+    # A - Move in a straight line
     print("\n... Approaching apple")
     move = gripper.move_normal_until_suction(APPROACH_DISTANCE, APPROACH_SPEED_FACTOR, cups=1, condition=True)
+    # B - Turn vacuum on
+
+        # print("\n... Applying vacuum")
+        # gripper.publish_event("Vacuum On")
+        # service_call("openValve")
+
 
     # Step 2: Control loop
     cnt = 0
@@ -1842,7 +1856,7 @@ def pressure_control():
         # C - Move back (depending on sequence)
         if sequence == '3':
             print("\n... Moving back a bit")
-            move = gripper.move_normal_until_suction(-0.9*ADJUST_DISTANCE, ADJUST_SPEED_FACTOR)
+            move = gripper.move_normal_until_suction(-0.9*SERVO_ADJUST_DISTANCE, SERVO_ADJUST_SPEEDFACTOR)
 
         # D - Adjust pose
         # Net Air Pressure magnitude and orientation
@@ -1856,7 +1870,7 @@ def pressure_control():
         # Find Center of rotation
         x,y = gripper.center_of_rotation(ps1_mean, ps2_mean, ps3_mean)
         # Adjust pose
-        gripper.simple_pitch_roll(axis_of_rotation, magnitude, [x,y], ADJUST_SPEED_FACTOR, condition=False)
+        gripper.simple_pitch_roll(axis_of_rotation, magnitude, [x,y], SERVO_ADJUST_SPEEDFACTOR, condition=False)
 
         # E - Switch air on (depending on sequence)
         if sequence == '2' or sequence == '3':
@@ -1868,33 +1882,41 @@ def pressure_control():
         # F - Approach again (depending on sequence
         if sequence == '3':
             print("\n... Approaching apple")
-            move = gripper.move_normal_until_suction(1.1*ADJUST_DISTANCE, ADJUST_SPEED_FACTOR, cups=2, condition=True)
+            move = gripper.move_normal_until_suction(1.1*SERVO_ADJUST_DISTANCE, SERVO_ADJUST_SPEEDFACTOR, cups=2, condition=True)
 
         cnt +=1
         print(cnt)
 
-    time.sleep(0.01)
+    time.sleep(TIME_SLEEP_FOR_ROSSERIAL)
 
     # Step 3: Deploy Fingers
     print("\n... Deploying fingers")
     gripper.publish_event("Closing fingers")
     service_call("closeFingers")
 
+    time.sleep(TIME_SLEEP_FOR_ROSSERIAL)
+
     # Step 4: Pick Apple
     print("\n... Picking Apple")
     gripper.publish_event("Retrieve")
     move = gripper.move_normal_until_suction(gripper.RETRIEVE, FRUITPICK_SPEED_FACTOR)
+    # move = gripper.move_normal_until_suction(0.03, FRUITPICK_SPEED_FACTOR)
+
+    time.sleep(TIME_SLEEP_FOR_ROSSERIAL)
 
     # Step 5: Open fingers
     print("\n... Opening fingers")
     gripper.publish_event("Opening fingers")
     service_call("openFingers")
-    time.sleep(0.01)
+
+    time.sleep(TIME_SLEEP_FOR_ROSSERIAL)
 
     # Step 6: Close Air
     print("\n... Closing vacuum")
     gripper.publish_event("Vacuum Off")
     service_call("closeValve")
+
+    time.sleep(TIME_SLEEP_FOR_ROSSERIAL)
 
     # Step 7: Finish saving bagfile
     stop_rosbag(command, rosbag_process)
