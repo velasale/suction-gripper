@@ -661,7 +661,7 @@ class RoboticGripper():
 
         return current_pose, success
 
-    def go_to_preliminary_position(self):
+    def go_to_preliminary_position(self, prelim_pose_in_degrees):
         """Reaches a desired joint position (Forward Kinematics)"""
 
         # --- Place marker with text in RVIZ
@@ -671,13 +671,16 @@ class RoboticGripper():
         # --- Initiate object joint
         goal_pose = self.move_group.get_current_joint_values()
         print(goal_pose)
-        #
-        goal_pose[0] = - 180 * pi / 180
-        goal_pose[1] = -  60 * pi / 180
-        goal_pose[2] = + 120 * pi / 180
-        goal_pose[3] = + 240 * pi / 180
-        goal_pose[4] = +  90 * pi / 180
-        goal_pose[5] = + 150 * pi / 180
+
+        goal_pose = np.multiply(pi/180,prelim_pose_in_degrees)
+        print('Goal Pose:\n', goal_pose)
+
+        # goal_pose[0] = - 180 * pi / 180
+        # goal_pose[1] = -  60 * pi / 180
+        # goal_pose[2] = + 120 * pi / 180
+        # goal_pose[3] = + 240 * pi / 180
+        # goal_pose[4] = +  90 * pi / 180
+        # goal_pose[5] = + 150 * pi / 180
 
         # goal_pose[0] = + 0.2
         # goal_pose[1] = - 1.4
@@ -949,7 +952,7 @@ class RoboticGripper():
 
 
     # def simple_pitch_roll(self, quat_x, quat_y, magnitude):
-    def simple_pitch_roll(self, axis, angle, cor, condition=False):
+    def simple_pitch_roll(self, axis, angle, cor, speed_factor, condition=False):
         """
             Adjusts the pitch and roll of the robotic arm.
 
@@ -1027,6 +1030,9 @@ class RoboticGripper():
         # Step 4: Move to the new goal
         pressure_threshold = self.PRESSURE_THRESHOLD
         self.move_group.set_pose_target(goal_pose_pframe.pose)
+
+        self.move_group.set_max_acceleration_scaling_factor(1)
+        self.move_group.set_max_velocity_scaling_factor(1)
 
         if condition:
             self.move_group.go(wait=False)
@@ -1724,46 +1730,60 @@ def pressure_control():
     gripper = RoboticGripper()
 
     # Parameters
-    ADJUST_DISTANCE = 0.0
-    ADJUST_SPEED_FACTOR = 0.03
+    ADJUST_DISTANCE = 0.02
+    ADJUST_SPEED_FACTOR = 0.25
     APPROACH_DISTANCE = 0.20
-    APPROACH_SPEED_FACTOR = 0.01
+    APPROACH_SPEED_FACTOR = 0.0005
     FRUITPICK_SPEED_FACTOR = 0.02
-    TIME_SLEEP_FOR_ROSSERIAL = 0.005
+    TIME_SLEEP_FOR_ROSSERIAL = 0.015
     MAX_ATTEMPTS = 10
     KP = 0.015
-    gripper.apple_pose = [  ,   ,   , 0.00, 0.00, 0.00]
+    gripper.apple_pose = [-0.43, -0.30 , 1.135 , 0.00, 0.00, 0.00]
+
+    # TODO: Why is not placeing ballons until it moves?
+    gripper.go_to_preliminary_position([-7.13, -54.61, 113.66, 266.56, 83.48, 50])
 
 
+    # Place Apple in Rviz
+    gripper.place_marker_sphere([1, 0, 0, 0.5], gripper.apple_pose[:3], gripper.APPLE_DIAMETER)
+    # Place Sphere in Rviz
+    gripper.place_marker_sphere([0, 1, 0, 0.5], gripper.apple_pose[:3], gripper.sphere_diam)
+
+    input("\n*** Press Enter ***")
 
     # Input from user
     # sequence 1: vac on / sense / rotate
     # sequence 2: vac on / sense / vac off / rotate
     # sequence 3: vac on / sense / vac off / back / rotate / approach
-    print("Experiment sequence (1, 2 or 3)")
-    sequence = 0
-    while (sequence != 1 and sequence != 2 and sequence != 2):
+    print("Choose experiment sequence (1, 2 or 3):")
+    sequence = ''
+    while (sequence != '1' and sequence != '2' and sequence != '3'):
         sequence = input()
 
-    print("Branch stiffness (high or low")
+    print("Choose branch stiffness (high or low):")
     stiffness = ''
-    while (stiffness != 'high' and sequence != 'low'):
+    while (stiffness != 'high' and stiffness != 'low'):
         stiffness = input()
         gripper.SPRING_STIFFNESS_LEVEL = stiffness
 
-    print("Initial offset (1cm or 2cm)")
-    offset = 0
-    while(offset != 1 or offset != 2):
+    print("Choose initial offset (1cm or 2cm):")
+    offset = ''
+    while (offset != '1' and offset != '2'):
         offset = input()
 
+
+    gripper.apply_offset(float(int(offset)/100),0, -0.10,0)
+
+    input("\n*** Press Enter ***")
+
     # Start recording bagfile
-    location = '/media/alejo/Elements/'
-    folder = 'Alejo - Experiments in Progress/'
+    location = '/home/alejo/gripper_ws/src/suction-gripper/data/'
+    folder = ''
     name = (datetime_simplified()
-            + "_stf_" + str(stiffness)
-            + "_offset_"
-            + "_seq_" + str(sequence)
-            + "_rep_" + str('todo')
+            + "__stf_" + str(stiffness)
+            + "__offset_" + str(offset)
+            + "__seq_" + str(sequence)
+            + "__rep_" + str('todo')
             )
     filename = location + folder + name
 
@@ -1803,26 +1823,30 @@ def pressure_control():
         ps3_mean = np.mean(ps3_list)
         print("\nMean pressure readings: ", int(ps1_mean), int(ps2_mean), int(ps3_mean))
 
+        # input("\n*** Press Enter ***")
+
         threshold = gripper.PRESSURE_THRESHOLD
         if (ps1_mean < threshold and ps2_mean < threshold and ps3_mean < threshold):
             print("All suction cups engaged!!!")
             break
 
         # B - Switch air off (depending on sequence)
-        if seq == 2 or seq == 3:
+        if sequence == '2' or sequence == '3':
             # Switch air off
             print("\n... Closing vacuum")
             gripper.publish_event("Vacuum Off")
             service_call("closeValve")
             time.sleep(TIME_SLEEP_FOR_ROSSERIAL)
 
+
         # C - Move back (depending on sequence)
-        if seq == 3:
+        if sequence == '3':
             print("\n... Moving back a bit")
             move = gripper.move_normal_until_suction(-0.9*ADJUST_DISTANCE, ADJUST_SPEED_FACTOR)
 
         # D - Adjust pose
         # Net Air Pressure magnitude and orientation
+        print("\n... Adjusting pose")
         magnitude, net_angle = olivia_test(ps1_mean, ps2_mean, ps3_mean)
         print("P_SUM magnitude %.2f, P_SUM angle %.2f" % (magnitude, math.degrees(net_angle)))
         magnitude = magnitude * KP
@@ -1832,17 +1856,17 @@ def pressure_control():
         # Find Center of rotation
         x,y = gripper.center_of_rotation(ps1_mean, ps2_mean, ps3_mean)
         # Adjust pose
-        gripper.simple_pitch_roll(axis_of_rotation, magnitude, [x,y], condition=False)
+        gripper.simple_pitch_roll(axis_of_rotation, magnitude, [x,y], ADJUST_SPEED_FACTOR, condition=False)
 
         # E - Switch air on (depending on sequence)
-        if seq == 2 or seq == 3:
+        if sequence == '2' or sequence == '3':
             print("\n... Applying vacuum")
             gripper.publish_event("Vacuum On")
             service_call("openValve")
             time.sleep(TIME_SLEEP_FOR_ROSSERIAL)
 
         # F - Approach again (depending on sequence
-        if seq == 3:
+        if sequence == '3':
             print("\n... Approaching apple")
             move = gripper.move_normal_until_suction(1.1*ADJUST_DISTANCE, ADJUST_SPEED_FACTOR, cups=2, condition=True)
 
@@ -1852,7 +1876,7 @@ def pressure_control():
     time.sleep(0.01)
 
     # Step 3: Deploy Fingers
-    rint("\n... Deploying fingers")
+    print("\n... Deploying fingers")
     gripper.publish_event("Closing fingers")
     service_call("closeFingers")
 
