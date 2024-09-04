@@ -41,7 +41,7 @@
     <joint name="world_small_table" type="fixed">
     <parent link="world" />
     <child link="small_table" />
-    <origin xyz="0 -1.35 0" rpy="0 0 1.5708" />
+    <origin xyz="0 -1.44 0" rpy="0 0 1.5708" />
     <!-- <origin xyz="-0.155 -1.50 0" rpy="0 0 1.5708" /> -->
     <!-- <origin xyz="-0.155 -1.65 0" rpy="0 0 1.5708" />    -->
 
