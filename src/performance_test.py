@@ -926,12 +926,13 @@ class RoboticGripper():
                 rospy.sleep(.1)  # Sleep .1 second
                 thr_cnt = 0
 
+                # --- Switch air-on
                 if self.tof_distance < 100:
                     print("\n... Applying vacuum")
                     self.publish_event("Vacuum On")
                     service_call("openValve")
 
-                # Check if air-pressure sensors are below the threshold
+                # --- Check if air-pressure signals are below the threshold
                 for i in [self.ps1, self.ps2, self.ps3]:
                     if i < airp_thr:
                         thr_cnt += 1
@@ -957,20 +958,17 @@ class RoboticGripper():
         return success
 
 
-    # def simple_pitch_roll(self, quat_x, quat_y, magnitude):
     def simple_pitch_roll(self, axis, angle, cor, speed_factor, condition=False):
         """
-            Adjusts the pitch and roll of the robotic arm.
-
-            Parameters:
-                axis (float): The axis around which to rotate.
-                angle (float): The angle to rotate.
-                cor (list of float): The center of rotation.
-                condition (bool, optional): If True, perform an additional check before stopping. Defaults to False.
-
-            Returns:
-                bool: True if the adjustment was successful, False otherwise.
-            """
+        Adjusts the orientation of the end effector with respect to a given center of rotation.
+        This method simply uses the axis-angle representation anc converts it into a quaternion.
+        @param axis [degrees]: orientation of the axis of rotation
+        @param angle [degrees]: magnitude of the angle of rotation
+        @param cor [list of floats]: x,y,z location of center of rotation
+        @param speed_factor:
+        @param condition:
+        @return:
+        """
 
         # --- Place marker with text in RVIZ
         caption = "Adjusting PITCH"
@@ -1050,7 +1048,7 @@ class RoboticGripper():
                 # print("Counter: %i, Air Presure %.2f" %(cnt, self.ps1))
                 cnt += 1
 
-                if (self.ps1 < airp_thr and self.ps2 < airp_thr and self.ps3 < airp_thr) or cnt > max_attempts:
+                if (self.ps1 < pressure_threshold and self.ps2 < pressure_threshold and self.ps3 < pressure_threshold) or cnt > max_attempts:
                     self.move_group.stop()
                     close = True
         else:
@@ -1735,10 +1733,10 @@ def real_picks(gripper=RoboticGripper()):
 
 def pressure_control():
 
-    # Instantiate gripper
+    # --- Instantiate gripper
     gripper = RoboticGripper()
 
-    # Parameters
+    # --- Parameters
     SERVO_ADJUST_DISTANCE = 0.01
     SERVO_ADJUST_SPEEDFACTOR = 0.35
 
@@ -1749,22 +1747,10 @@ def pressure_control():
     TIME_SLEEP_FOR_ROSSERIAL = 0.020
     MAX_ATTEMPTS = 10
     KP = 0.015
-    # gripper.apple_pose = [-0.43, -0.30 , 1.135 , 0.00, 0.00, 0.00]
-    gripper.apple_pose = [-0.285, -0.30, 1.135, 0.00, 0.00, 0.00]
 
-    # TODO: Why is not placeing ballons until it moves?
-    # gripper.go_to_preliminary_position([-7.13, -54.61, 113.66, 266.56, 83.48, 50])
-    gripper.go_to_preliminary_position([-22.9, -54.64, 115.79, 261.28, 71.74, 56.84])
+    # TODO: Why is not placing ballons until it moves?
 
-
-    # Place Apple in Rviz
-    gripper.place_marker_sphere([1, 0, 0, 0.5], gripper.apple_pose[:3], gripper.APPLE_DIAMETER)
-    # Place Sphere in Rviz
-    gripper.place_marker_sphere([0, 1, 0, 0.5], gripper.apple_pose[:3], gripper.sphere_diam)
-
-    input("\n*** Press Enter ***")
-
-    # Input from user
+    # --- Inputs from user
     # sequence 1: vac on / sense / rotate
     # sequence 2: vac on / sense / vac off / rotate
     # sequence 3: vac on / sense / vac off / back / rotate / approach
@@ -1779,17 +1765,29 @@ def pressure_control():
         stiffness = input()
         gripper.SPRING_STIFFNESS_LEVEL = stiffness
 
+    # Location of apple with LOW stiffness stem
+    if stiffness == 'low':
+        gripper.apple_pose = [-0.285, -0.30, 1.135, 0.00, 0.00, 0.00]
+        gripper.go_to_preliminary_position([-22.9, -54.64, 115.79, 261.28, 71.74, 56.84])
+
+    # Location of apple with HIGH stiffness stem
+    if stiffness == 'high':
+        gripper.apple_pose = [-0.43, -0.30, 1.135, 0.00, 0.00, 0.00]
+        gripper.go_to_preliminary_position([-7.13, -54.61, 113.66, 266.56, 83.48, 50])
+
+    # Place Apple and Sphere in Rviz
+    gripper.place_marker_sphere([1, 0, 0, 0.5], gripper.apple_pose[:3], gripper.APPLE_DIAMETER)
+    gripper.place_marker_sphere([0, 1, 0, 0.5], gripper.apple_pose[:3], gripper.sphere_diam)
+
     print("Choose initial offset (1cm or 2cm or 3cm):")
     offset = ''
     while (offset != '1' and offset != '2' and offset != '3'):
         offset = input()
-
-
     gripper.apply_offset(float(int(offset)/100),0, -0.10,0)
 
-    input("\n*** Press Enter ***")
+    input("\n*** Press Enter to begin sequence***")
 
-    # Start recording bagfile
+    # --- Start recording bagfile
     location = '/home/alejo/gripper_ws/src/suction-gripper/data/'
     folder = ''
     name = (datetime_simplified()
@@ -1808,18 +1806,12 @@ def pressure_control():
     print("\n... Start recording Rosbag")
     time.sleep(1)
 
-    # Step 1: Initial approach to fruit
+    # --- Step 1: Initial approach to fruit
     # A - Move in a straight line
     print("\n... Approaching apple")
     move = gripper.move_normal_until_suction(APPROACH_DISTANCE, APPROACH_SPEED_FACTOR, cups=1, condition=True)
-    # B - Turn vacuum on
 
-        # print("\n... Applying vacuum")
-        # gripper.publish_event("Vacuum On")
-        # service_call("openValve")
-
-
-    # Step 2: Control loop
+    # --- Step 2: Control loop
     cnt = 0
     while cnt < MAX_ATTEMPTS:
 
@@ -1837,21 +1829,17 @@ def pressure_control():
         ps3_mean = np.mean(ps3_list)
         print("\nMean pressure readings: ", int(ps1_mean), int(ps2_mean), int(ps3_mean))
 
-        # input("\n*** Press Enter ***")
-
         threshold = gripper.PRESSURE_THRESHOLD
-        if (ps1_mean < threshold and ps2_mean < threshold and ps3_mean < threshold):
+        if ps1_mean < threshold and ps2_mean < threshold and ps3_mean < threshold:
             print("All suction cups engaged!!!")
             break
 
         # B - Switch air off (depending on sequence)
         if sequence == '2' or sequence == '3':
-            # Switch air off
             print("\n... Closing vacuum")
             gripper.publish_event("Vacuum Off")
             service_call("closeValve")
             time.sleep(TIME_SLEEP_FOR_ROSSERIAL)
-
 
         # C - Move back (depending on sequence)
         if sequence == '3':
