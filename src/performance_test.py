@@ -1745,8 +1745,9 @@ def pressure_control():
     APPROACH_SPEED_FACTOR = 0.0005
 
     FRUITPICK_SPEED_FACTOR = 0.02
+
     TIME_SLEEP_FOR_ROSSERIAL = 0.020
-    MAX_ATTEMPTS = 10
+    MAX_ATTEMPTS = 5
     KP = 0.015
 
     # TODO: Why is not placing balloons until it moves?
