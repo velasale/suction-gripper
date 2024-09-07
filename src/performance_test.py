@@ -1856,35 +1856,35 @@ def pressure_control():
         axis_of_rotation = net_angle - 90
         print('Axis of rotation %.0f' % axis_of_rotation)
         # Find Center of rotation
-        x,y = gripper.center_of_rotation(ps1_mean, ps2_mean, ps3_mean)
+        x, y = gripper.center_of_rotation(ps1_mean, ps2_mean, ps3_mean)
         # Adjust pose
-        gripper.simple_pitch_roll(axis_of_rotation, magnitude, [x,y], SERVO_ADJUST_SPEEDFACTOR, condition=False)
+        gripper.simple_pitch_roll(axis_of_rotation, magnitude, [x, y], SERVO_ADJUST_SPEEDFACTOR, condition=False)
 
-        # E - Switch air on (depending on sequence)
+        # E - Switch air back on (depending on sequence)
         if sequence == '2' or sequence == '3':
             print("\n... Applying vacuum")
             gripper.publish_event("Vacuum On")
             service_call("openValve")
             time.sleep(TIME_SLEEP_FOR_ROSSERIAL)
 
-        # F - Approach again (depending on sequence
+        # F - Approach again (depending on sequence)
         if sequence == '3':
             print("\n... Approaching apple")
             move = gripper.move_normal_until_suction(1.1*SERVO_ADJUST_DISTANCE, SERVO_ADJUST_SPEEDFACTOR, cups=2, condition=True)
 
-        cnt +=1
+        cnt += 1
         print(cnt)
 
     time.sleep(TIME_SLEEP_FOR_ROSSERIAL)
 
-    # Step 3: Deploy Fingers
+    # --- Step 3: Deploy Fingers
     print("\n... Deploying fingers")
     gripper.publish_event("Closing fingers")
     service_call("closeFingers")
 
     time.sleep(TIME_SLEEP_FOR_ROSSERIAL)
 
-    # Step 4: Pick Apple
+    # --- Step 4: Pick Apple
     print("\n... Picking Apple")
     gripper.publish_event("Retrieve")
     move = gripper.move_normal_until_suction(gripper.RETRIEVE, FRUITPICK_SPEED_FACTOR)
@@ -1892,25 +1892,24 @@ def pressure_control():
 
     time.sleep(TIME_SLEEP_FOR_ROSSERIAL)
 
-    # Step 5: Open fingers
+    # --- Step 5: Open fingers
     print("\n... Opening fingers")
     gripper.publish_event("Opening fingers")
     service_call("openFingers")
 
     time.sleep(TIME_SLEEP_FOR_ROSSERIAL)
 
-    # Step 6: Close Air
+    # --- Step 6: Close Air
     print("\n... Closing vacuum")
     gripper.publish_event("Vacuum Off")
     service_call("closeValve")
 
     time.sleep(TIME_SLEEP_FOR_ROSSERIAL)
 
-    # Step 7: Finish saving bagfile
+    # --- Step 7: Finish saving bagfile and metadata
     stop_rosbag(command, rosbag_process)
     print("\n... Stop recording Rosbag")
     time.sleep(1)
-
     # Save metadata in yaml file
     gripper.save_metadata(filename)
     print("\n... Saving metadata in *yaml file")
