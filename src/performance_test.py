@@ -912,16 +912,17 @@ class RoboticGripper():
         waypoints.append(copy.deepcopy(goal_pose_pframe.pose))
         (plan, fraction) = self.move_group.compute_cartesian_path(waypoints, 0.01, 0.0)
 
-        if condition == True:
-            # Stop if sensors are engaged
-            self.move_group.set_max_acceleration_scaling_factor(speed_factor)
-            self.move_group.set_max_velocity_scaling_factor(speed_factor)
+        self.move_group.set_max_acceleration_scaling_factor(speed_factor)
+        self.move_group.set_max_velocity_scaling_factor(speed_factor)
+
+        if condition:
+            # --- Stop if sensors are engaged
             self.move_group.execute(plan, wait=False)
             close = False
             cnt = 0
             tof_flag = 0
             airp_thr = self.PRESSURE_THRESHOLD
-            while close is False:
+            while not close:
                 rospy.sleep(.1)  # Sleep .1 second
                 thr_cnt = 0
 
@@ -937,7 +938,7 @@ class RoboticGripper():
                     if i < airp_thr:
                         thr_cnt += 1
 
-                # --- Stop motion when one of these conditions is met
+                # --- Stop motion if one of these conditions is met
                 if cnt == 50 or thr_cnt >= cups:
                     self.move_group.stop()
                     close = True
@@ -945,8 +946,6 @@ class RoboticGripper():
                 cnt += 1
             print('finished moving')
         else:
-            self.move_group.set_max_acceleration_scaling_factor(speed_factor)
-            self.move_group.set_max_velocity_scaling_factor(speed_factor)
             self.move_group.execute(plan, wait=True)
             self.move_group.stop()
 
@@ -1046,12 +1045,20 @@ class RoboticGripper():
             max_attempts = 50
             while not close:
                 rospy.sleep(.1)
-                # print("Counter: %i, Air Presure %.2f" %(cnt, self.ps1))
-                cnt += 1
+                thr_cnt = 0
 
-                if (self.ps1 < pressure_threshold and self.ps2 < pressure_threshold and self.ps3 < pressure_threshold) or cnt > max_attempts:
+                # --- Check if air-pressure signals are below the threshold
+                for i in [self.ps1, self.ps2, self.ps3]:
+                    if i < pressure_threshold:
+                        thr_cnt += 1
+
+                # --- Stop motion if one of these conditions is met
+                if cnt == max_attempts or thr_cnt >= 3:
                     self.move_group.stop()
                     close = True
+
+                cnt += 1
+
         else:
             self.move_group.go(wait=True)
             self.move_group.stop()
@@ -1750,7 +1757,6 @@ def pressure_control():
     MAX_ATTEMPTS = 5
     KP = 0.015
 
-    # TODO: Why is not placing balloons until it moves?
 
     # --- Inputs from user
     # sequence 1: vac on / sense / rotate
@@ -1778,6 +1784,7 @@ def pressure_control():
         gripper.go_to_preliminary_position([-7.13, -54.61, 113.66, 266.56, 83.48, 50])
 
     # Place Apple and Sphere in Rviz
+    # TODO: Why is not placing balloons until it moves?
     gripper.place_marker_sphere([1, 0, 0, 0.5], gripper.apple_pose[:3], gripper.APPLE_DIAMETER)
     gripper.place_marker_sphere([0, 1, 0, 0.5], gripper.apple_pose[:3], gripper.sphere_diam)
 
@@ -1859,7 +1866,7 @@ def pressure_control():
         # Find Center of rotation
         x, y = gripper.center_of_rotation(ps1_mean, ps2_mean, ps3_mean)
         # Adjust pose
-        gripper.simple_pitch_roll(axis_of_rotation, magnitude, [x, y], SERVO_ADJUST_SPEEDFACTOR, condition=False)
+        gripper.simple_pitch_roll(axis_of_rotation, magnitude, [x, y], SERVO_ADJUST_SPEEDFACTOR, condition=True)
 
         # --- E - Switch air back on (depending on sequence)
         if sequence == '2' or sequence == '3':
