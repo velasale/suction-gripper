@@ -874,7 +874,7 @@ class RoboticGripper():
 
         @param z:
         @param cups: Number of cups that need to engage before stopping
-        @param condition: This is meant to stop the movement if the suction cups engage
+        @param condition: This is meant to stop the movement if suction cups engage
         @return:
         """
 
@@ -898,9 +898,7 @@ class RoboticGripper():
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             raise
 
-        # print('before',cur_pose_ezframe)
         cur_pose_ezframe.pose.position.z += z
-        # print('after',cur_pose_ezframe)
         cur_pose_ezframe.header.stamp = rospy.Time(0)
 
         # ---- Step 3: Transform again the goal pose into the planning frame
@@ -915,27 +913,30 @@ class RoboticGripper():
         (plan, fraction) = self.move_group.compute_cartesian_path(waypoints, 0.01, 0.0)
 
         if condition == True:
-            # Condition to stop if it senses the three sensors engaged
+            # Stop if sensors are engaged
             self.move_group.set_max_acceleration_scaling_factor(speed_factor)
             self.move_group.set_max_velocity_scaling_factor(speed_factor)
             self.move_group.execute(plan, wait=False)
             close = False
             cnt = 0
+            tof_flag = 0
             airp_thr = self.PRESSURE_THRESHOLD
             while close is False:
                 rospy.sleep(.1)  # Sleep .1 second
                 thr_cnt = 0
 
                 # --- Switch air-on
-                if self.tof_distance < 100:
+                if self.tof_distance < 100 and tof_flag == 0:
                     print("\n... Applying vacuum")
                     self.publish_event("Vacuum On")
                     service_call("openValve")
+                    tof_flag = 1
 
                 # --- Check if air-pressure signals are below the threshold
                 for i in [self.ps1, self.ps2, self.ps3]:
                     if i < airp_thr:
                         thr_cnt += 1
+
                 # Stop approach when one of these conditions is met
                 if cnt == 50 or thr_cnt >= cups:
                     self.move_group.stop()
@@ -1756,12 +1757,12 @@ def pressure_control():
     # sequence 3: vac on / sense / vac off / back / rotate / approach
     print("Choose experiment sequence (1, 2 or 3):")
     sequence = ''
-    while (sequence != '1' and sequence != '2' and sequence != '3'):
+    while sequence != '1' and sequence != '2' and sequence != '3':
         sequence = input()
 
     print("Choose branch stiffness (high or low):")
     stiffness = ''
-    while (stiffness != 'high' and stiffness != 'low'):
+    while stiffness != 'high' and stiffness != 'low':
         stiffness = input()
         gripper.SPRING_STIFFNESS_LEVEL = stiffness
 
@@ -1781,7 +1782,7 @@ def pressure_control():
 
     print("Choose initial offset (1cm or 2cm or 3cm):")
     offset = ''
-    while (offset != '1' and offset != '2' and offset != '3'):
+    while offset != '1' and offset != '2' and offset != '3':
         offset = input()
     gripper.apply_offset(float(int(offset)/100),0, -0.10,0)
 
