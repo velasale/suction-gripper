@@ -1739,7 +1739,7 @@ def real_picks(gripper=RoboticGripper()):
                 print("\n... Saving metadata in *yaml file")
 
 
-def pressure_control():
+def pressure_servoing():
 
     # --- Instantiate gripper
     gripper = RoboticGripper()
@@ -1928,4 +1928,4 @@ if __name__ == '__main__':
     # real_picks()
     # just record camera
 
-    pressure_control()
+    pressure_servoing()
