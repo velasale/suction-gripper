@@ -937,7 +937,7 @@ class RoboticGripper():
                     if i < airp_thr:
                         thr_cnt += 1
 
-                # Stop approach when one of these conditions is met
+                # --- Stop motion when one of these conditions is met
                 if cnt == 50 or thr_cnt >= cups:
                     self.move_group.stop()
                     close = True
@@ -1749,7 +1749,7 @@ def pressure_control():
     MAX_ATTEMPTS = 10
     KP = 0.015
 
-    # TODO: Why is not placing ballons until it moves?
+    # TODO: Why is not placing balloons until it moves?
 
     # --- Inputs from user
     # sequence 1: vac on / sense / rotate
@@ -1807,8 +1807,7 @@ def pressure_control():
     print("\n... Start recording Rosbag")
     time.sleep(1)
 
-    # --- Step 1: Initial approach to fruit
-    # A - Move in a straight line
+    # --- Step 1: Initial approach to fruit in a straight line
     print("\n... Approaching apple")
     move = gripper.move_normal_until_suction(APPROACH_DISTANCE, APPROACH_SPEED_FACTOR, cups=1, condition=True)
 
@@ -1816,7 +1815,7 @@ def pressure_control():
     cnt = 0
     while cnt < MAX_ATTEMPTS:
 
-        # A - Sense: Pressure Readings
+        # --- A - Sense: Pressure Readings
         ps1_list = []
         ps2_list = []
         ps3_list = []
@@ -1835,19 +1834,19 @@ def pressure_control():
             print("All suction cups engaged!!!")
             break
 
-        # B - Switch air off (depending on sequence)
+        # --- B - Switch air off (depending on sequence)
         if sequence == '2' or sequence == '3':
             print("\n... Closing vacuum")
             gripper.publish_event("Vacuum Off")
             service_call("closeValve")
             time.sleep(TIME_SLEEP_FOR_ROSSERIAL)
 
-        # C - Move back (depending on sequence)
+        # --- C - Move back (depending on sequence)
         if sequence == '3':
             print("\n... Moving back a bit")
             move = gripper.move_normal_until_suction(-0.9*SERVO_ADJUST_DISTANCE, SERVO_ADJUST_SPEEDFACTOR)
 
-        # D - Adjust pose
+        # --- D - Adjust pose
         # Net Air Pressure magnitude and orientation
         print("\n... Adjusting pose")
         magnitude, net_angle = olivia_test(ps1_mean, ps2_mean, ps3_mean)
@@ -1861,14 +1860,14 @@ def pressure_control():
         # Adjust pose
         gripper.simple_pitch_roll(axis_of_rotation, magnitude, [x, y], SERVO_ADJUST_SPEEDFACTOR, condition=False)
 
-        # E - Switch air back on (depending on sequence)
+        # --- E - Switch air back on (depending on sequence)
         if sequence == '2' or sequence == '3':
             print("\n... Applying vacuum")
             gripper.publish_event("Vacuum On")
             service_call("openValve")
             time.sleep(TIME_SLEEP_FOR_ROSSERIAL)
 
-        # F - Approach again (depending on sequence)
+        # --- F - Approach again (depending on sequence)
         if sequence == '3':
             print("\n... Approaching apple")
             move = gripper.move_normal_until_suction(1.1*SERVO_ADJUST_DISTANCE, SERVO_ADJUST_SPEEDFACTOR, cups=2, condition=True)
@@ -1889,7 +1888,6 @@ def pressure_control():
     print("\n... Picking Apple")
     gripper.publish_event("Retrieve")
     move = gripper.move_normal_until_suction(gripper.RETRIEVE, FRUITPICK_SPEED_FACTOR)
-    # move = gripper.move_normal_until_suction(0.03, FRUITPICK_SPEED_FACTOR)
 
     time.sleep(TIME_SLEEP_FOR_ROSSERIAL)
 
