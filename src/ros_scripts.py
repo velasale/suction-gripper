@@ -351,7 +351,7 @@ def main():
     # folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/04 - 2023 summer - suctionCup gripper/LOW STIFFNESS/'
 
     # --- Prosser Data ---
-    folder = 'Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/Dataset - apple picks/'
+    # folder = 'Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/Dataset - apple picks/'
     # file = '2023111_realapple7_mode_dual_attempt_1_orientation_0_yaw_0.bag'
 
     # --- Proxy Data ---
@@ -359,6 +359,9 @@ def main():
 
     # --- Occlusions ----
     # folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/06 - 2024 summer - occlusion trials/cluster_occlusions/'
+
+    # --- Pressure Servoing ---
+    folder = 'Alejo - Air Pressure Servoing/Joes Videos/'
 
     location = storage + folder
 
@@ -379,8 +382,8 @@ def main():
 
                 # --- Otherwise extract topics
                 print('there is not a folder yet')
-                topic = "/camera/image_raw"
-                bag_to_pngs(location, filename, topic,'/pngs_inhand_cam')
+                # topic = "/camera/image_raw"
+                # bag_to_pngs(location, filename, topic,'/pngs_inhand_cam')
 
                 topic = "/usb_cam/image_raw"
                 bag_to_pngs(location, filename, topic, '/pngs_fixed_cam')

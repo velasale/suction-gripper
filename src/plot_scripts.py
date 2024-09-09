@@ -118,7 +118,7 @@ def running_plot_and_video(location, filename, experiment, xlabel='Elapsed time 
 
         fps = 9.93
 
-        speed_factor = 2
+        speed_factor = 1
 
         if out is None:
             out = cv2.VideoWriter(temporal_dir + 'party.avi', cv2.VideoWriter_fourcc(*'MP4V'), speed_factor * 10, (w, h))

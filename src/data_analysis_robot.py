@@ -42,7 +42,7 @@ from tqdm import tqdm
 
 ######## Self developed imports ########
 # from ros_scripts import *
-# from plot_scripts import *
+from plot_scripts import *
 from datascience_concepts import *
 
 import logging
@@ -650,9 +650,9 @@ def plot_and_video():
         storage = '/media/alejo/Elements/'
 
     ### RAL24 figures ###
-    folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/06 - 2024 summer - occlusion trials/cluster_occlusions/'
-    location = storage + folder
-    file = '20240628_proxy_sample_2_yaw_85_offset_0_rep_0_stiff_medium_force_medium'
+    # folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/06 - 2024 summer - occlusion trials/cluster_occlusions/'
+    # location = storage + folder
+    # file = '20240628_proxy_sample_2_yaw_85_offset_0_rep_0_stiff_medium_force_medium'
 
     # # --- Default Hard Drive ---
     # # folder = '/home/alejo/gripper_ws/src/suction-gripper/data/'
@@ -690,6 +690,12 @@ def plot_and_video():
     # location = storage + folder
     # filename = '2023111_realapple7_mode_dual_attempt_1_orientation_0_yaw_0'
 
+
+    # --- Pressure Servoing
+    folder = 'Alejo - Air Pressure Servoing/Joes Videos/'
+    file = '2024099__stf_medium__offset_1__seq_1__rep_todo'
+
+    location = storage + folder
     # --- 2. Turn bag into csvs if needed
     if os.path.isdir(location + file):
         print("csvs already created")
@@ -2807,10 +2813,10 @@ def main():
     # simple_suction_experiment()
 
     # proxy_trials()
-    real_trials()
+    # real_trials()
 
     ### Step4: Build video from pngs and a plot beside of it with a vertical line running ###
-    # plot_and_video()
+    plot_and_video()
 
     # TODO: Compare results between  get_detach_values() and get_forces_at_pick()
     # TODO: Interpret moments (lever = height of the rig)
