@@ -187,6 +187,7 @@ def relative_values(original_list, reference_value):
 
     return relative_list
 
+
 def time_between_events(first_event, second_event, events_list, time_list):
 
     ### Find indexes
@@ -202,6 +203,7 @@ def time_between_events(first_event, second_event, events_list, time_list):
     elapsed_time = second_time - first_time
 
     return elapsed_time
+
 
 def crop_lists(lower_bound, time_list, value_list):
     """
