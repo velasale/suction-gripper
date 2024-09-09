@@ -28,6 +28,9 @@ from geometry_msgs.msg import Pose, Point, Quaternion, Vector3, Polygon
 import moveit_commander
 import moveit_msgs.msg
 from std_msgs.msg import String, Int32, UInt16
+from actionlib_msgs.msg import GoalStatusArray
+from moveit_msgs.msg import MoveGroupActionFeedback, MoveGroupGoal, MoveGroupActionResult
+
 import tf
 from tf.transformations import euler_from_quaternion, quaternion_about_axis, quaternion_from_euler
 import tf2_ros
@@ -322,6 +325,12 @@ class RoboticGripper():
         self.ps3 = 1000.00
         self.tof_sub = rospy.Subscriber('/gripper/distance', UInt16, self.read_tof_distance, queue_size=1)
         self.tof_distance = 1000.00
+
+        self.moveit_state_sub = rospy.Subscriber('/move_group/feedback', MoveGroupActionFeedback, self.moveit_feedback_cb)
+        self.moveit_state = []
+
+        self.moveit_result_sub = rospy.Subscriber('/move_group/result', MoveGroupActionResult, self.moveit_result_cb, queue_size=10)
+        self.moveit_result_var = []
 
         planning_frame = move_group.get_planning_frame()
         print("=========== Planning frame: %s" % planning_frame)
@@ -671,10 +680,10 @@ class RoboticGripper():
 
         # --- Initiate object joint
         goal_pose = self.move_group.get_current_joint_values()
-        print(goal_pose)
+        # print(goal_pose)
 
         goal_pose = np.multiply(pi/180,prelim_pose_in_degrees)
-        print('Goal Pose:\n', goal_pose)
+        # print('Goal Pose:\n', goal_pose)
 
         # goal_pose[0] = - 180 * pi / 180
         # goal_pose[1] = -  60 * pi / 180
@@ -939,9 +948,13 @@ class RoboticGripper():
                         thr_cnt += 1
 
                 # --- Stop motion if one of these conditions is met
-                if cnt == 50 or thr_cnt >= cups:
+                if cnt == 50 or thr_cnt >= cups or tof_flag == 1:
+                # https://docs.ros.org/en/jade/api/actionlib_msgs/html/msg/GoalStatus.html
                     self.move_group.stop()
                     close = True
+
+                print(cnt, self.moveit_state)
+
                 # print(cnt, self.ps1, self.ps2, self.ps3)
                 cnt += 1
             print('finished moving')
@@ -1039,7 +1052,7 @@ class RoboticGripper():
         self.move_group.set_max_velocity_scaling_factor(speed_factor)
 
         if condition:
-            self.move_group.go(wait=False)
+            motion_flag = self.move_group.go(wait=False)
             close = False
             cnt = 0
             max_attempts = 50
@@ -1053,10 +1066,12 @@ class RoboticGripper():
                         thr_cnt += 1
 
                 # --- Stop motion if one of these conditions is met
-                if cnt == max_attempts or thr_cnt >= 3:
+                # https://robotics.stackexchange.com/questions/77823/how-to-check-sate-of-plan-execution-in-moveit-during-async-execution-in-python
+                if cnt == max_attempts or thr_cnt >= 3 or self.moveit_state == "IDLE":
                     self.move_group.stop()
                     close = True
 
+                # print('Simple pitch_roll counter:',cnt)
                 cnt += 1
 
         else:
@@ -1075,6 +1090,14 @@ class RoboticGripper():
 
 
     #### Air-Pressure methods ####
+    def moveit_feedback_cb(self, msg):
+        self.moveit_state = msg.feedback.state
+        # rospy.loginfo("Received /move_group/feedback: %s", msg.feedback.state)
+
+    def moveit_result_cb(self, msg):
+        self.moveit_result_var = msg.status.status
+        # rospy.loginfo("Received /move_group/result: %s", msg.status.status)
+
     def read_pressure1(self, msg):
         self.ps1 = msg.data
 
@@ -1747,6 +1770,7 @@ def pressure_servoing():
     # --- Parameters
     SERVO_ADJUST_DISTANCE = 0.01
     SERVO_ADJUST_SPEEDFACTOR = 0.35
+    # SERVO_ADJUST_SPEEDFACTOR = 0.80
 
     APPROACH_DISTANCE = 0.20
     APPROACH_SPEED_FACTOR = 0.0005
@@ -1767,9 +1791,9 @@ def pressure_servoing():
     while sequence != '1' and sequence != '2' and sequence != '3':
         sequence = input()
 
-    print("Choose branch stiffness (high or low):")
+    print("Choose branch stiffness (low, medium or high):")
     stiffness = ''
-    while stiffness != 'high' and stiffness != 'low':
+    while stiffness != 'high' and stiffness != 'low' and stiffness != 'medium':
         stiffness = input()
         gripper.SPRING_STIFFNESS_LEVEL = stiffness
 
@@ -1777,6 +1801,11 @@ def pressure_servoing():
     if stiffness == 'low':
         gripper.apple_pose = [-0.285, -0.30, 1.135, 0.00, 0.00, 0.00]
         gripper.go_to_preliminary_position([-22.9, -54.64, 115.79, 261.28, 71.74, 56.84])
+
+    # Location of apple with HIGH stiffness stem
+    if stiffness == 'medium':
+        gripper.apple_pose = [-0.36, -0.30, 1.135, 0.00, 0.00, 0.00]
+        gripper.go_to_preliminary_position([-11.92, -40.72, 107.92, 243.87, 85.91, 49.25])
 
     # Location of apple with HIGH stiffness stem
     if stiffness == 'high':
@@ -1811,7 +1840,15 @@ def pressure_servoing():
                               "experiment_steps",
                               "/gripper/distance",
                               "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3"]
-    command, rosbag_process = start_rosbag(filename, topics_without_cameras)
+
+    topics_with_cameras = ["wrench", "joint_states",
+                           "experiment_steps",
+                           "/gripper/distance",
+                           "/gripper/pressure/sc1", "/gripper/pressure/sc2", "/gripper/pressure/sc3",
+                           "/usb_cam/image_raw"
+                           ]
+
+    command, rosbag_process = start_rosbag(filename, topics_with_cameras)
     print("\n... Start recording Rosbag")
     time.sleep(1)
 
@@ -1827,7 +1864,7 @@ def pressure_servoing():
         ps1_list = []
         ps2_list = []
         ps3_list = []
-        readings = 20
+        readings = 10
         for i in range(readings):
             ps1_list.append(gripper.ps1)
             ps2_list.append(gripper.ps2)
