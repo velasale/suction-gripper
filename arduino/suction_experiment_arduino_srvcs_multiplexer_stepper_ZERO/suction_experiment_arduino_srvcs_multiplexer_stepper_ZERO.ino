@@ -68,7 +68,9 @@ Stepper myStepper(stepsPerRevolution, 9, 10, 11, 12);
 #define EOC_PIN   -1
 #define VALVE 7
 #define RESET_PRESSURE_SENSORS 6
-Adafruit_MPRLS mpr = Adafruit_MPRLS(RESET_PIN, EOC_PIN);
+// Adafruit_MPRLS mpr = Adafruit_MPRLS(RESET_PIN, EOC_PIN);
+Adafruit_MPRLS mpr = Adafruit_MPRLS(EOC_PIN);
+
 Adafruit_VL53L0X lox = Adafruit_VL53L0X();
 
 
