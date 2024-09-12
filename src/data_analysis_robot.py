@@ -760,6 +760,7 @@ class ApplePickTrial:
 
         self.metadata = metadata
         self.exp_type = metadata['general']['experiment type']
+        self.pressure_threshold = 60    # units: kPa
 
         # ------------------------ Data from csvs -----------------------------
         # Topic: Gripper's Pressure Sensors
@@ -880,7 +881,7 @@ class ApplePickTrial:
         self.apple_height = self.metadata['proxy']['apple height']
         self.apple_center_loc = [0, 0, 0]
 
-    # --- Functions and methods to use in different experiments ---
+    # --- GENERAL METHODS ---
     def initial_stamp(self):
         """ Takes the initial stamp from all the topics. This is useful to subtract it from all Time stamps and get a readable time"""
         try:
@@ -975,7 +976,7 @@ class ApplePickTrial:
 
         # self.check_errors()
 
-    # ---------------- METHODS FOR BRANCH STIFFNESS --------------
+    # --- METHODS RELATED TO BRANCH STIFFNESS ---
     def eef_location(self, plots='no'):
         """Obtain the 3d position of the End Effector"""
 
@@ -1297,7 +1298,7 @@ class ApplePickTrial:
         self.stiffness_lr_rvalue = lr_stiffness.rvalue
         self.travel_at_pick = delta_travel
 
-    # ----------- METHODS FOR EEF POSE W.R.T APPLE ---------
+    # --- METHODS RELATED TO EEF POSE W.R.T APPLE ---
     def apple_pose(self):
         """Returns as numpy arrays the coordinates of calix, north pole and abcission layer"""
 
@@ -1357,7 +1358,7 @@ class ApplePickTrial:
 
         return array_sp, array_np, array_ab
 
-    # --------------- METHODS FOR AIR PRESSURE -------------
+    # --- METHODS RELATED TO VACUUM & SUCTION CUPS ---
     def get_atmospheric_pressure(self):
         """Takes initial and last reading as the atmospheric pressure.
         Both are taken because in some cases the valve was already on, hence the last one (after valve is off) is also checked
@@ -1590,7 +1591,7 @@ class ApplePickTrial:
         logging.debug('Elapsed time @ engagement: %.2f sec (index %i)' % (time_of_index, pressure_index))
         logging.debug('Engagement Values: %.1f, %.1f, %.1f' % (self.sc1_value_at_engagement, self.sc2_value_at_engagement, self.sc3_value_at_engagement))
 
-        ### STEP 3: Set labels accodring to the vacuum threshold ###
+        ### STEP 3: Set labels according to the vacuum threshold ###
         sc_a_sensor_label = 'no'
         sc_b_sensor_label = 'no'
         sc_c_sensor_label = 'no'
@@ -1612,7 +1613,26 @@ class ApplePickTrial:
             print('Engagement Values: %.1f, %.1f, %.1f' % (self.sc1_value_at_engagement, self.sc2_value_at_engagement, self.sc3_value_at_engagement))
             print('Manual labels: %s, %s, %s' %(sc_a_manual_label, sc_b_manual_label, sc_c_manual_label))
 
-    # ------------ METHODS FOR PLOTS ----------------
+    def pressure_servoing_duration(self):
+
+        # --- Step 1: Find the index of the initial pressure drop for each suction cup
+        cnt = 0
+        for x in self.pressure_sc1_values:
+            if x < self.pressure_threshold:
+                break
+            cnt += 1
+
+        print('Suction cup A engaged at', self.pressure_sc1_elapsed_time[x])
+
+
+        # --- Step 2: Subtract the time between the latest and the earliest
+
+        servoing_time = 0
+
+        return servoing_time
+
+
+    # --- METHODS RELATED TO PLOTS ---
     def plots_stuff(self):
         """Plots wrench (forces and moments) and pressure readings"""
 
@@ -2554,10 +2574,10 @@ def real_trials():
     # folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'  # ArmFarm laptop - Hard Drive C
 
     # --- Field Trials at prosser --- #
-    folder = 'Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/'
+    # folder = 'Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/'
     # subfolders = ['Dataset - apple grasps/', 'Dataset - apple picks/']
     # subfolders = ['Dataset - apple grasps/']
-    subfolders = ['Dataset - apple picks/']
+    # subfolders = ['Dataset - apple picks/']
 
     # --- Proxy trials --- #
     # folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/05 - 2024 winter - finger and dual trials/'
@@ -2576,7 +2596,8 @@ def real_trials():
     # file = '2023111_realapple1_mode_dual_attempt_1_orientation_0_yaw_0'
 
     # --- Pressure Servoing
-    folder =
+    folder ='Alejo - Air Pressure Servoing/'
+    subfolders = ['high_stiffness/']
 
 
     ### Step 2: Define what variables to gather from trials ###
