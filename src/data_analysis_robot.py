@@ -2488,8 +2488,8 @@ def proxy_trials():
     # file = '2024072_proxy_sample_6_rep3_yaw_25_offset_0_rep_0_stiff_medium_force_medium'
 
     ### Prosser trials ###
-    folder = '/Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/Dataset - apple picks/'
-    file = '2023111_realapple1_mode_dual_attempt_1_orientation_0_yaw_0'
+    # folder = 'Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/Dataset - apple picks/'
+    # file = '2023111_realapple1_mode_dual_attempt_1_orientation_0_yaw_0'
     # file = '2023111_realapple1_mode_suction_attempt_1_orientation_0_yaw_0'
 
     ### ICRA24 Figures ###
@@ -2503,6 +2503,10 @@ def proxy_trials():
     # file = '20230731_proxy_sample_6_yaw_45_rep_0_stiff_low_force_low'
     # file = '20230922_realapple3_attempt_1_orientation_0_yaw_0'
     # file = '20230922_realapple2_attempt_1_orientation_0_yaw_0'
+
+    # --- Pressure Servoing ---
+    folder = 'Alejo - Air Pressure Servoing/Joes Videos/'
+    file = '20240911__stf_high__offset_2__seq_1__rep_todo'
 
     location = storage + folder
 
@@ -2570,6 +2574,10 @@ def real_trials():
     # file = '20230922_realapple3_attempt_1_orientation_0_yaw_0'
     # file = '20230922_realapple2_attempt_1_orientation_0_yaw_0'
     # file = '2023111_realapple1_mode_dual_attempt_1_orientation_0_yaw_0'
+
+    # --- Pressure Servoing
+    folder =
+
 
     ### Step 2: Define what variables to gather from trials ###
     stiffnesses = []
@@ -2812,11 +2820,11 @@ def main():
     # noise_experiments_pitch(exp_type='horizontal', radius=radius, variable=variable)
     # simple_suction_experiment()
 
-    # proxy_trials()
+    proxy_trials()
     # real_trials()
 
     ### Step4: Build video from pngs and a plot beside of it with a vertical line running ###
-    plot_and_video()
+    # plot_and_video()
 
     # TODO: Compare results between  get_detach_values() and get_forces_at_pick()
     # TODO: Interpret moments (lever = height of the rig)

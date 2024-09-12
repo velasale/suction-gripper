@@ -361,10 +361,9 @@ def main():
     # folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/06 - 2024 summer - occlusion trials/cluster_occlusions/'
 
     # --- Pressure Servoing ---
-    folder = 'Alejo - Air Pressure Servoing/Joes Videos/'
+    folder = 'Alejo - Air Pressure Servoing/low_stiffness/'
 
     location = storage + folder
-
     open_batch = 'yes'
 
     if open_batch == 'yes':
@@ -386,9 +385,9 @@ def main():
                 # bag_to_pngs(location, filename, topic,'/pngs_inhand_cam')
 
                 topic = "/usb_cam/image_raw"
-                bag_to_pngs(location, filename, topic, '/pngs_fixed_cam')
+                # bag_to_pngs(location, filename, topic, '/pngs_fixed_cam')
 
-                bag_to_video(location, filename, topic)
+                # bag_to_video(location, filename, topic)
 
                 bag_to_csvs(location + filename)
 
