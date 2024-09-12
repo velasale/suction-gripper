@@ -693,7 +693,7 @@ def plot_and_video():
 
     # --- Pressure Servoing
     folder = 'Alejo - Air Pressure Servoing/Joes Videos/'
-    file = '2024099__stf_medium__offset_1__seq_1__rep_todo'
+    file = '20240911__stf_high__offset_3__seq_1__rep_todo'
 
     location = storage + folder
     # --- 2. Turn bag into csvs if needed

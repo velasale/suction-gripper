@@ -1805,12 +1805,14 @@ def pressure_servoing():
     # Location of apple with HIGH stiffness stem
     if stiffness == 'medium':
         gripper.apple_pose = [-0.36, -0.30, 1.135, 0.00, 0.00, 0.00]
-        gripper.go_to_preliminary_position([-11.92, -40.72, 107.92, 243.87, 85.91, 49.25])
+        # gripper.go_to_preliminary_position([-11.92, -40.72, 107.92, 243.87, 85.91, 49.25])
+        gripper.go_to_preliminary_position([-164, -168, -87, -56.26, -69, 28])
 
     # Location of apple with HIGH stiffness stem
     if stiffness == 'high':
         gripper.apple_pose = [-0.43, -0.30, 1.135, 0.00, 0.00, 0.00]
-        gripper.go_to_preliminary_position([-7.13, -54.61, 113.66, 266.56, 83.48, 50])
+        # gripper.go_to_preliminary_position([-7.13, -54.61, 113.66, 266.56, 83.48, 50])
+        gripper.go_to_preliminary_position([-159.18, -168.81, -83.02, -61.85, -68.54, 28])
 
     # Place Apple and Sphere in Rviz
     # TODO: Why is not placing balloons until it moves?
@@ -1821,7 +1823,7 @@ def pressure_servoing():
     offset = ''
     while offset != '1' and offset != '2' and offset != '3':
         offset = input()
-    gripper.apply_offset(float(int(offset)/100),0, -0.10,0)
+    gripper.apply_offset(float(int(offset)/100),0, -0.15,0)
 
     input("\n*** Press Enter to begin sequence***")
 
