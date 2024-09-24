@@ -784,6 +784,8 @@ class ApplePickTrial:
         self.sc2_value_at_engagement = 0.00
         self.sc3_value_at_engagement = 0.00
 
+        self.all_cups_engagement_elapsed_time = 0.00
+
         # Topic: Gripper's ToF Sensor
         self.tof_time_stamp = []
         self.tof_elapsed_time = []
@@ -1564,10 +1566,14 @@ class ApplePickTrial:
             self.errors.append("Cup collapsed after retrieve")
 
     def suction_engagement(self, vacuum_thr=60):
-        # Reads sensor values to see whether the cup was engaged or not
+        """
+        Reads sensor values to see whether the suction cup got engaged or not
+        @param vacuum_thr:
+        @return:
+        """
 
         #### STEP 1: Find index when cups allegedly engaged with apple ###
-        idx=0
+        idx = 0
         for count, event in enumerate(self.event_values):
             if event == 'Labeling cups':
                 idx = count
@@ -1614,20 +1620,40 @@ class ApplePickTrial:
             print('Manual labels: %s, %s, %s' %(sc_a_manual_label, sc_b_manual_label, sc_c_manual_label))
 
     def pressure_servoing_duration(self):
+        """
+        Method to obtain the time elapsed between the engagement of the first and last suction cup
+        @return: servoing_time
+        """
+
+        times_of_engagement = []
 
         # --- Step 1: Find the index of the initial pressure drop for each suction cup
-        cnt = 0
-        for x in self.pressure_sc1_values:
-            if x < self.pressure_threshold:
+        for sc_A, pressure in enumerate(self.pressure_sc1_values):
+            if pressure < self.pressure_threshold:
                 break
-            cnt += 1
+        time_when_engaged = self.pressure_sc1_elapsed_time[sc_A]
+        times_of_engagement.append(time_when_engaged)
+        print('Suction cup A engaged at', time_when_engaged)
 
-        print('Suction cup A engaged at', self.pressure_sc1_elapsed_time[x])
+        for sc_B, pressure in enumerate(self.pressure_sc2_values):
+            if pressure < self.pressure_threshold:
+                break
+        time_when_engaged = self.pressure_sc2_elapsed_time[sc_B]
+        times_of_engagement.append(time_when_engaged)
+        print('Suction cup B engaged at', time_when_engaged)
 
+        for sc_C, pressure in enumerate(self.pressure_sc3_values):
+            if pressure < self.pressure_threshold:
+                break
+        time_when_engaged = self.pressure_sc3_elapsed_time[sc_C]
+        times_of_engagement.append(time_when_engaged)
+        print('Suction cup C engaged at', time_when_engaged)
 
         # --- Step 2: Subtract the time between the latest and the earliest
+        servoing_time = max(times_of_engagement) - min(times_of_engagement)
+        print('Servoing time: ', servoing_time)
 
-        servoing_time = 0
+        self.all_cups_engagement_elapsed_time = servoing_time
 
         return servoing_time
 
@@ -2552,6 +2578,7 @@ def proxy_trials():
 
     # --- 5. Get different features for the experiment
     experiment.get_features()
+    experiment.pressure_servoing_duration()
 
     # --- 6. Plot
     experiment.plot_only_pressure(start_time=0)
@@ -2599,7 +2626,6 @@ def real_trials():
     folder ='Alejo - Air Pressure Servoing/'
     subfolders = ['high_stiffness/']
 
-
     ### Step 2: Define what variables to gather from trials ###
     stiffnesses = []
     max_normalForces = []
@@ -2612,6 +2638,7 @@ def real_trials():
     sc1_values_at_eng = []
     sc2_values_at_eng = []
     sc3_values_at_eng = []
+    servoing_times = []
 
     folder = storage + folder
 
@@ -2656,8 +2683,8 @@ def real_trials():
                 ### STEP 4: Apply filter
                 # a,d,e: successful, b,c: un-successful
                 # if pick != 'c':         # c: unsuccessful
-                if pick == 'a' or pick == 'd' or pick == 'e':     # Successful picks
-                # if True:
+                # if pick == 'a' or pick == 'd' or pick == 'e':     # Successful picks
+                if True:
                 # if mode == 'suction':
 
                     ### STEP 4: Read values from 'csv'
@@ -2671,6 +2698,7 @@ def real_trials():
                         experiment.pick_forces()
                         experiment.pick_stiffness(plots='no')
                     experiment.suction_engagement()
+                    experiment.pressure_servoing_duration()
 
                     ### STEP 6: Append variables of interest
                     if experiment.stiffness_lr_rvalue > 0.95:
@@ -2681,6 +2709,7 @@ def real_trials():
                     thetas.append(experiment.theta_at_pick)
                     deltas.append(experiment.travel_at_pick)
                     apple_ids.append(experiment.apple_id)
+                    servoing_times.append(experiment.all_cups_engagement_elapsed_time)
 
                     air_pres_thr = 120       # @ Corvallis, atmospheric air pressure ~115kPa
                     if experiment.sc1_value_at_engagement < air_pres_thr:
@@ -2696,6 +2725,9 @@ def real_trials():
                     ### STEP 7: Single trial plots
                     # experiment.plot_only_pressure(type='single')
                     # experiment.plot_only_total_force()
+
+    if len(servoing_times) > 1:
+        print()
 
     ### STEP 8: Grouped trial plots
     if len(stiffnesses) > 1:
