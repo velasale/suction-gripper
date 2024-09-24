@@ -2727,7 +2727,7 @@ def real_trials():
                     # experiment.plot_only_total_force()
 
     if len(servoing_times) > 1:
-        print()
+        print('Servoing times', servoing_times)
 
     ### STEP 8: Grouped trial plots
     if len(stiffnesses) > 1:
@@ -2873,8 +2873,8 @@ def main():
     # noise_experiments_pitch(exp_type='horizontal', radius=radius, variable=variable)
     # simple_suction_experiment()
 
-    proxy_trials()
-    # real_trials()
+    # proxy_trials()
+    real_trials()
 
     ### Step4: Build video from pngs and a plot beside of it with a vertical line running ###
     # plot_and_video()
