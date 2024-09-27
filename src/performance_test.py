@@ -991,13 +991,13 @@ class RoboticGripper():
         tf_buffer = tf2_ros.Buffer()
         listener = tf2_ros.TransformListener(tf_buffer)
 
-        # Step 1: Read the current pose in the planning frame
+        # --- Step 1: Read the current pose in the planning frame
         cur_pose_pframe = tf2_geometry_msgs.PoseStamped()
         cur_pose_pframe.pose = self.move_group.get_current_pose().pose
         cur_pose_pframe.header.frame_id = self.planning_frame
         cur_pose_pframe.header.stamp = rospy.Time(0)
 
-        # Step 2: Transform current pose into intuitive cframe
+        # --- Step 2: Transform current pose into intuitive cframe
         # A - Translate
         try:
             cur_pose_ezframe_step1 = tf_buffer.transform(cur_pose_pframe, 'eef', rospy.Duration(1))
@@ -1056,6 +1056,7 @@ class RoboticGripper():
             close = False
             cnt = 0
             max_attempts = 50
+
             while not close:
                 rospy.sleep(.1)
                 thr_cnt = 0

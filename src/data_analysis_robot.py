@@ -244,6 +244,27 @@ def gmm_plot(data, labels, colors, linestyles):
     plt.legend()
 
 
+def features_from_filename(object, filename):
+
+    # --- Features for Pressure Servoing files
+    stiffness = filename.split('stf_')[1]
+    stiffness = stiffness.split('__offset')[0]
+    object.stiffness = stiffness
+
+    offset = filename.split('offset_')[1]
+    offset = int(offset.split('__seq')[0])
+    object.offset_eef_apple = offset
+
+    sequence = filename.split('seq_')[1]
+    sequence = int(sequence.split('__rep')[0])
+    object.sequence = sequence
+
+    rep = int(filename.split('rep_')[1])
+    object.repetition = rep
+
+    logging.debug('Trial sequence: %i, stiffness: %s, offset: %i, rep: %i' %(sequence, stiffness, offset, rep))
+
+
 
 # ------------------------ FORWARD KINEMATICS FUNCTIONS -------------------------------
 def DH_T(i, thetas, alphas, a_links, d_offsets):
@@ -757,6 +778,7 @@ class ApplePickTrial:
         self.filename = ""
         self.pitch = 0
         self.repetition = 0
+        self.sequence = 0
 
         self.metadata = metadata
         self.exp_type = metadata['general']['experiment type']
@@ -1316,7 +1338,7 @@ class ApplePickTrial:
         filename = '20231101_apples_coords.csv'
 
         folder = folder + filename
-        print(folder)
+        # print(folder)
         data_list = pd.read_csv(folder)
 
         array_sp = np.ones(3)
@@ -1628,30 +1650,38 @@ class ApplePickTrial:
         times_of_engagement = []
 
         # --- Step 1: Find the index of the initial pressure drop for each suction cup
+        flag = 3
         for sc_A, pressure in enumerate(self.pressure_sc1_values):
             if pressure < self.pressure_threshold:
+                flag -= 1
                 break
         time_when_engaged = self.pressure_sc1_elapsed_time[sc_A]
         times_of_engagement.append(time_when_engaged)
-        print('Suction cup A engaged at', time_when_engaged)
+        logging.debug('Suction cup A engaged at %.2f sec' %time_when_engaged)
 
         for sc_B, pressure in enumerate(self.pressure_sc2_values):
             if pressure < self.pressure_threshold:
+                flag -= 1
                 break
         time_when_engaged = self.pressure_sc2_elapsed_time[sc_B]
         times_of_engagement.append(time_when_engaged)
-        print('Suction cup B engaged at', time_when_engaged)
+        logging.debug('Suction cup B engaged at %i.2 sec' %time_when_engaged)
 
         for sc_C, pressure in enumerate(self.pressure_sc3_values):
             if pressure < self.pressure_threshold:
+                flag -= 1
                 break
         time_when_engaged = self.pressure_sc3_elapsed_time[sc_C]
         times_of_engagement.append(time_when_engaged)
-        print('Suction cup C engaged at', time_when_engaged)
+        logging.debug('Suction cup C engaged at %i.2 sec' %time_when_engaged)
 
-        # --- Step 2: Subtract the time between the latest and the earliest
+        # --- Step 2: Check if any suction cup didn't engage ---
+        if flag > 0:
+            print('\nWarning!, %i suction cups did not engage' %flag)
+
+        # --- Step 3: Subtract the time between the latest and the earliest
         servoing_time = max(times_of_engagement) - min(times_of_engagement)
-        print('Servoing time: ', servoing_time)
+        logging.debug('Servoing time to engage all suction cups %i.2: ' %servoing_time)
 
         self.all_cups_engagement_elapsed_time = servoing_time
 
@@ -1799,7 +1829,7 @@ class ApplePickTrial:
                     axis[i, 2].text(event, 0, label, rotation=90, color='black')
                     axis[i, 2].set_xlabel("Elapsed Time [sec]")
 
-    def plot_only_pressure(self, start_time=0,type='single_plot'):
+    def plot_only_pressure(self, start_time=0, type='single_plot'):
         """
         Plots only pressure readings
         @param type: 'single' to have the three suction cup plots in a single figure
@@ -1810,10 +1840,11 @@ class ApplePickTrial:
         ### Step1: Plot Parameters ###
         icra24_figure5_fonts = 24
         icra22_figure5_size = (14, 4)
+        iros24_figure3_size = (10, 4)
 
         FONTSIZE = 18
         TICKSIZE = 16
-        FIGURESIZE = icra22_figure5_size
+        FIGURESIZE = iros24_figure3_size
 
         lines = itertools.cycle(('dotted', 'dashed', 'dashdot'))
         colors = itertools.cycle(('orange', 'blue', 'green'))
@@ -1830,7 +1861,7 @@ class ApplePickTrial:
 
         pressure_times = [cropped_times1, cropped_times2, cropped_times3]
         pressure_values = [cropped_values1, cropped_values2, cropped_values3]
-        pressure_labels = ["cup A", "cup B", "cup C"]
+        pressure_labels = ["suction cup a", "suction cup b", "suction cup c"]
 
         event_x = self.event_elapsed_time
         event_y = self.event_values
@@ -1901,6 +1932,10 @@ class ApplePickTrial:
             plt.rc('font', family='serif')
             fig, ax = plt.subplots(figsize=FIGURESIZE)
 
+            # --- Plot experiment events for reference ---
+            for event, label in zip(event_x, event_y):
+                plt.axvline(x=event, color='black', linestyle='--', linewidth=1.5)
+                plt.text(event, 10, label.lower(), rotation=60, color='black', fontsize=TICKSIZE)
             cnt = 0
 
             #### Plot pressure signals ####
@@ -1913,7 +1948,7 @@ class ApplePickTrial:
             ax.set_ylim([0, 110])
             ax.tick_params(axis='x', labelsize=TICKSIZE)
             ax.tick_params(axis='y', labelsize=TICKSIZE)
-            ax.legend(loc='upper left', fontsize=TICKSIZE)
+
 
             #### Plot force ###
             ### Step2: Crop data if needed ###
@@ -1922,19 +1957,17 @@ class ApplePickTrial:
             ax2 = ax.twinx()
             ax2.plot(force_time, sumforce_values, linewidth=2, color='red', label='net force')
             ax2.set_ylabel("Force [N]", fontsize=FONTSIZE)
-            ax2.set_ylim([0, 50])
+            ax2.set_ylim([0, 30])
             ax2.tick_params(axis='y', labelsize=TICKSIZE)
+
+
+
+            ax.legend(loc='upper left', fontsize=TICKSIZE)
             ax2.legend(loc='upper right', fontsize=TICKSIZE)
-
-            # --- Plot experiment events for reference ---
-            for event, label in zip(event_x, event_y):
-                plt.axvline(x=event, color='black', linestyle='--', linewidth=1.5)
-                plt.text(event, 10, label.lower(), rotation=45, color='black', fontsize=TICKSIZE)
-
             plt.xlim([start_time,max(force_time)])
             # plt.xlim([0, 16])       # Fig.5 ICRA24
             # plt.xlim([0, 50])        # Fig.8 ICRA24
-            plt.title(self.filename)
+            # plt.title(self.filename)
 
             plt.grid()
             # plt.legend(fontsize=FONTSIZE)
@@ -2553,6 +2586,9 @@ def proxy_trials():
     # --- Pressure Servoing ---
     folder = 'Alejo - Air Pressure Servoing/Joes Videos/'
     file = '20240911__stf_high__offset_2__seq_1__rep_todo'
+    # folder = 'Alejo - Air Pressure Servoing/low_stiffness/'
+    # file = '2024094__stf_low__offset_2__seq_1__rep_3'
+    # file='2024095__stf_low__offset_3__seq_2__rep_1'
 
     location = storage + folder
 
@@ -2582,7 +2618,7 @@ def proxy_trials():
 
     # --- 6. Plot
     experiment.plot_only_pressure(start_time=0)
-    experiment.plot_only_total_force(start_time=0)
+    # experiment.plot_only_total_force(start_time=0)
 
     print(experiment.time_closing_fingers)
     plt.show()
@@ -2651,9 +2687,9 @@ def real_trials():
                 logging.debug('------------- Filename: %s ------------' %file)
                 only_name = file.split('.bag')[0]  # remove extension
                 file = only_name
-                print('\n\n', file)
+                # print('\n\n', file)
 
-                # Extract apple's id
+                # --- Extract apple's id
                 try:
                     apple_id = file.split('apple')[1]
                     apple_id = int(apple_id.split('_')[0])
@@ -2661,7 +2697,7 @@ def real_trials():
                 except IndexError:
                     apple_id = 1
 
-                ### STEP 1: Turn bag into csvs if needed
+                # --- STEP 1: Turn bag into csvs if needed
                 if os.path.isdir(location + file):
                     logging.debug('csvs were already generated')
                     pass
@@ -2669,12 +2705,14 @@ def real_trials():
                     logging.debug('make sure to import ros_scripts.py')
                     bag_to_csvs(location + file + ".bag")
 
-                ### STEP 2: Generate an experiment object for each file, and read its json file
+                # --- STEP 2: Generate an experiment object for each file, and read its json file
                 json_file = open(location + file + '.json')
                 json_data = json.load(json_file)
                 experiment = ApplePickTrial(apple_id=apple_id, metadata=json_data)
                 experiment.filename = file
                 logging.debug('metadata: %s' %experiment.metadata['general'])
+
+                features_from_filename(experiment, file)
 
                 ### STEP 3: Check conditions from metadata to continue with analysis
                 mode = experiment.metadata['robot']['actuation mode']
@@ -2684,8 +2722,11 @@ def real_trials():
                 # a,d,e: successful, b,c: un-successful
                 # if pick != 'c':         # c: unsuccessful
                 # if pick == 'a' or pick == 'd' or pick == 'e':     # Successful picks
-                if True:
+                # if True:
                 # if mode == 'suction':
+                if experiment.sequence == 1 and experiment.stiffness == 'high' and experiment.offset_eef_apple == 1:
+
+                    print('\n\n', file)
 
                     ### STEP 4: Read values from 'csv'
                     read_csvs(experiment, location + file)
@@ -2693,10 +2734,10 @@ def real_trials():
                     ### STEP 5: Get features for the experiment
                     experiment.get_features()
                     experiment.eef_location(plots='no')
-                    if subfolder != 'Dataset - apple grasps/':
-                        experiment.pick_points(plots='no')
-                        experiment.pick_forces()
-                        experiment.pick_stiffness(plots='no')
+                    # if subfolder != 'Dataset - apple grasps/':
+                        # experiment.pick_points(plots='no')
+                        # experiment.pick_forces()
+                        # experiment.pick_stiffness(plots='no')
                     experiment.suction_engagement()
                     experiment.pressure_servoing_duration()
 
@@ -2727,7 +2768,8 @@ def real_trials():
                     # experiment.plot_only_total_force()
 
     if len(servoing_times) > 1:
-        print('Servoing times', servoing_times)
+        print('Servoing times: ', servoing_times)
+        print('Servoing times: Mean %.2f, Std %.2f' %(np.mean(servoing_times), np.std(servoing_times)))
 
     ### STEP 8: Grouped trial plots
     if len(stiffnesses) > 1:
@@ -2873,8 +2915,8 @@ def main():
     # noise_experiments_pitch(exp_type='horizontal', radius=radius, variable=variable)
     # simple_suction_experiment()
 
-    # proxy_trials()
-    real_trials()
+    proxy_trials()
+    # real_trials()
 
     ### Step4: Build video from pngs and a plot beside of it with a vertical line running ###
     # plot_and_video()
