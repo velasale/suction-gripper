@@ -9,10 +9,8 @@ def process_folders(root_folder):
 
         for filename in dirfiles:
             if filename.endswith(".db3"):
-                # print(filename)
-                print(dirpath)
-
                 db3_file_path = os.path.join(dirpath, filename)
+                print(f'\nFile: {db3_file_path}')
                 topics = extract_topics(db3_file_path)    
                 print(topics)
                                   
@@ -61,6 +59,15 @@ def extract_topics(db3_file_path):
         cursor.execute("SELECT DISTINCT name FROM topics")
         topics = cursor.fetchall()
 
+        # Iterate through topics and extract the messages
+        for topic in topics:
+            print(topic)
+
+            topic_name = topic[1]    
+            # topic[0]=id, topic[1]=name, topic[2]=type, topic[3]=
+
+            # Query to get all messages for the current
+
         # Close connection
         conn.close()
 
@@ -83,8 +90,8 @@ def extract_topics(db3_file_path):
 def main():
     root_folder = '/media/alejo/Elements/Alejo - Apple Pick Data/Real Apple Picks/06 - 2024 fall (Prosser-WA)'
     
-    # inspect_db3_schema()          # Run this first to understand how the db3 file is structured
-    process_folders(root_folder)
+    inspect_db3_schema()          # Run this first to understand how the db3 file is structured
+    # process_folders(root_folder)
 
 
 if __name__ == "__main__":
