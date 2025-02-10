@@ -89,6 +89,8 @@ def extract_topics(db3_file_path):
 
 def main():
     root_folder = '/media/alejo/Elements/Alejo - Apple Pick Data/Real Apple Picks/06 - 2024 fall (Prosser-WA)'
+
+    root_folder = '/home/alejo/Documents/temporal/'
     
     inspect_db3_schema()          # Run this first to understand how the db3 file is structured
     # process_folders(root_folder)
