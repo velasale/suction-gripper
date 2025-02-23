@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import os
+import statistics as st
 from src.data_analysis_robot import ur5e_fk_dh
 from matplotlib import pyplot as plt
 import math
@@ -48,6 +49,13 @@ def rotation_matrix(alpha, beta, gamma):
 
 
 def main():
+
+
+    ### Adjust plot parameters (for papers) ###
+    plt.rcParams["font.family"] = "serif"
+    plt.rcParams["font.serif"] = ["Times New Roman"]
+    plt.rcParams["font.size"] = 20
+    plt.rc('legend', fontsize=14)  # using a size in points
 
     # --- Step 1: Only consider Useful Data ---
     # Note: Useful data is in the csv file 'pressure_servo_folders_labels'
@@ -154,11 +162,11 @@ def main():
         fig = plt.figure()
         ax = plt.axes(projection='3d')
         ax.set_title('End Effector Trajectory\n' + bagfile_name)
-        ax.set_xlabel('x[m]')
-        ax.set_ylabel('y[m]')
-        ax.set_zlabel('z[m]')
-        ax.text(x[0], y[0], z[0], "Start", color='green')
-        ax.text(x[-1], y[-1], z[-1], "End", color='red')
+        ax.set_xlabel('x[m]', labelpad=15)
+        ax.set_ylabel('y[m]', labelpad=15)
+        ax.set_zlabel('z[m]', labelpad=15)
+        ax.text(x[0]-0.03, y[0], z[0]+0.015, "Start", color='black')
+        ax.text(x[-1]-0.03, y[-1], z[-1]+0.015, "End", color='black')
         ax.plot3D(x, y, z, 'black', linewidth='2', linestyle='dotted')
 
         # Plot eef frame
@@ -190,7 +198,16 @@ def main():
     plt.ylabel('Swept angle [deg]')
     plt.title('Unsuccessful pose servoing')
 
+    fig = plt.figure()
+    plt.boxplot(swept_angles)
+    plt.ylabel('Swept angle [deg]')
+    plt.title('Unsuccessful pose servoing')
+
+    print(st.mean(swept_angles))
+    print(st.stdev(swept_angles))
+
     plt.show()
+
 
 
 

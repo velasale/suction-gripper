@@ -132,23 +132,33 @@ def find_and_plot_pressure_csv(folder_path, output_pdf):
                 # Read the pressure.csv file
                 pressure_data = pd.read_csv(file_path)
                 if 'time' in pressure_data.columns and 'data_0' in pressure_data.columns and 'data_1' in pressure_data.columns and 'data_2' in pressure_data.columns:
-                    pressure_data = extract_pressure_signals(pressure_data)
+                    pressure_data = extract_pressure_signals(pressure_data)        # Convert hPa to KPa
+
+                    # Scale the pressure to kPa
+                    pressure_data['data_0'] = pressure_data['data_0'] / 10
+                    pressure_data['data_1'] = pressure_data['data_1'] / 10
+                    pressure_data['data_2'] = pressure_data['data_2'] / 10
+
+                    # Scale time to seconds.
+                    pressure_data['elapsed_time_s'] = pressure_data['elapsed_time_ms'] / 1000
 
                     print(file_path)
                     cups_engaged(pressure_data)
 
                     # Create the plot
                     plt.figure()
-                    plt.plot(pressure_data['elapsed_time_ms'], pressure_data['data_0'], label='Suction Cup A', linestyle='-', color='b')
-                    plt.plot(pressure_data['elapsed_time_ms'], pressure_data['data_1'], label='Suction Cup B', linestyle='--', color='g')
-                    plt.plot(pressure_data['elapsed_time_ms'], pressure_data['data_2'], label='Suction Cup C', linestyle=':', color='r')
-                    plt.xlabel('Elapsed Time (ms)')
-                    plt.ylabel('Pressure')
+                    plt.plot(pressure_data['elapsed_time_s'], pressure_data['data_0'], label='Suction Cup A', linestyle='-', color='c')
+                    plt.plot(pressure_data['elapsed_time_s'], pressure_data['data_1'], label='Suction Cup B', linestyle='--', color='m')
+                    plt.plot(pressure_data['elapsed_time_s'], pressure_data['data_2'], label='Suction Cup C', linestyle=':', color='y')
+                    plt.xlabel('Elapsed Time [sec]')
+                    plt.ylabel('Pressure [kPa]')
                     plt.title(f"Pressure Signals: {os.path.relpath(file_path, folder_path)}")
                     plt.legend()
+                    plt.ylim([0, 110])
                     plt.grid(True)
 
                     pdf.savefig()
+                    plt.show()
                     plt.close()
             except Exception as e:
                 print(f"Error reading {file_path}: {e}")
@@ -213,11 +223,11 @@ def plot_distance_and_pressure(folder_path, output_pdf):
 
                             # Plot pressure signals on primary y-axis (left)
                             ax1.plot(pressure_data['elapsed_time_ms'], pressure_data['data_0'], label='Suction Cup A',
-                                     linestyle='-', color='b')
+                                     linestyle='-', color='c')
                             ax1.plot(pressure_data['elapsed_time_ms'], pressure_data['data_1'], label='Suction Cup B',
-                                     linestyle='--', color='g')
+                                     linestyle='--', color='m')
                             ax1.plot(pressure_data['elapsed_time_ms'], pressure_data['data_2'], label='Suction Cup C',
-                                     linestyle=':', color='r')
+                                     linestyle=':', color='y')
                             ax1.set_xlabel('Elapsed Time (ms)')
                             ax1.set_ylabel('Pressure (Pa)', color='b')
                             ax1.tick_params(axis='y', labelcolor='b')
@@ -325,6 +335,12 @@ def find_and_plot_wrench_csv(folder_path, output_pdf):
 
 
 if __name__ == "__main__":
+
+    ### Adjust plot parameters (for papers) ###
+    plt.rcParams["font.family"] = "serif"
+    plt.rcParams["font.serif"] = ["Times New Roman"]
+    plt.rcParams["font.size"] = 14
+    plt.rc('legend', fontsize=14)  # using a size in points
 
     # input_folder = "/home/alejo/Projects/Prosser2025_Dataset/Data"
     input_folder = "C:/Users/avela/OneDrive/Documents/01 Research/Data"
