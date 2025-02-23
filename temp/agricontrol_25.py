@@ -68,7 +68,7 @@ def main():
     useful_df = df[df['Data Useful?'] == 'yes']
 
     # Filter 1.2: Other filters
-    useful_df = useful_df[useful_df['gripper pose success'] == 'yes']
+    useful_df = useful_df[useful_df['gripper pose success'] == 'no']
     # useful_df = useful_df[useful_df['Cause / Effect'] == 'SW - Pressure Servoing: Singularity reached']
 
     # --- Step 2: Find the initial pose angle
