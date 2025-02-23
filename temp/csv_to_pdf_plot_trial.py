@@ -3,34 +3,62 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
+
+def cups_engaged(pressure_data):
+    """"""
+
+    max_cnt = 0
+
+    for i, j, k, l in zip(pressure_data['elapsed_time_ms'], pressure_data['data_0'], pressure_data['data_1'], pressure_data['data_2']):
+
+        cnt = 0
+        if j < 600:
+            cnt += 1
+        if k < 600:
+            cnt += 1
+        if l < 600:
+            cnt += 1
+
+        if cnt > max_cnt:
+            max_cnt = cnt
+
+        if max_cnt == 3:
+            print('success')
+            break
+
+    print(f'Maximum_count = {max_cnt}\n')
+
+
+
+
 def extract_timestamp_and_distance(data):
     """Extracts timestamp and distance from the respective columns."""
     # Extract timestamp directly
     data['timestamp'] = pd.to_datetime(data['time'], format='%Y/%m/%d %H:%M:%S.%f')
-    
+
     # Sort by timestamp
     data = data.sort_values('timestamp').reset_index(drop=True)
-    
+
     # Convert timestamp to elapsed time in milliseconds
     data['elapsed_time_ms'] = (data['timestamp'] - data['timestamp'].iloc[0]).dt.total_seconds() * 1000
-    
+
     # Extract Distance in mm from the 'data' column using regex
     distance_regex = r"Distance:\s*(\d+)\s*mm"
     data['Distance in mm'] = data['data'].str.extract(distance_regex).astype(float)
-    
+
     return data
 
 def extract_pressure_signals(data):
     """Extracts timestamp and pressure signals from the respective columns."""
     # Extract timestamp directly
     data['timestamp'] = pd.to_datetime(data['time'], format='%Y/%m/%d %H:%M:%S.%f')
-    
+
     # Sort by timestamp
     data = data.sort_values('timestamp').reset_index(drop=True)
-    
+
     # Convert timestamp to elapsed time in milliseconds
     data['elapsed_time_ms'] = (data['timestamp'] - data['timestamp'].iloc[0]).dt.total_seconds() * 1000
-    
+
     # Return the relevant columns for plotting
     return data[['elapsed_time_ms', 'data_0', 'data_1', 'data_2']]
 
@@ -106,6 +134,9 @@ def find_and_plot_pressure_csv(folder_path, output_pdf):
                 if 'time' in pressure_data.columns and 'data_0' in pressure_data.columns and 'data_1' in pressure_data.columns and 'data_2' in pressure_data.columns:
                     pressure_data = extract_pressure_signals(pressure_data)
 
+                    print(file_path)
+                    cups_engaged(pressure_data)
+
                     # Create the plot
                     plt.figure()
                     plt.plot(pressure_data['elapsed_time_ms'], pressure_data['data_0'], label='Suction Cup A', linestyle='-', color='b')
@@ -122,8 +153,12 @@ def find_and_plot_pressure_csv(folder_path, output_pdf):
             except Exception as e:
                 print(f"Error reading {file_path}: {e}")
 
-def find_and_plot_combined_csv(folder_path, output_pdf):
-    """Generate combined pressure and distance plots."""
+def apply_moving_average(data, window_size=5):
+    """Applies a moving average filter to smooth the data."""
+    return data.rolling(window=window_size, min_periods=1).mean()
+
+def plot_distance_and_pressure(folder_path, output_pdf):
+    """Generate combined pressure and distance plots with distance on secondary y-axis."""
     with PdfPages(output_pdf) as pdf:
         file_paths_with_batches = []
 
@@ -149,47 +184,64 @@ def find_and_plot_combined_csv(folder_path, output_pdf):
             try:
                 # Read the distance.csv file
                 distance_data = pd.read_csv(file_path)
+                print(f"Loaded distance data for {file_path}: {distance_data.shape}")
+
                 if 'time' in distance_data.columns and 'data' in distance_data.columns:
                     distance_data = extract_timestamp_and_distance(distance_data)
+
+                    # Apply moving average filter to the distance data to reduce noise
+                    distance_data['Distance in mm'] = apply_moving_average(distance_data['Distance in mm'], window_size=5)
+
+                    # Round the elapsed_time_ms to avoid precision issues during merge
+                    distance_data['elapsed_time_ms'] = distance_data['elapsed_time_ms'].round(3)
 
                     # Find the corresponding pressure.csv file in the same folder
                     pressure_file_path = file_path.replace('distance.csv', 'pressure.csv')
 
                     if os.path.exists(pressure_file_path):
                         pressure_data = pd.read_csv(pressure_file_path)
+                        print(f"Loaded pressure data for {pressure_file_path}: {pressure_data.shape}")
+
                         if 'time' in pressure_data.columns and 'data_0' in pressure_data.columns and 'data_1' in pressure_data.columns and 'data_2' in pressure_data.columns:
                             pressure_data = extract_pressure_signals(pressure_data)
 
-                            # Merge distance and pressure data on elapsed_time_ms
-                            combined_data = pd.merge(distance_data[['elapsed_time_ms', 'Distance in mm']],
-                                                     pressure_data[['elapsed_time_ms', 'data_0', 'data_1', 'data_2']],
-                                                     on='elapsed_time_ms', how='inner')
-
-                            if combined_data.empty:
-                                print(f"Warning: Merged data is empty for {os.path.relpath(file_path, folder_path)}")
-                                continue
+                            # Round the elapsed_time_ms in the pressure data to match the distance data
+                            pressure_data['elapsed_time_ms'] = pressure_data['elapsed_time_ms'].round(3)
 
                             # Create the combined plot
-                            plt.figure(figsize=(10, 6))
+                            fig, ax1 = plt.subplots(figsize=(10, 6))
 
-                            # Plot pressure signals
-                            plt.plot(combined_data['elapsed_time_ms'], combined_data['data_0'], label='Suction Cup A', linestyle='-', color='b')
-                            plt.plot(combined_data['elapsed_time_ms'], combined_data['data_1'], label='Suction Cup B', linestyle='--', color='g')
-                            plt.plot(combined_data['elapsed_time_ms'], combined_data['data_2'], label='Suction Cup C', linestyle=':', color='r')
-                            plt.xlabel('Elapsed Time (ms)')
-                            plt.ylabel('Pressure')
+                            # Plot pressure signals on primary y-axis (left)
+                            ax1.plot(pressure_data['elapsed_time_ms'], pressure_data['data_0'], label='Suction Cup A',
+                                     linestyle='-', color='b')
+                            ax1.plot(pressure_data['elapsed_time_ms'], pressure_data['data_1'], label='Suction Cup B',
+                                     linestyle='--', color='g')
+                            ax1.plot(pressure_data['elapsed_time_ms'], pressure_data['data_2'], label='Suction Cup C',
+                                     linestyle=':', color='r')
+                            ax1.set_xlabel('Elapsed Time (ms)')
+                            ax1.set_ylabel('Pressure (Pa)', color='b')
+                            ax1.tick_params(axis='y', labelcolor='b')
 
-                            # Plot distance
-                            plt.plot(combined_data['elapsed_time_ms'], combined_data['Distance in mm'], label='Distance (mm)', color='purple', linestyle='-.')
+                            # Create the secondary y-axis (right) for distance
+                            ax2 = ax1.twinx()
+                            ax2.plot(distance_data['elapsed_time_ms'], distance_data['Distance in mm'],
+                                     label='Distance (mm)', color='purple', linestyle='-.')
+                            ax2.set_ylabel('Distance (mm)', color='purple')
+                            ax2.tick_params(axis='y', labelcolor='purple')
 
-                            plt.title(f"Combined Plot (Pressure and Distance): {os.path.relpath(file_path, folder_path)}")
-                            plt.legend()
+                            # Set the title and legend
+                            plt.title(
+                                f"Pressure and Distance Plot: {os.path.relpath(file_path, folder_path)}")
+                            ax1.legend(loc='upper left')
+                            ax2.legend(loc='upper right')
                             plt.grid(True)
 
-                            pdf.savefig()
+                            pdf.savefig(fig)
                             plt.close()
             except Exception as e:
                 print(f"Error reading {file_path}: {e}")
+
+
 
 def get_batch_number_from_path(path):
     """Extract the batch number from the folder path."""
@@ -273,25 +325,27 @@ def find_and_plot_wrench_csv(folder_path, output_pdf):
 
 
 if __name__ == "__main__":
-    input_folder = "/home/alejo/Projects/Prosser2025_Dataset/Data"
+
+    # input_folder = "/home/alejo/Projects/Prosser2025_Dataset/Data"
+    input_folder = "C:/Users/avela/OneDrive/Documents/01 Research/Data"
 
     # Specify the output PDF files
-    distance_pdf_path = "/home/alejo/Projects/Prosser2025_Dataset/Data/distance_plots.pdf"
-    pressure_pdf_path = "/home/alejo/Projects/Prosser2025_Dataset/Data/pressure_plots.pdf"
-    combined_pdf_path = "/home/alejo/Projects/Prosser2025_Dataset/Data/combined_plots.pdf"
-    wrench_pdf_path = "/home/alejo/Projects/Prosser2025_Dataset/Data/wrench_plots.pdf"  # New PDF path for wrench plots
+    distance_pdf_path = input_folder + "/distance_plots.pdf"
+    pressure_pdf_path = input_folder + "/pressure_plots.pdf"
+    combined_pdf_path = input_folder + "/combined_plots.pdf"
+    wrench_pdf_path = input_folder + "/wrench_plots.pdf"  # New PDF path for wrench plots
 
     # Generate the distance plots and save them to the PDF
-    find_and_plot_distance_csv(input_folder, distance_pdf_path)
+    # find_and_plot_distance_csv(input_folder, distance_pdf_path)
 
     # Generate the pressure plots and save them to the PDF
     find_and_plot_pressure_csv(input_folder, pressure_pdf_path)
 
     # Generate the combined pressure and distance plots and save them to the PDF
-    find_and_plot_combined_csv(input_folder, combined_pdf_path)
+    # plot_distance_and_pressure(input_folder, combined_pdf_path)
 
     # Generate the wrench force plots and save them to the PDF
-    find_and_plot_wrench_csv(input_folder, wrench_pdf_path)
+    # find_and_plot_wrench_csv(input_folder, wrench_pdf_path)
 
     print(f"Distance plots have been saved to {distance_pdf_path}.")
     print(f"Pressure plots have been saved to {pressure_pdf_path}.")

@@ -39,11 +39,11 @@ from sklearn import cluster, datasets, mixture
 import pyautogui
 
 from tqdm import tqdm
-
+#
 ######## Self developed imports ########
 # from ros_scripts import *
-from plot_scripts import *
-from datascience_concepts import *
+from src.plot_scripts import *
+from src.datascience_concepts import *
 
 import logging
 logging_format = "[%(asctime)s - %(levelname)s] %(message)s"
