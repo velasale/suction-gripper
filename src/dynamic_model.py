@@ -30,10 +30,15 @@ class CamDrivenFinger():
     def __init__(self):
 
         # Mechanism lengths and distances
-        self.px = 12.13             # horizontal distance between pivot and nut
-        self.lb = 18.5              # length of connecting bar
-        self.lk = 17.5              # length of knuckle
-        self.lf = 47.81             # vertical distance to point of contact with apple
+        self.d1 = 47.81             # vertical distance to point of contact with apple
+        self.d2 = 7.5               # horizontal distance to point of contact with apple
+        self.d5 = 18.5              # length of connecting bar
+        self.d6 = 17.5              # length of knuckle
+        self.d7 = 12.13             # horizontal distance between pivot and nut
+
+        # Friction Coefficients
+        self.mu = 0.5               # TBD Friction coefficient between apple and fingers
+        self.num_fingers = 3
 
         # Mechanism angles
         self.alfa = 0.0
@@ -43,22 +48,22 @@ class CamDrivenFinger():
     def ratio(self, distance):
 
         # Four-bar mechanism angles
-        self.alfa = math.atan(self.px / distance)
+        self.alfa = math.atan(self.d7 / distance)
 
-        num_gamma = self.lk ** 2 + self.lb ** 2 - self.px ** 2 - distance ** 2
-        den_gamma = 2 * self.lb * self.lk
+        num_gamma = self.d6 ** 2 + self.d5 ** 2 - self.d7 ** 2 - distance ** 2
+        den_gamma = 2 * self.d5 * self.d6
         self.gamma = math.acos(num_gamma / den_gamma)
 
-        num_theta = self.lk * math.sin(self.gamma)
-        den_theta = math.sqrt(self.px ** 2 + distance ** 2)
+        num_theta = self.d6 * math.sin(self.gamma)
+        den_theta = math.sqrt(self.d7 ** 2 + distance ** 2)
         self.theta = math.asin(num_theta / den_theta)
 
         lever_angle = self.alfa + self.theta
         lever_angle_deg = lever_angle * 180 / math.pi
 
         # Four-bar mechanism force ratio
-        num_ratio = self.lk * math.sin(self.gamma)
-        den_ratio = self.lf * math.cos(lever_angle)
+        num_ratio = self.d6 * math.sin(self.gamma)
+        den_ratio = self.num_fingers * (self.d1 - self.mu * self.d2) * math.cos(lever_angle)
         ratio = num_ratio / den_ratio
 
         return lever_angle_deg, ratio
