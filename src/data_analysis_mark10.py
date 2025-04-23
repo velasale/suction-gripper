@@ -28,14 +28,13 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plo
     exp_number = int(exp_number.split('_')[0])
     print('Experiment number: ', exp_number)
 
-    # Lists to keep track of stuff
+    # Lists for book-keeping
     stepses = []
     good_picks = []
     suction_picks = []
     max_forces_data = []
 
     # Create figure
-    fig = plt.figure(figsize=(8, 6))
     fig = plt.figure(figsize=(7, 6))
     exp_prefix = 'loremipsum'
 
@@ -56,6 +55,9 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plo
                 # exp_prefix = tag + '_dist_' + str(steps) + '_rep' + str(rep)
 
                 # Concatenate filename depending on each experiment
+
+                if exp_number == 4:
+                    exp_prefix = 'delta_' + str(steps) + '_' + tag + '_rep' + str(rep)
 
                 if exp_number == 8:
                     exp_prefix = 'exp(pullBack)_mode(' + tag + ')_dist(58)_speed(' + str(steps) + ')_rep' + str(rep)
@@ -117,6 +119,10 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plo
 
             max_forces_data.append(max_forces)
 
+        # Figure with boxPlots
+        # fig = plt.figure(figsize=(7, 6))
+        # plt.boxplot(max_forces_data)
+
         print('--- Results summary of the actuation mode:---')
         print('Steps:', stepses)
         print('Mean Value:', mean_max_forces)
@@ -141,6 +147,7 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plo
             plt.plot(stepses, mean_max_forces, linestyle=style, label=mode, color=color, marker=marker, lw=1)
             plt.fill_between(stepses, lows, highs, alpha=.2, color=color)
 
+
     # Note: Just for Experiment 2 -- Plot the force at which the magnet releases
     if len(good_picks) > 0:
         mean_pick_force = np.mean(good_picks)
@@ -163,6 +170,8 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plo
 
         suction_folder = 'Alejo - Mark10 Gripper Tests/Mark10_experiments/suction_reference_values/'
         suction_folder = storage + suction_folder
+
+        suction_folder = 'C:/Users/avela/Dropbox/03 Temporal/03 Research/data/Mark10_experiments/suction_reference_values/'
 
         max_forces = []
         for file in sorted(os.listdir(suction_folder)):
@@ -248,8 +257,8 @@ def locate_index_of_deltas_v2(data, intercept=0.5):
 def orthogonal_load_cell_experiments(folder):
 
     # subfolder = 'experiment1_orthogonalLoad/'
-    subfolder = 'experiment6_orthogonalLoad_accelStepper/'
-    # subfolder = 'experiment12_orthogonalLoad/'
+    # subfolder = 'experiment6_orthogonalLoad_accelStepper/'
+    subfolder = 'experiment12_orthogonalLoad/'
 
     folder = folder + subfolder
 
@@ -343,8 +352,8 @@ def orthogonal_load_cell_experiments(folder):
 def push_load_cell_experiments(folder):
 
     # subfolder = 'experiment1_orthogonalLoad/'
-    subfolder = 'experiment6_orthogonalLoad_accelStepper/'
-    # subfolder = 'experiment12_orthogonalLoad/'
+    # subfolder = 'experiment6_orthogonalLoad_accelStepper/'
+    subfolder = 'experiment12_orthogonalLoad/'
 
     location = folder + subfolder
 
@@ -462,26 +471,34 @@ def mark10_pullback_experiments(folder):
     #              )
     #
     # ---- NUT TRAVEL DISTANCE ----
-    mark10_plots(folder + 'experiment7_pullBack_fixedApple_fingerDistance/',
-                 ['fingers', 'dual'],
-                 ['Fingers', 'Dual'],
-                 [52, 54, 56, 58],
-                 10,
-                 'Nut-travel distance [mm]'
-                 )
+    # mark10_plots(folder + 'experiment7_pullBack_fixedApple_fingerDistance/',
+    #              ['fingers', 'dual'],
+    #              ['Fingers', 'Dual'],
+    #              [52, 54, 56, 58],
+    #              10,
+    #              'Nut-travel distance [mm]'
+    #              )
 
-    # ---- EQUATOR OFFSET ----
-    mark10_plots(folder + 'experiment9_pullBack_fixedApple_equatorOffset/',
-                 # ['fingers', 'dual'],
-                 ['fingers'],
-                 # ['Fingers', 'Dual'],
-                     ['Fingers'],
-                 [0, 5, 10, 15, 20],
-                 10,
-                 'Fruit offset [mm]'
-                 )
+    # # ---- EQUATOR OFFSET ----
+    # mark10_plots(folder + 'experiment9_pullBack_fixedApple_equatorOffset/',
+    #              # ['fingers', 'dual'],
+    #              ['fingers'],
+    #              # ['Fingers', 'Dual'],
+    #                  ['Fingers'],
+    #              [0, 5, 10, 15, 20],
+    #              10,
+    #              'Fruit offset [mm]'
+    #              )
 
     # ---- ANGLES ----
+    # mark10_plots(folder + 'experiment4_pullingLoad_fixedApple_angled/',
+    #              ['fingers', 'dual', 'suction'],
+    #              ['Fingers', 'Dual', 'Suction cups'],
+    #              [0, 15, 30, 45],
+    #              10,
+    #              '$\omega$ [deg]'
+    #              )
+
     mark10_plots(folder + 'experiment10_pullBack_angled/',
                  ['fingers', 'dual', 'suction'],
                  ['Fingers', 'Dual', 'Suction cups'],
@@ -515,11 +532,12 @@ if __name__ == '__main__':
     ### Step 1 - Data Location ###
     if os.name == 'nt':     # Windows OS
         storage = 'D:/'
+        folder = 'C:/Users/avela/Dropbox/03 Temporal/03 Research/data/Mark10_experiments/'
     else:                   # Ubuntu OS
         storage = '/media/alejo/Elements/'
 
-    folder = 'Alejo - Mark10 Gripper Tests/Mark10_experiments/'
-    folder = storage + folder
+    # folder = 'Alejo - Mark10 Gripper Tests/Mark10_experiments/'
+    # folder = storage + folder
 
     ### Step 2 - Subfunctions ###
     # orthogonal_load_cell_experiments(folder)
