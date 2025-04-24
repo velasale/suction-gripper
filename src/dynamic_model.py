@@ -73,7 +73,7 @@ class CamDrivenFinger():
 
         # Experiment parameters
         self.apple_radius = 80      # in Millimeters
-        self.clamping_force = 8.5     # in Newtons
+        self.clamping_force = 8     # in Newtons
         self.finger_offset = 0
         self.psi = math.tan(self.finger_offset / self.apple_radius)
         self.omega = 0              # angle between gripper and apple main axis
@@ -106,7 +106,7 @@ class CamDrivenFinger():
         return lever_angle_deg, ratio
 
     def forces(self):
-        self.psi = math.tan(self.finger_offset / self.apple_radius)
+        self.psi = math.asin(self.finger_offset / self.apple_radius)
 
         # APPROACH: System of Eqns with normal force limit
         A = np.array([[1, 0, 0, 0, 0, 0, 0, 0],   # Superposition Theorem Finger 1
