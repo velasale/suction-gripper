@@ -36,6 +36,7 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plo
 
     # Create figure
     fig = plt.figure(figsize=(7, 6))
+    fig, ax = plt.subplots()
     exp_prefix = 'loremipsum'
 
     for mode, tag, color, marker, style in zip(gripper_modes, tags, colors, markers, linestyles):
@@ -214,8 +215,9 @@ def mark10_plots(location, tags, gripper_modes, variable_list, reps, xlabel, plo
 
     if plot_type == 'barplot':
         array = np.array(max_forces_data, dtype=object)
-        plt.boxplot(array, labels=gripper_modes)
-        plt.axhline(y=16, c='k',linestyle='--', lw=2)
+        # plt.boxplot(array, labels=gripper_modes)
+        plt.boxplot(array, positions=variable_list)
+        plt.axhline(y=16, c='k', linestyle='--', lw=2)
     else:
         plt.legend()
 
@@ -479,16 +481,16 @@ def mark10_pullback_experiments(folder):
     #              'Nut-travel distance [mm]'
     #              )
 
-    # # ---- EQUATOR OFFSET ----
-    # mark10_plots(folder + 'experiment9_pullBack_fixedApple_equatorOffset/',
-    #              # ['fingers', 'dual'],
-    #              ['fingers'],
-    #              # ['Fingers', 'Dual'],
-    #                  ['Fingers'],
-    #              [0, 5, 10, 15, 20],
-    #              10,
-    #              'Fruit offset [mm]'
-    #              )
+    # # # ---- EQUATOR OFFSET ----
+    mark10_plots(folder + 'experiment9_pullBack_fixedApple_equatorOffset/',
+                 # ['fingers', 'dual'],
+                 ['fingers'],
+                 # ['Fingers', 'Dual'],
+                     ['Fingers'],
+                 [0, 5, 10, 15, 20],
+                 10,
+                 'Fruit offset [mm]'
+                 )
 
     # ---- ANGLES ----
     # mark10_plots(folder + 'experiment4_pullingLoad_fixedApple_angled/',
@@ -499,23 +501,23 @@ def mark10_pullback_experiments(folder):
     #              '$\omega$ [deg]'
     #              )
 
-    mark10_plots(folder + 'experiment10_pullBack_angled/',
-                 ['fingers', 'dual', 'suction'],
-                 ['Fingers', 'Dual', 'Suction cups'],
-                 [0, 15, 30, 45],
-                 10,
-                 '$\omega$ [deg]'
-                 )
+    # mark10_plots(folder + 'experiment10_pullBack_angled/',
+    #              ['fingers', 'dual', 'suction'],
+    #              ['Fingers', 'Dual', 'Suction cups'],
+    #              [0, 15, 30, 45],
+    #              10,
+    #              '$\omega$ [deg]'
+    #              )
 
-    # ---- MOMENTS ----
-    mark10_plots(folder + 'experiment11_pullBack_moment/',
-                 ['suction', 'fingers', 'dual'],
-                 ['Suction cups', 'Fingers', 'Dual'],
-                 [0],
-                 10,
-                 'Actuation mode',
-                 plot_type='barplot'
-                 )
+    # # ---- MOMENTS ----
+    # mark10_plots(folder + 'experiment11_pullBack_moment/',
+    #              ['suction', 'fingers', 'dual'],
+    #              ['Suction cups', 'Fingers', 'Dual'],
+    #              [0],
+    #              10,
+    #              'Actuation mode',
+    #              plot_type='barplot'
+    #              )
 
     # plt.show()
 
