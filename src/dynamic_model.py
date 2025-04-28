@@ -1,8 +1,11 @@
 import math
 import matplotlib.pyplot as plt
 import numpy as np
-from data_analysis_mark10 import *
 from matplotlib.patches import Patch
+from scipy.linalg import null_space
+
+from data_analysis_mark10 import *
+
 
 def latex_figure_settings():
     plt.rcParams["font.family"] = "serif"
@@ -55,16 +58,22 @@ class CamDrivenFinger():
 
     def __init__(self):
 
+        self.num_fingers = 3
+        self.apple_radius = 75 / 2  # in Millimeters
+
         # Mechanism lengths and distances
-        self.d1 = 47.81             # vertical distance to point of contact with apple
-        self.d2 = 7.5               # horizontal distance to point of contact with apple
+        self.d1 = 47                # 7.81  # vertical distance to point of contact with apple
+        self.d2 = 31                # horizontal distance to point of contact with apple
+        self.d3 = 90                # vertical distance from motor flange to camtrack rotating pivot
+        self.d4 = 7                 # nut thickness - from base to link-pivot
         self.d5 = 18.5              # length of connecting bar
         self.d6 = 17.5              # length of knuckle
-        self.d7 = 12.13             # horizontal distance between pivot and nut
+        self.d7 = 12.13                # horizontal distance between pivot and nut
+        self.m_threshold = 59               # nut displacement threshold
+        self.m_initial_2nd_region = 50      # initial nut displacement at 2nd region
 
         # Friction Coefficients
-        self.mu = 0.9               # TBD Friction coefficient between apple and fingers
-        self.num_fingers = 3
+        self.mu = 0.8               # TBD Friction coefficient between apple and fingers
 
         # Bar-Linkage angles
         self.alfa = 0.0
@@ -72,8 +81,7 @@ class CamDrivenFinger():
         self.theta = 0.0
 
         # Experiment parameters
-        self.apple_radius = 80      # in Millimeters
-        self.clamping_force = 8     # in Newtons
+
         self.finger_offset = 0
         self.psi = math.tan(self.finger_offset / self.apple_radius)
         self.omega = 0              # angle between gripper and apple main axis
@@ -81,6 +89,8 @@ class CamDrivenFinger():
 
         # Experiment forces
         self.forces_array = []
+        self.nut_clamp = 0
+        self.clamping_force = 8  # in Newtons
 
     def ratio(self, distance):
 
@@ -100,7 +110,7 @@ class CamDrivenFinger():
 
         # Four-bar mechanism force ratio
         num_ratio = self.d6 * math.sin(self.gamma)
-        den_ratio = self.num_fingers * (self.d1 - self.mu * self.d2) * math.cos(lever_angle)
+        den_ratio = self.d1 * math.cos(lever_angle)
         ratio = num_ratio / den_ratio
 
         return lever_angle_deg, ratio
@@ -113,12 +123,13 @@ class CamDrivenFinger():
                       [0, 0, 0, 1, math.tan(self.psi), 0, 0, -math.sin(self.omega + self.beta) / (2 * 0.5 * math.cos(self.psi))],   # Superposition Theorem
                       [-math.sin(self.psi), math.cos(self.psi), 0, -2 * math.sin(self.psi), 2 * math.cos(self.psi), 0, 0, -math.cos(self.omega + self.beta)],   # Balance of Forces y
                       [0, -1, 0, 0, 2 * 0.5, 0, 0, math.sin(self.beta)],                        # Balance of Moments in apple
-                      [-self.d1, self.d2, self.d6 * math.sin(self.gamma), 0, 0, 0, 0, 0],       # Balance of Moments in finger 1
+                      [-self.d1, self.apple_radius - self.d2, self.d6 * math.sin(self.gamma), 0, 0, 0, 0, 0],       # Balance of Moments in finger 1
                       [0, 0, 0, -self.d1, self.d2, self.d6 * math.sin(self.gamma), 0, 0],       # Balance of Moments in finger 2
                       [0, 0, math.cos(self.alfa + self.theta), 0, 0, 2 * math.cos(self.alfa + self.theta), -1, 0],  # Balance of forces in nut
                       [self.mu, -1, 0, 0, 0, 0, 0, 0]])     # Friction and Normal force relationship for finger 1
 
-        B = ([[self.clamping_force],
+
+        b = ([[self.clamping_force],
               [self.clamping_force],
               [0],
               [0],
@@ -127,150 +138,117 @@ class CamDrivenFinger():
               [0],
               [0]])
 
+
         # Forces array: [Normal-1  Friction-1  Flink-1  Normal-2  Friction-2   Flink-2  Fnut  Fpull]
-        self.forces_array = np.dot(np.linalg.pinv(A), B)
-        print(f'Cam Driven finger forces=,\n {self.forces_array}')
+        self.forces_array = np.dot(np.linalg.pinv(A), b)
+
+        # print(f'Cam Driven finger forces=,\n {self.forces_array}')
 
         return self.forces_array
 
 
 
-def cam_driven_finger_model():
-
-    n_fingers = 3
-    pick_force = 15                 # Force required to pick an apple [N]
-    apple_finger_friction = 0.5
-    friction_force_per_finger = pick_force / n_fingers
-    normal_force_per_finger = friction_force_per_finger / apple_finger_friction
-
-    camfinger = CamDrivenFinger()
+def cam_driven_finger_model(camfinger):
 
     # --- Lead Screw Transmission ---
     # https://www.engineersedge.com/mechanics_machines/power_screws_design_13982.htm
     # https://learning.hccs.edu/faculty/edward.osakue/dftg-2306-lecture-notes/Unit%209-Power%20Screws.pdf
     # https://uni.edu/~rao/MD-18%20Power%20screws.pdf
 
-    screw = AcmeLeadScrew()
-
-    # --- Given a torqueForce to raise load ---
-    motor_torque = 0.4              # N.m
-    efficiency = 1                  # From friction, manufacturing tolerances,
-    F_nut = efficiency * motor_torque * screw.factor_torque_into_force
-    print('Given a torque motor of %.2f [Nm], the nut force is: %.2f F_nut' % (motor_torque, F_nut))
-
     # Book-keeping
     x = []
     cam_ratios = []
-    f_normals_per_finger = []
-    f_pulls = []
-    required_torques = []
     lever_angles = []
 
-    displ_thr = 58.5
-    initial_stepper_distance = 50
-    for i in range(150):
+    for i in range(180):
 
         # --- Vary distance [mm] ---
-        stepper_distance = initial_stepper_distance + i / 10
-        d = 90 - 7 - stepper_distance
+        stepper_distance = camfinger.m_initial_2nd_region + i / 10
+        d = camfinger.d3 - camfinger.d4 - stepper_distance       # 90
         x.append(stepper_distance)
-
         lever_angle, cam_ratio = camfinger.ratio(d)
+
+        # Book-keeping
         lever_angles.append(lever_angle)
         cam_ratios.append(cam_ratio)
 
-        # --- APPROACH 1: Given the output normal, find the required Torque
-        required_nut_force = normal_force_per_finger * n_fingers / cam_ratio
-        required_torque = required_nut_force * screw.factor_force_into_torque
-        required_torques.append(required_torque)
-
-        # --- APPROACH 2: Given the torque, find the output force
-        if stepper_distance <= displ_thr:
-            f_normal = (F_nut / n_fingers) * cam_ratio * efficiency
-            f_friction = f_normal * apple_finger_friction
-            f_pull = 3 * f_friction
-        else:
-            pass
-        f_normals_per_finger.append(f_normal)
-        f_pulls.append(f_pull)
-
-        # Print values
-        print(f'Stepper distance: {stepper_distance:.2f}, Gamma: {camfinger.gamma:.2f}, Alpha: {camfinger.alfa:.2f}, Theta: {camfinger.theta:.2f}')
-
-
-    return x, cam_ratios, f_normals_per_finger, required_torques, lever_angles, f_pulls
+    return x, cam_ratios, lever_angles
 
 
 def main():
 
-    x, cam_force_ratios, f_normals_per_finger, T_motors, levers, pull_forces = cam_driven_finger_model()
+    camfinger = CamDrivenFinger()
+    screw = AcmeLeadScrew()
+
+    x, cam_force_ratios, levers = cam_driven_finger_model(camfinger)
 
     ### Figure 1: Force Tranmission Ratio vs Distance ###
     # Source: https://onelinerhub.com/python-matplotlib/how-to-add-third-y-axis
     latex_figure_settings()
-    x_size = 10.5
-    y_size = 6.5
+    x_size = 11.5
+    y_size = 7
     fig, ax = plt.subplots(figsize=(x_size, y_size))
     twin1 = ax.twinx()
-    twin2 = ax.twinx()
-
-    twin2.spines.right.set_position(("axes", 1.15))
+    # twin2 = ax.twinx()
+    # twin2.spines.right.set_position(("axes", 1.15))
 
     p1, = ax.plot(x, cam_force_ratios, c='k', label=r"$F_{normal}$ / $F_{nut}$ ratio", linewidth=2)
     ax.set_xlabel('x [mm]')
-    ax.set_ylabel(r"$F_{normal}$/$F_{nut}$ ratio [-]")
+    ax.set_ylabel(r"$F_{clamp}$/$F_{nut}$ ratio")
+    ax.set_ylim([0, 3])
+    ax.tick_params(axis='y', colors=p1.get_color())
     # ax.legend(loc='lower left')
     ax.grid()
 
+    ax.axvspan(camfinger.m_initial_2nd_region, camfinger.m_threshold, color='gray', alpha=0.3, label='Operating Region')
+
     p2, = twin1.plot(x, levers, label=r"$\alpha$ + $\theta$", linestyle='dashed', c='g', linewidth=2)
     twin1.set_ylabel(r"$\alpha$ + $\theta$ [deg]", c='g')
-    # twin1.legend(loc='upper right')
-    travel_limit = 59.5
-    # ax.vlines(x=travel_limit, ymin=min(y), ymax=max(y), linestyles='dotted', color='k', lw=2, label='apple bruising threshold')
-
-    p3, = twin2.plot(x, T_motors, c='b', linestyle='dotted', label='Motor torque', linewidth=2)
-    twin2.set_ylabel(r"$T_{motor}$ [N.m]", c='b')
-    # twin2.legend(loc='upper left')
-
-    ax.tick_params(axis='y', colors=p1.get_color())
     twin1.tick_params(axis='y', colors=p2.get_color())
-    twin2.tick_params(axis='y', colors=p3.get_color())
+    twin1.set_ylim([30, 90])
+    # twin1.legend(loc='upper right')
 
+    # p3, = twin2.plot(x, T_motors, c='b', linestyle='dotted', label='Motor torque', linewidth=2)
+    # twin2.set_ylabel(r"$T_{motor}$ [N.m]", c='b')
+    # twin2.legend(loc='upper left')
+    # twin2.tick_params(axis='y', colors=p3.get_color())
+
+    plt.xlim([50, 66])
     plt.tight_layout()
 
-    ### Figure 2: Push Force vs Distance ###
-    fig = plt.figure(figsize=(x_size, y_size))
-    # plt.plot(x, f_outs, c='r', label='total')
-    plt.plot(x, f_normals_per_finger, c='orange', label='per finger (total/3)')
-    plt.plot(x, pull_forces, c='red', label='total pull force')
-    plt.xlabel('nut travel distance [mm]')
-    plt.ylabel('push force [N]')
-    plt.tight_layout()
-    thr_press = 0.29e6  # Pa (Li et al. 2016)
-    finger_width = 20  # mm
-    thr_force = thr_press * (10 ** 2) / 1e6
-    print(thr_force)
-    # plt.hlines(y=thr_force, xmin=1285, xmax=1425, linestyles='--', lw=2, label='Apple Bruising threshold')
-    plt.hlines(y=thr_force, xmin=min(x), xmax=max(x), linestyles='--', lw=2, label='apple bruising threshold')
-    # plt.ylim([0, 35])
-    plt.xlim([52, 60])
-    plt.legend()
-    # plt.grid()
-    plt.tight_layout()
+    # ### Figure 2: Push Force vs Distance ###
+    # fig = plt.figure(figsize=(x_size, y_size))
+    # # plt.plot(x, f_outs, c='r', label='total')
+    # plt.plot(x, f_normals_per_finger, c='orange', label='per finger (total/3)')
+    # plt.xlabel('nut travel distance [mm]')
+    # plt.ylabel('push force [N]')
+    # plt.tight_layout()
+    # thr_press = 0.29e6  # Pa (Li et al. 2016)
+    # finger_width = 20  # mm
+    # thr_force = thr_press * (10 ** 2) / 1e6
+    # print(thr_force)
+    # # plt.hlines(y=thr_force, xmin=1285, xmax=1425, linestyles='--', lw=2, label='Apple Bruising threshold')
+    # plt.hlines(y=thr_force, xmin=min(x), xmax=max(x), linestyles='--', lw=2, label='apple bruising threshold')
+    # # plt.ylim([0, 35])
+    # plt.xlim([52, 60])
+    # plt.legend()
+    # # plt.grid()
+    # plt.tight_layout()
 
-
-    # ------------------------------------------------------------------
+    # ------------------- MARK10 EXPERIMENTS ---------------------------------
     # First configure bar-linkage at the desired position
-    camfinger = CamDrivenFinger()
-    displacement = 58
-    _, _ = camfinger.ratio(90 - 7 - displacement)
-    x_size = 9
-    y_size = 7.5
+    _, _ = camfinger.ratio(camfinger.d3 - camfinger.d4 - camfinger.m_threshold)
+
+    efficiency = 0.55
+    Tmotor = 0.32
+    Fnut = Tmotor * screw.factor_torque_into_force
+    camfinger.nut_clamp = efficiency * Fnut
+    camfinger.clamping_force = efficiency * (Fnut / camfinger.num_fingers) * camfinger.d6 * math.sin(camfinger.gamma) / (3*camfinger.d1*math.cos(camfinger.alfa + camfinger.theta))
+    print("\nFnut= ", Fnut)
+    print("Fclamp= ", camfinger.clamping_force, "\n")
 
     # ------------------ Experiment 1: Finger offsets ----------------------
-    boxwidth = 3*20/45
-    xloc_delta = 1.1* boxwidth
-    mus = [0.6, 0.8, 1.0]
+    mus = [0.75, 0.9, 1.05]
     offsets = [0, 5, 10, 15, 20]
 
     for mu in mus:
@@ -289,6 +267,12 @@ def main():
             Fpulls_mid = Fpulls
         elif mu == mus[2]:
             Fpulls_max = Fpulls
+
+    # Figure parameters
+    x_size = 9
+    y_size = 7.5
+    boxwidth = 3 * 20 / 45
+    xloc_delta = 1.1 * boxwidth
 
     fig, ax = plt.subplots(figsize=(x_size, y_size))
     model_plot, = ax.plot(offsets, Fpulls_mid, '-o', color='green', label='fingers model')
