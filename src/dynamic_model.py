@@ -89,8 +89,8 @@ class CamDrivenFinger():
 
         # Experiment forces
         self.forces_array = []
-        self.nut_clamp = 0
-        self.clamping_force = 8  # in Newtons
+        # self.nut_clamp = 0
+        self.clamping_force = 0
 
     def ratio(self, distance):
 
@@ -142,7 +142,7 @@ class CamDrivenFinger():
         # Forces array: [Normal-1  Friction-1  Flink-1  Normal-2  Friction-2   Flink-2  Fnut  Fpull]
         self.forces_array = np.dot(np.linalg.pinv(A), b)
 
-        # print(f'Cam Driven finger forces=,\n {self.forces_array}')
+        print(f'Cam Driven finger forces=,\n {self.forces_array}')
 
         return self.forces_array
 
@@ -193,7 +193,7 @@ def main():
     # twin2.spines.right.set_position(("axes", 1.15))
 
     p1, = ax.plot(x, cam_force_ratios, c='k', label=r"$F_{normal}$ / $F_{nut}$ ratio", linewidth=2)
-    ax.set_xlabel('x [mm]')
+    ax.set_xlabel('nut travel $m$ [mm]')
     ax.set_ylabel(r"$F_{clamp}$/$F_{nut}$ ratio")
     ax.set_ylim([0, 3])
     ax.tick_params(axis='y', colors=p1.get_color())
@@ -239,16 +239,17 @@ def main():
     # First configure bar-linkage at the desired position
     _, _ = camfinger.ratio(camfinger.d3 - camfinger.d4 - camfinger.m_threshold)
 
-    efficiency = 0.55
+    efficiency = 0.6
     Tmotor = 0.32
-    Fnut = Tmotor * screw.factor_torque_into_force
-    camfinger.nut_clamp = efficiency * Fnut
-    camfinger.clamping_force = efficiency * (Fnut / camfinger.num_fingers) * camfinger.d6 * math.sin(camfinger.gamma) / (3*camfinger.d1*math.cos(camfinger.alfa + camfinger.theta))
+    Fnut = Tmotor * screw.factor_torque_into_force * efficiency
+    # camfinger.nut_clamp = efficiency * Fnut
+    camfinger.clamping_force = (Fnut / camfinger.num_fingers) * camfinger.d6 * math.sin(camfinger.gamma) / (3*camfinger.d1*math.cos(camfinger.alfa + camfinger.theta))
     print("\nFnut= ", Fnut)
     print("Fclamp= ", camfinger.clamping_force, "\n")
 
     # ------------------ Experiment 1: Finger offsets ----------------------
-    mus = [0.75, 0.9, 1.05]
+    print("\nExperiment 1: Finger offsets")
+    mus = [0.7, 0.8, 0.9]
     offsets = [0, 5, 10, 15, 20]
 
     for mu in mus:
@@ -257,9 +258,8 @@ def main():
 
         for offset in offsets:
             camfinger.finger_offset = offset
-            # print(camfinger.alfa, camfinger.theta, camfinger.gamma)
             x = camfinger.forces()
-            Fpulls.append(float(x[7]))
+            Fpulls.append(x[7].item())
 
         if mu == mus[0]:
             Fpulls_min = Fpulls
@@ -326,6 +326,7 @@ def main():
     plt.tight_layout()
 
     # ------------------ Experiment 2: Angled pull-back -----------------------------
+    print("\nExperiment 2: Angled pull-back")
     camfinger.finger_offset = 0
     omegas = [0, 15, 30, 45]
     for mu in mus:
@@ -335,7 +336,7 @@ def main():
         for omega in omegas:
             camfinger.omega = math.radians(omega)
             x = camfinger.forces()
-            Fpulls.append(float(x[7]))
+            Fpulls.append(x[7].item())
 
         if mu == mus[0]:
             Fpulls_min = Fpulls
@@ -393,6 +394,7 @@ def main():
     plt.tight_layout()
 
     #------------------------------------ Experiment 3: Angled pull back with Beta ------------------------------------
+    print("\nExperiment 3: Angled pull-back with Beta")
     camfinger.finger_offset = 0
     camfinger.beta = math.radians(90)
     omegas = [0, 15, 30, 45]
@@ -403,7 +405,7 @@ def main():
         for omega in omegas:
             camfinger.omega = math.radians(omega)
             x = camfinger.forces()
-            Fpulls.append(float(x[7]))
+            Fpulls.append(x[7].item())
 
         if mu == mus[0]:
             Fpulls_min = Fpulls
