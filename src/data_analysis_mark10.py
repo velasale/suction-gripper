@@ -405,6 +405,7 @@ def push_load_cell_experiments(folder):
                 all_fingers_max_vals.append(max_val)
 
             print('Finger Max-values', finger_max_vals)
+            print('Finger Mean and SDvalues', round(np.mean(finger_max_vals),1), round(np.std(finger_max_vals),1))
             print('All fingers accumulated Max-values', all_fingers_max_vals)
 
         fingers_data.append(finger_max_vals)
@@ -543,7 +544,7 @@ if __name__ == '__main__':
 
     ### Step 2 - Subfunctions ###
     # orthogonal_load_cell_experiments(folder)
-    # push_load_cell_experiments(folder)
-    mark10_pullback_experiments(folder)
+    push_load_cell_experiments(folder)
+    # mark10_pullback_experiments(folder)
 
     plt.show()
