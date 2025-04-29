@@ -147,7 +147,6 @@ class CamDrivenFinger():
         return self.forces_array
 
 
-
 def cam_driven_finger_model(camfinger):
 
     # --- Lead Screw Transmission ---
@@ -239,11 +238,11 @@ def main():
     # First configure bar-linkage at the desired position
     _, _ = camfinger.ratio(camfinger.d3 - camfinger.d4 - camfinger.m_threshold)
 
-    efficiency = 0.6
+    efficiency = 0.2
     Tmotor = 0.32
     Fnut = Tmotor * screw.factor_torque_into_force * efficiency
     # camfinger.nut_clamp = efficiency * Fnut
-    camfinger.clamping_force = (Fnut / camfinger.num_fingers) * camfinger.d6 * math.sin(camfinger.gamma) / (3*camfinger.d1*math.cos(camfinger.alfa + camfinger.theta))
+    camfinger.clamping_force = (Fnut / camfinger.num_fingers) * camfinger.d6 * math.sin(camfinger.gamma) / (camfinger.d1*math.cos(camfinger.alfa + camfinger.theta))
     print("\nFnut= ", Fnut)
     print("Fclamp= ", camfinger.clamping_force, "\n")
 
