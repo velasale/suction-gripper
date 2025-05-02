@@ -51,6 +51,22 @@ logging.basicConfig(format=logging_format, level=logging.INFO, datefmt="%H:%M:%S
 
 
 # ------------------------ HANDY FUNCTIONS -----------------------------------------
+def angle_between_vectors(a, b):
+    a = np.array(a)
+    b = np.array(b)
+
+    dot_product = np.dot(a, b)
+    norm_a = np.linalg.norm(a)
+    norm_b = np.linalg.norm(b)
+
+    # Avoid division by zero and domain error for arccos
+    cos_theta = np.clip(dot_product / (norm_a * norm_b), -1.0, 1.0)
+
+    angle_rad = np.arccos(cos_theta)
+    angle_deg = np.degrees(angle_rad)
+
+    return angle_rad, angle_deg
+
 def point_to_line_distance(point, origin, vector):
     """
 
@@ -263,7 +279,6 @@ def features_from_filename(object, filename):
     object.repetition = rep
 
     logging.debug('Trial sequence: %i, stiffness: %s, offset: %i, rep: %i' %(sequence, stiffness, offset, rep))
-
 
 
 # ------------------------ FORWARD KINEMATICS FUNCTIONS -------------------------------
@@ -764,7 +779,6 @@ class ApplePickTrial:
         self.vacuum_type = vacuum_type
 
         # ------------------------- Data from jsons ---------------------------
-
         self.pressure = pressure
         self.surface = surface
         self.surface_radius = radius
@@ -887,6 +901,10 @@ class ApplePickTrial:
         self.offset_eef_apple = []
         self.stiffness = 0
         self.stiffness_lr_rvalue = 0
+
+        self.omega_at_max_rad = 0               # Gripper-fruit angle omega
+        self.omega_at_max_deg = 0
+        self.beta_at_max = 0                # Fruit-force angle beta
 
         self.wrench_idx_start_pick = 0
         self.wrench_idx_end_pick = 0
@@ -1075,12 +1093,12 @@ class ApplePickTrial:
         eef_z_vector = np.dot(Rot_M, z_axis)
         eef_z_vector = plot_factor * eef_z_vector / np.linalg.norm(eef_z_vector)
 
-        # STEP 3: Location of the apple
+        # STEP 3: Apple location
         stem_vector = 0.01 * np.ones(3)
         calix_coord, stem_coord, branch_coord = self.apple_pose()
 
         compare_coords = 'same'
-        for  i,j in zip(branch_coord, stem_coord):
+        for i,j in zip(branch_coord, stem_coord):
             if i != j:
                 compare_coords = 'different'
                 break
@@ -1088,6 +1106,7 @@ class ApplePickTrial:
         if compare_coords != 'same':          #avoid divisions by zero
             stem_vector = np.subtract(branch_coord, stem_coord)
             stem_vector = plot_factor * stem_vector / np.linalg.norm(stem_vector)  # Normalize its magnitude
+
         apple_vector = np.subtract(stem_coord, calix_coord)
 
         x_last = self.eef_x[-1]
@@ -1095,6 +1114,8 @@ class ApplePickTrial:
         z_last = self.eef_z[-1]
         self.offset_eef_apple = point_to_line_distance(self.apple_center_loc, [x_last, y_last, z_last], eef_z_vector)
         logging.debug('EEF offset: %i.2 ' % self.offset_eef_apple)
+
+        self.omega_at_max_rad, self.omega_at_max_deg = angle_between_vectors(apple_vector, np.array([eef_z_vector[0], eef_z_vector[1], eef_z_vector[2]]))
 
         # plots
         if plots == 'yes':
@@ -2637,10 +2658,10 @@ def real_trials():
     # folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/REAL_APPLE_PICKS/'  # ArmFarm laptop - Hard Drive C
 
     # --- Field Trials at prosser --- #
-    # folder = 'Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/'
+    folder = 'Alejo - Apple Pick Data/Real Apple Picks/05 - 2023 fall (Prosser-WA)/'
     # subfolders = ['Dataset - apple grasps/', 'Dataset - apple picks/']
     # subfolders = ['Dataset - apple grasps/']
-    # subfolders = ['Dataset - apple picks/']
+    subfolders = ['Dataset - apple picks/']
 
     # --- Proxy trials --- #
     # folder = 'Alejo - Apple Pick Data/Apple Proxy Picks/05 - 2024 winter - finger and dual trials/'
@@ -2659,8 +2680,8 @@ def real_trials():
     # file = '2023111_realapple1_mode_dual_attempt_1_orientation_0_yaw_0'
 
     # --- Pressure Servoing
-    folder ='Alejo - Air Pressure Servoing/'
-    subfolders = ['high_stiffness/']
+    # folder ='Alejo - Air Pressure Servoing/'
+    # subfolders = ['high_stiffness/']
 
     ### Step 2: Define what variables to gather from trials ###
     stiffnesses = []
@@ -2675,6 +2696,9 @@ def real_trials():
     sc2_values_at_eng = []
     sc3_values_at_eng = []
     servoing_times = []
+    omegas_deg = []
+    betas_deg = []
+    pick_success_labels = []
 
     folder = storage + folder
 
@@ -2712,7 +2736,7 @@ def real_trials():
                 experiment.filename = file
                 logging.debug('metadata: %s' %experiment.metadata['general'])
 
-                features_from_filename(experiment, file)
+                # features_from_filename(experiment, file)
 
                 ### STEP 3: Check conditions from metadata to continue with analysis
                 mode = experiment.metadata['robot']['actuation mode']
@@ -2722,9 +2746,10 @@ def real_trials():
                 # a,d,e: successful, b,c: un-successful
                 # if pick != 'c':         # c: unsuccessful
                 # if pick == 'a' or pick == 'd' or pick == 'e':     # Successful picks
-                # if True:
-                # if mode == 'suction':
-                if experiment.sequence == 1 and experiment.stiffness == 'high' and experiment.offset_eef_apple == 1:
+
+                # if apple_id != 19:
+                if mode == 'dual':
+                # if experiment.sequence == 1 and experiment.stiffness == 'high' and experiment.offset_eef_apple == 1:
 
                     print('\n\n', file)
 
@@ -2734,10 +2759,10 @@ def real_trials():
                     ### STEP 5: Get features for the experiment
                     experiment.get_features()
                     experiment.eef_location(plots='no')
-                    # if subfolder != 'Dataset - apple grasps/':
-                        # experiment.pick_points(plots='no')
-                        # experiment.pick_forces()
-                        # experiment.pick_stiffness(plots='no')
+                    if subfolder != 'Dataset - apple grasps/':
+                        experiment.pick_points(plots='no')
+                        experiment.pick_forces()
+                        experiment.pick_stiffness(plots='no')
                     experiment.suction_engagement()
                     experiment.pressure_servoing_duration()
 
@@ -2751,6 +2776,13 @@ def real_trials():
                     deltas.append(experiment.travel_at_pick)
                     apple_ids.append(experiment.apple_id)
                     servoing_times.append(experiment.all_cups_engagement_elapsed_time)
+                    omegas_deg.append(experiment.omega_at_max_deg)
+
+                    beta = 90 - experiment.omega_at_max_deg - experiment.theta_at_pick
+                    betas_deg.append(beta)
+
+                    pick_success_labels.append(experiment.metadata['labels']['apple pick result'])
+
 
                     air_pres_thr = 120       # @ Corvallis, atmospheric air pressure ~115kPa
                     if experiment.sc1_value_at_engagement < air_pres_thr:
@@ -2882,6 +2914,120 @@ def real_trials():
 
         plt.xlabel('Air pressure [KPa]')
 
+        # print("(a) Successful pick: after pick pattern")
+        # print("(b) Un-successful: Apple picked but apple it fell afterwards")
+        # print("(c) Un-successful: Apple not picked")
+        # print("(d) Successful pick: before pick pattern ")
+        # print("(e) Successful pick: apple tweaked while closing fingers")
+
+        # ---- OMEGA PLOT -----
+        fig = plt.figure()
+        for i in range(len(pick_success_labels)):
+            x_coord = float(omegas_deg[i][0])
+            y_coord = float(max_netForces[i])
+            pick_label = str(pick_success_labels[i])
+            apple = str(apple_ids[i])
+
+            if (np.isfinite(x_coord) and np.isfinite(y_coord)):
+                # Green labels
+                if pick_label in ['a', 'd', 'e', 'b']:
+                    color = 'green'
+                    marker = 'o'
+                else:
+                    color = 'red'
+                    marker = '^'
+                plt.scatter(x_coord, y_coord, color=color, marker=marker, s=150, alpha=0.5)
+                plt.text(x_coord + 0.1, y_coord + 0.1, str(apple), fontsize=10, ha='left', va='bottom')
+            else:
+                print('i=', i)
+
+        plt.xlabel(r'$\omega$')
+        plt.ylabel('Pull force [N]')
+        plt.title(r'Gripper-Fruit angle vs $F_{\text{pull}}$')
+        plt.xlim([0, 120])
+        plt.ylim([0, 50])
+        plt.grid(True)
+        plt.tight_layout
+
+        # ---- OMEGA PLOT -----
+        fig = plt.figure()
+        for i in range(len(pick_success_labels)):
+            x_coord = float(betas_deg[i][0])
+            y_coord = float(max_netForces[i])
+            pick_label = str(pick_success_labels[i])
+            apple = str(apple_ids[i])
+
+            if (np.isfinite(x_coord) and np.isfinite(y_coord)):
+                # Green labels
+                if pick_label in ['a', 'd', 'e', 'b']:
+                    color = 'green'
+                    marker = 'o'
+                else:
+                    color = 'red'
+                    marker = '^'
+                plt.scatter(x_coord, y_coord, color=color, marker=marker, s=150, alpha=0.5)
+                plt.text(x_coord + 0.1, y_coord + 0.1, str(apple), fontsize=10, ha='left', va='bottom')
+            else:
+                print('i=', i)
+
+        plt.xlabel(r'$\beta$')
+        plt.ylabel('Pull force [N]')
+        plt.title(r'Fruit-Force angle vs $F_{\text{pull}}$')
+        plt.xlim([0, 150])
+        plt.ylim([0, 50])
+        plt.grid(True)
+        plt.tight_layout
+
+        # ---- BETA + OMEGA PLOT -----
+        plotted_good = False
+        plotted_bad = False
+
+        fig = plt.figure()
+        for i in range(len(pick_success_labels)):
+            x_coord = abs(float(betas_deg[i][0]) - float(omegas_deg[i][0]))
+            y_coord = float(max_netForces[i])
+            pick_label = str(pick_success_labels[i])
+            apple = str(apple_ids[i])
+
+            if (np.isfinite(x_coord) and np.isfinite(y_coord)):
+                # Green labels
+                if pick_label in ['a', 'd', 'e', 'b']:
+                    color = 'green'
+                    marker = 'o'
+
+                    if not plotted_good:
+                        plt.scatter(x_coord, y_coord, color=color, marker=marker, s=180, alpha=0.65, label='good pick')
+                        plotted_good = True
+                    else:
+                        plt.scatter(x_coord, y_coord, color=color, marker=marker, s=180, alpha=0.65)
+
+                else:
+
+                    color = 'red'
+                    marker = '^'
+
+                    if not plotted_bad:
+                        plt.scatter(x_coord, y_coord, color=color, marker=marker, s=180, alpha=0.65, label='bad pick')
+                        plotted_bad = True
+                    else:
+                        plt.scatter(x_coord, y_coord, color=color, marker=marker, s=180, alpha=0.65)
+
+
+
+                plt.text(x_coord + 0.1, y_coord + 0.1, str(apple), fontsize=12, ha='left', va='bottom')
+            else:
+                print('i=', i)
+
+        plt.axvline(x=40, color='black', linestyle='--', linewidth=2)
+        plt.xlabel(r'$\beta$ + $\omega$ [deg]')
+        plt.ylabel('Pull force [N]')
+        plt.title(r'Fruit-Force angle vs $F_{\text{pull}}$')
+        plt.xlim([0, 90])
+        plt.ylim([0, 40])
+        plt.grid(True)
+        plt.legend()
+        plt.tight_layout
+
     ### Choice 1 for plotting ####
     plt.show()
 
@@ -2915,8 +3061,8 @@ def main():
     # noise_experiments_pitch(exp_type='horizontal', radius=radius, variable=variable)
     # simple_suction_experiment()
 
-    proxy_trials()
-    # real_trials()
+    # proxy_trials()
+    real_trials()
 
     ### Step4: Build video from pngs and a plot beside of it with a vertical line running ###
     # plot_and_video()
