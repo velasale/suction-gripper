@@ -2984,7 +2984,7 @@ def real_trials():
 
         fig = plt.figure()
         for i in range(len(pick_success_labels)):
-            x_coord = abs(float(betas_deg[i][0]) - float(omegas_deg[i][0]))
+            x_coord = abs(float(betas_deg[i][0]) + float(omegas_deg[i][0]))
             y_coord = float(max_netForces[i])
             pick_label = str(pick_success_labels[i])
             apple = str(apple_ids[i])
