@@ -2748,7 +2748,7 @@ def real_trials():
                 # if pick == 'a' or pick == 'd' or pick == 'e':     # Successful picks
 
                 # if apple_id != 19:
-                if mode == 'dual':
+                if mode == 'dual' and apple_id != 19:
                 # if experiment.sequence == 1 and experiment.stiffness == 'high' and experiment.offset_eef_apple == 1:
 
                     print('\n\n', file)
@@ -2982,9 +2982,9 @@ def real_trials():
         plotted_good = False
         plotted_bad = False
 
-        fig = plt.figure()
+        fig = plt.figure(figsize=(9,5))
         for i in range(len(pick_success_labels)):
-            x_coord = abs(float(betas_deg[i][0]) + float(omegas_deg[i][0]))
+            x_coord = abs(float(betas_deg[i][0]) + float(omegas_deg[i][0]))     # same as 90 - theta
             y_coord = float(max_netForces[i])
             pick_label = str(pick_success_labels[i])
             apple = str(apple_ids[i])
@@ -2996,7 +2996,7 @@ def real_trials():
                     marker = 'o'
 
                     if not plotted_good:
-                        plt.scatter(x_coord, y_coord, color=color, marker=marker, s=180, alpha=0.65, label='good pick')
+                        plt.scatter(x_coord, y_coord, color=color, marker=marker, s=180, alpha=0.65, label='successful pick')
                         plotted_good = True
                     else:
                         plt.scatter(x_coord, y_coord, color=color, marker=marker, s=180, alpha=0.65)
@@ -3007,26 +3007,29 @@ def real_trials():
                     marker = '^'
 
                     if not plotted_bad:
-                        plt.scatter(x_coord, y_coord, color=color, marker=marker, s=180, alpha=0.65, label='bad pick')
+                        plt.scatter(x_coord, y_coord, color=color, marker=marker, s=180, alpha=0.65, label='failed pick')
                         plotted_bad = True
                     else:
                         plt.scatter(x_coord, y_coord, color=color, marker=marker, s=180, alpha=0.65)
 
-
-
-                plt.text(x_coord + 0.1, y_coord + 0.1, str(apple), fontsize=12, ha='left', va='bottom')
+                plt.text(x_coord + 0.15, y_coord + 0.15, str(apple), fontsize=12, ha='left', va='bottom')
             else:
                 print('i=', i)
 
+        # Customize x-axis tick labels with degree symbol
+        xticks = plt.xticks()[0]  # Get current tick locations
+        xtick_labels = [f"{int(tick)}°" for tick in xticks]
+        plt.xticks(xticks, xtick_labels)
+
         plt.axvline(x=40, color='black', linestyle='--', linewidth=2)
-        plt.xlabel(r'$\beta$ + $\omega$ [deg]')
-        plt.ylabel('Pull force [N]')
-        plt.title(r'Fruit-Force angle vs $F_{\text{pull}}$')
-        plt.xlim([0, 90])
+        plt.xlabel(r'Gripper-$F_{\text{pull}}$ angle $\psi = \beta + \omega$')
+        plt.ylabel('Force [N]')
+        plt.title(r'Gripper-Force angle ($\beta + \omega$) vs $F_{\text{pull}}$')
+        plt.xlim([0, 80])
         plt.ylim([0, 40])
         plt.grid(True)
         plt.legend()
-        plt.tight_layout
+        # plt.tight_layout()
 
     ### Choice 1 for plotting ####
     plt.show()
