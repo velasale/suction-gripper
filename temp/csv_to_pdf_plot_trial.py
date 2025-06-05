@@ -29,8 +29,6 @@ def cups_engaged(pressure_data):
     print(f'Maximum_count = {max_cnt}\n')
 
 
-
-
 def extract_timestamp_and_distance(data):
     """Extracts timestamp and distance from the respective columns."""
     # Extract timestamp directly
