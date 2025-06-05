@@ -59,7 +59,7 @@ def main():
 
     # --- Step 1: Only consider Useful Data ---
     # Note: Useful data is in the csv file 'pressure_servo_folders_labels'
-    base_directory ="C:/Users/avela/OneDrive/Documents/01 Research/Data/"
+    base_directory = "D:/Alejo - Apple Pick Data/Real Apple Picks/06 - 2024 fall (Prosser-WA)/"     # ALEJO HD1
     file_path = base_directory + "pressure_servo_folders_labels.csv"
     df = pd.read_csv(file_path)
 
@@ -207,8 +207,6 @@ def main():
     print(st.stdev(swept_angles))
 
     plt.show()
-
-
 
 
 if __name__ == '__main__':
