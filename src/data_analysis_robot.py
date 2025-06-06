@@ -1869,6 +1869,9 @@ class ApplePickTrial:
 
         lines = itertools.cycle(('dotted', 'dashed', 'dashdot'))
         colors = itertools.cycle(('orange', 'blue', 'green'))
+
+        lines = itertools.cycle(('-', '--', '-.'))
+        colors = itertools.cycle(('#0072B2', '#E69F00', '#000000'))
         # text_locations = itertools.cycle((0, 6, 12, 0, 6, 12))
         text_locations = itertools.cycle((105, 95, 85, 105, 95, 85))
 
@@ -1955,14 +1958,14 @@ class ApplePickTrial:
 
             # --- Plot experiment events for reference ---
             for event, label in zip(event_x, event_y):
-                plt.axvline(x=event, color='black', linestyle='--', linewidth=1.5)
+                plt.axvline(x=event, color='black', linestyle='--', linewidth=1)
                 plt.text(event, 10, label.lower(), rotation=60, color='black', fontsize=TICKSIZE)
             cnt = 0
 
             #### Plot pressure signals ####
             for pressure_time, pressure_value, pressure_label in zip(pressure_times, pressure_values, pressure_labels):
                 # plt.plot(pressure_time, pressure_value, linewidth=2, label=pressure_label, linestyle=next(lines), color=next(colors))
-                ax.plot(pressure_time, pressure_value, linewidth=2, label=pressure_label, linestyle=next(lines), color=next(colors))
+                ax.plot(pressure_time, pressure_value, linewidth=2.5, label=pressure_label, linestyle=next(lines), color=next(colors))
                 cnt += 1
             ax.set_ylabel("Pressure [kPa]", fontsize=FONTSIZE)
             ax.set_xlabel("Elapsed Time [sec]", fontsize=FONTSIZE)
@@ -1976,19 +1979,28 @@ class ApplePickTrial:
             force_time, sumforce_values = crop_lists(start_time, self.wrench_elapsed_time,
                                                      self.wrench_netforce_relative_values)
             ax2 = ax.twinx()
-            ax2.plot(force_time, sumforce_values, linewidth=2, color='red', label='net force')
+            ax2.plot(force_time, sumforce_values, linewidth=1.5, color='red', label='net force')
             ax2.set_ylabel("Force [N]", fontsize=FONTSIZE)
             ax2.set_ylim([0, 30])
             ax2.tick_params(axis='y', labelsize=TICKSIZE)
 
 
 
-            ax.legend(loc='upper left', fontsize=TICKSIZE)
+            ax.legend(loc='upper left',  bbox_to_anchor=(0, 0.9),fontsize=TICKSIZE)
             ax2.legend(loc='upper right', fontsize=TICKSIZE)
             plt.xlim([start_time,max(force_time)])
             # plt.xlim([0, 16])       # Fig.5 ICRA24
             # plt.xlim([0, 50])        # Fig.8 ICRA24
             # plt.title(self.filename)
+
+            # AGRICONTROL_2025: Highlight time region between 5 and 10 sec
+            ax.axvspan(0, 3.2, color='lightblue', alpha=0.5)
+            ax.axvspan(3.2, 9.2, color='lightgray', alpha=0.5)
+            ax.text(0.25, 101, 'approach', horizontalalignment='left', verticalalignment='bottom',
+                     fontsize=16, color='k')
+            ax.text(3.55, 101, 'servoing', horizontalalignment='left', verticalalignment='bottom',
+                     fontsize=16, color='k')
+
 
             plt.grid()
             # plt.legend(fontsize=FONTSIZE)
@@ -3064,8 +3076,8 @@ def main():
     # noise_experiments_pitch(exp_type='horizontal', radius=radius, variable=variable)
     # simple_suction_experiment()
 
-    # proxy_trials()
-    real_trials()
+    proxy_trials()
+    # real_trials()
 
     ### Step4: Build video from pngs and a plot beside of it with a vertical line running ###
     # plot_and_video()

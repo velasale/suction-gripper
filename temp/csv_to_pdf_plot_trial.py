@@ -129,7 +129,8 @@ def find_and_plot_pressure_csv(folder_path, output_pdf):
             try:
                 # Read the pressure.csv file
                 pressure_data = pd.read_csv(file_path)
-                if 'time' in pressure_data.columns and 'data_0' in pressure_data.columns and 'data_1' in pressure_data.columns and 'data_2' in pressure_data.columns:
+                trial_name = '181307'
+                if 'time' in pressure_data.columns and 'data_0' in pressure_data.columns and 'data_1' in pressure_data.columns and 'data_2' in pressure_data.columns and trial_name in file_path:
                     pressure_data = extract_pressure_signals(pressure_data)        # Convert hPa to KPa
 
                     # Scale air-pressure to kPa (The original data is given in hPa)
@@ -143,11 +144,54 @@ def find_and_plot_pressure_csv(folder_path, output_pdf):
                     print(file_path)
                     cups_engaged(pressure_data)
 
+
+                    # Define accessible, high-contrast colors
+                    colors = {
+                        'a': '#0072B2',  # blue
+                        'b': '#E69F00',  # orange
+                        'c': '#000000'   # sky blue
+                    }
+
                     # Create the plot
                     plt.figure(figsize=(6, 5))
-                    plt.plot(pressure_data['elapsed_time_s'], pressure_data['data_0'], label='suction cup a', linestyle='-', color='c')
-                    plt.plot(pressure_data['elapsed_time_s'], pressure_data['data_1'], label='suction cup b', linestyle='--', color='m')
-                    plt.plot(pressure_data['elapsed_time_s'], pressure_data['data_2'], label='suction cup c', linestyle=':', color='y')
+
+                    # Suction cup a
+                    plt.plot(
+                        pressure_data['elapsed_time_s'],
+                        pressure_data['data_0'],
+                        label='suction cup a',
+                        linestyle='-',
+                        linewidth = 2.5,  #marker='o',
+                        markersize=5,
+                        markevery=15,  # Show marker every 15 points
+                        color=colors['a']
+                    )
+
+                    # Suction cup b
+                    plt.plot(
+                        pressure_data['elapsed_time_s'],
+                        pressure_data['data_1'],
+                        label='suction cup b',
+                        linestyle='--',
+                        linewidth = 2.5,  # marker='s',
+                        markersize=5,
+                        markevery=15,
+                        color=colors['b']
+                    )
+
+                    # Suction cup c
+                    plt.plot(
+                        pressure_data['elapsed_time_s'],
+                        pressure_data['data_2'],
+                        label='suction cup c',
+                        linestyle='-.',
+                        linewidth = 2.5,  #marker='^',
+                        markersize=5,
+                        markevery=15,
+                        color=colors['c']
+                    )
+
+                    # Labels and styling
                     plt.xlabel('Elapsed Time [sec]')
                     plt.ylabel('Pressure [kPa]')
                     plt.title(f"Pressure Signals: {os.path.relpath(file_path, folder_path)}")
@@ -156,9 +200,18 @@ def find_and_plot_pressure_csv(folder_path, output_pdf):
                     plt.grid(True)
                     plt.tight_layout()
 
+                    # AGRICONTROL_2025: Highlight time region between 5 and 10 sec
+                    plt.axvspan(0, 5, color='lightblue', alpha=0.5)
+                    plt.axvspan(5, 11, color='lightgray', alpha=0.5)
+                    plt.text(0.5, 1, 'approach', horizontalalignment='left', verticalalignment='bottom',
+                             fontsize=18, color='k')
+                    plt.text(5.5, 1, 'servoing', horizontalalignment='left', verticalalignment='bottom',
+                             fontsize=18, color='k')
+
                     pdf.savefig()
                     plt.show()
                     plt.close()
+
             except Exception as e:
                 print(f"Error reading {file_path}: {e}")
 

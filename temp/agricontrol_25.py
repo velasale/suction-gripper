@@ -68,7 +68,7 @@ def main():
     useful_df = df[df['Data Useful?'] == 'yes']
 
     # Filter 1.2: Other filters
-    useful_df = useful_df[useful_df['gripper pose success'] == 'no']
+    useful_df = useful_df[useful_df['gripper pose success'] == 'yes']
     # useful_df = useful_df[useful_df['Cause / Effect'] == 'SW - Pressure Servoing: Singularity reached']
 
     # --- Step 2: Find the initial pose angle
@@ -165,8 +165,8 @@ def main():
         ax.set_xlabel('x[m]', labelpad=15)
         ax.set_ylabel('y[m]', labelpad=15)
         ax.set_zlabel('z[m]', labelpad=15)
-        ax.text(x[0]-0.03, y[0], z[0]+0.015, "Start", color='black')
-        ax.text(x[-1]-0.03, y[-1], z[-1]+0.015, "End", color='black')
+        ax.text(x[0]-0.03, y[0], z[0]+0.015, "start", color='black')
+        ax.text(x[-1]-0.03, y[-1], z[-1]+0.015, "end", color='black')
         ax.plot3D(x, y, z, 'black', linewidth='2', linestyle='dotted')
 
         # Plot eef frame
