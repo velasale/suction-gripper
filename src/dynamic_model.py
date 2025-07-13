@@ -1,10 +1,49 @@
 import math
 import matplotlib.pyplot as plt
 import numpy as np
+import yaml
+from pathlib import Path
 from matplotlib.patches import Patch
 from scipy.linalg import null_space
 
 from data_analysis_mark10 import *
+
+
+def Fpull_range(object, attr_name, attr_values):
+    """
+    Summary: This function evaluates the Pull Force of the mechanism while changing the attribute.
+             It also provides a range for a deviation of the friction coefficient.
+
+    Args:
+        object: cam finger mechanism
+        attr_name: attribute to vary in for-loop
+        attr_values: values to assign to attribute
+
+    Returns:
+        Max, Med and Min Pull Forces
+    """
+
+
+
+    mus = [0.7, 0.8, 0.9]   # Friction coefficient range
+
+    for mu in mus:
+        object.mu = mu
+        Fpulls = []
+
+        for value in attr_values:
+            setattr(object, attr_name, value)
+            x = object.forces()
+            Fpulls.append(x[7].item())
+
+        if mu == mus[0]:
+            Fpulls_min = Fpulls
+        elif mu == mus[1]:
+            Fpulls_mid = Fpulls
+        elif mu == mus[2]:
+            Fpulls_max = Fpulls
+
+    return Fpulls_max, Fpulls_mid, Fpulls_min
 
 
 def latex_figure_settings():
@@ -81,7 +120,6 @@ class CamDrivenFinger():
         self.theta = 0.0
 
         # Experiment parameters
-
         self.finger_offset = 0
         self.psi = math.tan(self.finger_offset / self.apple_radius)
         self.omega = 0              # angle between gripper and apple main axis
@@ -263,37 +301,18 @@ def main():
     print("\nExperiment 1: Finger offsets")
 
     # --- Part 1.1: Model ---
-    mus = [0.7, 0.8, 0.9]
-    offsets = [0, 5, 10, 15, 20]
-
-    for mu in mus:
-        camfinger.mu = mu
-        Fpulls = []
-
-        for offset in offsets:
-            camfinger.finger_offset = offset
-            x = camfinger.forces()
-            Fpulls.append(x[7].item())
-
-        if mu == mus[0]:
-            Fpulls_min = Fpulls
-        elif mu == mus[1]:
-            Fpulls_mid = Fpulls
-        elif mu == mus[2]:
-            Fpulls_max = Fpulls
+    attr_name = 'finger_offset'
+    attr_values = [0, 5, 10, 15, 20]
+    Fpulls_max, Fpulls_mid, Fpulls_min = Fpull_range(camfinger, attr_name, attr_values)
 
     # Figure parameters
     x_size = 9
     y_size = 7.5
 
     fig, ax = plt.subplots(figsize=(x_size, y_size))
-    model_plot, = ax.plot(offsets, Fpulls_mid, '-o', color='green', label='fingers model')
-    ax.fill_between(offsets, Fpulls_min, Fpulls_max, color='green', alpha=.2)
+    model_plot, = ax.plot(attr_values, Fpulls_mid, '-o', color='green', label='fingers model')
+    ax.fill_between(attr_values, Fpulls_min, Fpulls_max, color='green', alpha=.2)
 
-    ax.set_ylim([0, 60])
-    # ax.grid()
-    ax.set_ylabel('Force [N]')
-    ax.set_xlabel('offset [mm]')
 
     # --- Part 1.2: Mark10 measurements ---
     # Boxplot parameters
@@ -316,7 +335,7 @@ def main():
                   'orange',
                   'skyblue']
 
-    position_list = [offsets,
+    position_list = [attr_values,
                  [0+xloc_delta, 5+xloc_delta, 10+xloc_delta, 15+xloc_delta, 20+xloc_delta],
                  [0 - xloc_delta, 5 - xloc_delta, 10 - xloc_delta, 15 - xloc_delta, 20 - xloc_delta]]
 
@@ -340,6 +359,9 @@ def main():
     ax.legend(handles=legend_handles, loc='upper left')
     ax.set_xticks([])
     ax.set_xticks([0, 5, 10, 15, 20])
+    ax.set_ylim([0, 60])
+    ax.set_ylabel('Force [N]')
+    ax.set_xlabel('offset [mm]')
     ax.grid()
     plt.tight_layout()
 
@@ -348,26 +370,15 @@ def main():
 
     # --- Part 2.1: Model ---
     camfinger.finger_offset = 0
-    omegas = [0, 15, 30, 45]
-    for mu in mus:
-        camfinger.mu = mu
-        Fpulls = []
+    attr_name = 'omega'
+    attr_values_deg = [0, 15, 30, 45]
+    attr_values_rad = [math.radians(deg) for deg in attr_values_deg]
 
-        for omega in omegas:
-            camfinger.omega = math.radians(omega)
-            x = camfinger.forces()
-            Fpulls.append(x[7].item())
-
-        if mu == mus[0]:
-            Fpulls_min = Fpulls
-        elif mu == mus[1]:
-            Fpulls_mid = Fpulls
-        elif mu == mus[2]:
-            Fpulls_max = Fpulls
+    Fpulls_max, Fpulls_mid, Fpulls_min = Fpull_range(camfinger, attr_name, attr_values_rad)
 
     fig, ax = plt.subplots(figsize=(x_size, y_size))
-    model_plot, = ax.plot(omegas, Fpulls_mid, '-o', color='green', label='fingers model')
-    ax.fill_between(omegas, Fpulls_min, Fpulls_max, color='green', alpha=.2)
+    model_plot, = ax.plot(attr_values_deg, Fpulls_mid, '-o', color='green', label='fingers model')
+    ax.fill_between(attr_values_deg, Fpulls_min, Fpulls_max, color='green', alpha=.2)
 
     # --- Part 2.2: Mark10 measurements ---
     # Boxplot parameters
@@ -383,7 +394,7 @@ def main():
                       [12.85, 13.0, 12.6, 11.75, 11.7, 13.6], [11.65, 13.0, 13.8], [13.35, 12.0, 13.7]]
     Force_lists = [Fpulls_fingers, Fpulls_dual, Fpulls_suction]
 
-    position_list = [omegas,
+    position_list = [attr_values_deg,
                      [0 + xloc_delta, 15 + xloc_delta, 30 + xloc_delta, 45 + xloc_delta],
                      [0 - xloc_delta, 15 - xloc_delta, 30 - xloc_delta, 45 - xloc_delta]]
 
@@ -420,41 +431,38 @@ def main():
     # --- Part 3.1: Model ---
     camfinger.finger_offset = 0
     camfinger.beta = math.radians(90)
-    omegas = [0, 15, 30, 45]
-    for mu in mus:
-        camfinger.mu = mu
-        Fpulls = []
+    attr_name = 'omega'
+    attr_values_deg = [0, 15, 30, 45]
+    attr_values_rad = [math.radians(deg) for deg in attr_values_deg]
 
-        for omega in omegas:
-            camfinger.omega = math.radians(omega)
-            x = camfinger.forces()
-            Fpulls.append(x[7].item())
-
-        if mu == mus[0]:
-            Fpulls_min = Fpulls
-        elif mu == mus[1]:
-            Fpulls_mid = Fpulls
-        elif mu == mus[2]:
-            Fpulls_max = Fpulls
+    Fpulls_max, Fpulls_mid, Fpulls_min = Fpull_range(camfinger, attr_name, attr_values_rad)
 
     fig, ax = plt.subplots(figsize=(x_size, y_size))
-    model_plot, = ax.plot(omegas, Fpulls_mid, '-o', color='green', label='fingers model')
-    ax.fill_between(omegas, Fpulls_min, Fpulls_max, color='green', alpha=.2)
+    model_plot, = ax.plot(attr_values_deg, Fpulls_mid, '-o', color='green', label='fingers model')
+    ax.fill_between(attr_values_deg, Fpulls_min, Fpulls_max, color='green', alpha=.2)
 
     # --- Part 2.2: Mark10 measurements ---
-    Fpulls_dual = [[22.2, 22.9, 23.24, 22.18, 21.18],
-                   [26.4, 25, 27.7, 28, 28],
-                   [32.2, 31.25, 32.9, 33, 32.8],
-                   [36.65, 36.95, 38.15, 37.5, 34.5]]
-    Fpulls_suction = [[5.3, 5.18, 5.64, 5.18, 4.96],
-                      [7.65, 7.5, 7.1, 7.15, 7.35],
-                      [6.6, 6.45, 6.75, 8.95, 9.05],
-                      [12.15, 13.7, 14.6, 14.55, 14.65]]
-    Fpulls_fingers = [[14.82, 12.04, 9.74, 16.3, 13.56, 17.52],
-                      [18.8, 20.95, 19.6, 20.85, 19.45],
-                      [22, 24.75, 24.4, 25.55, 26.3],
-                      [21.85, 21.4, 22.4, 18.15, 21.7]]
-    Force_lists = [Fpulls_fingers, Fpulls_dual, Fpulls_suction]
+    # Load data from YAML
+    # Relative to the script location
+    data_path = Path("C:/Users/avela/PycharmProjects/suction-gripper/data/mark10/fpull_omegasbeta90.yaml")
+    with open(data_path, "r") as f:
+        force_data = f.read()
+
+    # Fpulls_dual = [[22.2, 22.9, 23.24, 22.18, 21.18],
+    #                [26.4, 25, 27.7, 28, 28],
+    #                [32.2, 31.25, 32.9, 33, 32.8],
+    #                [36.65, 36.95, 38.15, 37.5, 34.5]]
+    # Fpulls_suction = [[5.3, 5.18, 5.64, 5.18, 4.96],
+    #                   [7.65, 7.5, 7.1, 7.15, 7.35],
+    #                   [6.6, 6.45, 6.75, 8.95, 9.05],
+    #                   [12.15, 13.7, 14.6, 14.55, 14.65]]
+    # Fpulls_fingers = [[14.82, 12.04, 9.74, 16.3, 13.56, 17.52],
+    #                   [18.8, 20.95, 19.6, 20.85, 19.45],
+    #                   [22, 24.75, 24.4, 25.55, 26.3],
+    #                   [21.85, 21.4, 22.4, 18.15, 21.7]]
+    Force_lists = [force_data["Fpulls_fingers"],
+                   force_data["Fpulls_dual"],
+                   force_data["Fpulls_suction"]]
 
     for force_list, facecolor, positions in zip(Force_lists, facecolors, position_list):
         ax.boxplot(force_list, positions=positions, widths=boxwidth,
