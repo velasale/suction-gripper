@@ -1,10 +1,8 @@
 # Mark10 Measurements
-# Experiment: Angled pull back with Beta
+# Experiment: Measure peak Pulling Force, while varying 'omega' with Beta=90deg
 # Parameters:
 #             Beta [deg] = 90
 #             Omega [rad] = 0, 15, 30, 45    (each row)
-
-
 
 Fpulls_dual:
   - [22.2, 22.9, 23.24, 22.18, 21.18]

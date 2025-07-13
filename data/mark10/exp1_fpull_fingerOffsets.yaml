@@ -1,5 +1,5 @@
 # Mark10 Measurements
-# Experiment: Finger Offsets
+# Experiment: Measure peak Pulling Force, while varying 'finger offset'
 # Parameters:
 #             offsets [mm] = 0, 10, 15, 20     (each row)
 

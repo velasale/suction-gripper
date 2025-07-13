@@ -1,5 +1,5 @@
 # Mark10 Measurements
-# Experiment: Angled pull back with Beta
+# Experiment: Measure peak Pulling Force, while varying 'omega' with Beta=0deg
 # Parameters:
 #             Beta [deg] = 0
 #             Omega [rad] = 0, 15, 30, 45    (each row)
