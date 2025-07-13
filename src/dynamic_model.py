@@ -179,9 +179,8 @@ def main():
     camfinger = CamDrivenFinger()
     screw = AcmeLeadScrew()
 
-    x, cam_force_ratios, levers = cam_driven_finger_model(camfinger)
-
-    ### Figure 1: Force Tranmission Ratio vs Distance ###
+    # --------------------- Figure 1: Force Tranmission Ratio vs Distance -------------------------------
+    # --- Figure settings ---
     # Source: https://onelinerhub.com/python-matplotlib/how-to-add-third-y-axis
     latex_figure_settings()
     x_size = 11.5
@@ -191,7 +190,19 @@ def main():
     # twin2 = ax.twinx()
     # twin2.spines.right.set_position(("axes", 1.15))
 
-    p1, = ax.plot(x, cam_force_ratios, c='k', label=r"$F_{normal}$ / $F_{nut}$ ratio", linewidth=2)
+    # --- Transmission configuration ---
+    d5_lengths = [18, 18.5, 19, 19.5, 20]
+    d5_lengths = [18.5]        # RAL paper - Figure 1
+    d7_lengths = [12, 13, 14, 14.25]
+    # d7_lengths = [12.13]   # horizontal distance between pivot and nut
+    d6_lengths = [17,18,19,20]
+
+    for bar_length in d6_lengths:
+        print(bar_length)
+        camfinger.d6 = bar_length
+        x, cam_force_ratios, levers = cam_driven_finger_model(camfinger)
+        p1, = ax.plot(x, cam_force_ratios, c='k', label=r"$F_{normal}$ / $F_{nut}$ ratio", linewidth=2)
+
     ax.set_xlabel('nut travel $m$ [mm]')
     ax.set_ylabel(r"$F_{clamp}$/$F_{nut}$ ratio")
     ax.set_ylim([0, 3])
@@ -236,6 +247,8 @@ def main():
 
     # ------------------- MARK10 EXPERIMENTS ---------------------------------
     # First configure bar-linkage at the desired position
+    camfinger = CamDrivenFinger()
+    screw = AcmeLeadScrew()
     _, _ = camfinger.ratio(camfinger.d3 - camfinger.d4 - camfinger.m_threshold)
 
     efficiency = 0.2
