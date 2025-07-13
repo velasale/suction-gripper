@@ -421,22 +421,31 @@ def main():
     boxwidth = 3
     xloc_delta = 1.1* boxwidth
 
-    Fpulls_dual = [22.2, 22.9, 23.24, 22.18, 21.18]
-    Fpulls_suction = [5.3, 5.18, 5.64, 5.18, 4.96]
-    Fpulls_fingers = [14.82, 12.04, 9.74, 16.3, 13.56, 17.52]
-    ax.boxplot(Fpulls_suction, positions=[0-xloc_delta], widths=boxwidth,
+    Fpulls_dual = [[22.2, 22.9, 23.24, 22.18, 21.18],
+                   [26.4, 25, 27.7, 28, 28],
+                   [32.2, 31.25, 32.9, 33, 32.8],
+                   [36.65, 36.95, 38.15, 37.5, 34.5]]
+    Fpulls_suction = [[5.3, 5.18, 5.64, 5.18, 4.96],
+                      [7.65, 7.5, 7.1, 7.15, 7.35],
+                      [6.6, 6.45, 6.75, 8.95, 9.05],
+                      [12.15, 13.7, 14.6, 14.55, 14.65]]
+    Fpulls_fingers = [[14.82, 12.04, 9.74, 16.3, 13.56, 17.52],
+                      [18.8, 20.95, 19.6, 20.85, 19.45],
+                      [22, 24.75, 24.4, 25.55, 26.3],
+                      [21.85, 21.4, 22.4, 18.15, 21.7]]
+    ax.boxplot(Fpulls_suction, positions=[0 - xloc_delta, 15 - xloc_delta, 30 - xloc_delta, 45 - xloc_delta], widths=boxwidth,
                patch_artist=True,
                boxprops=dict(facecolor='skyblue', color='black'),
                medianprops=dict(color='red')
                )
 
-    ax.boxplot(Fpulls_fingers, positions=[0], widths=boxwidth,
+    ax.boxplot(Fpulls_fingers, positions=omegas, widths=boxwidth,
                patch_artist=True,
                boxprops=dict(facecolor='green', color='black'),
                medianprops=dict(color='red')
                )
 
-    ax.boxplot(Fpulls_dual, positions=[0+xloc_delta], widths=boxwidth,
+    ax.boxplot(Fpulls_dual,  positions=[0+xloc_delta,15+xloc_delta,30+xloc_delta,45+xloc_delta], widths=boxwidth,
                patch_artist=True,
                boxprops=dict(facecolor='orange', color='black'),
                medianprops=dict(color='red')
