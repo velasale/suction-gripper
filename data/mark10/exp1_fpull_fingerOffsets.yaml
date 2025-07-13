@@ -1,7 +1,7 @@
 # Mark10 Measurements
 # Experiment: Measure peak Pulling Force, while varying 'finger offset'
 # Parameters:
-#             offsets [mm] = 0, 10, 15, 20     (each row)
+#             offsets [mm] = 0, 5, 10, 15, 20     (each row)
 
 
 Fpulls_fingers:
