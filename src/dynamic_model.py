@@ -320,16 +320,29 @@ def main():
     xloc_delta = 1.1 * boxwidth
 
     # Measurements
-    Fpulls_fingers = [[25.35, 22.95, 19.0, 26.05, 22.1], [17.25, 19.25, 16.25, 19.6, 21.95],
-                       [11.4, 14.7, 10.55, 13.5, 15.55],
-                       [10.65, 11.55, 11.4, 11.4, 12.5], [7.8, 8.25, 8.0, 5.05, 9.35]]
-    Fpulls_dual = np.array(Fpulls_fingers) + 12.12  # simply add the suction force
-    Fpulls_dual = Fpulls_dual.tolist()
-    Fpulls_suction = [[12.35, 11.9, 12.5, 11.9, 12.25, 11.95, 11.85, 12.3, 12.25, 11.95, 11.9],
-                      [12.85, 13.0, 12.6, 11.75, 11.7, 13.6], [11.65, 13.0, 13.8], [13.35, 12.0, 13.7],
-                      [13.35, 12.0, 13.7]]
+    data_path = Path(r"C:\Users\avela\PycharmProjects\suction-gripper\data\mark10\exp1_fpull_fingerOffsets.yaml")
+    with open(data_path, "r") as f:
+        force_data = yaml.safe_load(f)
 
-    Force_lists = [Fpulls_fingers, Fpulls_dual, Fpulls_suction]
+    Fpulls_dual = np.array(force_data["Fpulls_fingers"]) + 12.12  # simply add the suction force
+    Fpulls_dual = Fpulls_dual.tolist()
+
+    Force_lists = [force_data["Fpulls_fingers"],
+                   Fpulls_dual,
+                   force_data["Fpulls_suction"]]
+
+    # Measurements
+    # Fpulls_fingers = [[25.35, 22.95, 19.0, 26.05, 22.1], [17.25, 19.25, 16.25, 19.6, 21.95],
+    #                    [11.4, 14.7, 10.55, 13.5, 15.55],
+    #                    [10.65, 11.55, 11.4, 11.4, 12.5], [7.8, 8.25, 8.0, 5.05, 9.35]]
+    # Fpulls_dual = np.array(Fpulls_fingers) + 12.12  # simply add the suction force
+    # Fpulls_dual = Fpulls_dual.tolist()
+
+    # Fpulls_suction = [[12.35, 11.9, 12.5, 11.9, 12.25, 11.95, 11.85, 12.3, 12.25, 11.95, 11.9],
+    #                   [12.85, 13.0, 12.6, 11.75, 11.7, 13.6], [11.65, 13.0, 13.8], [13.35, 12.0, 13.7],
+    #                   [13.35, 12.0, 13.7]]
+
+    # Force_lists = [Fpulls_fingers, Fpulls_dual, Fpulls_suction]
 
     facecolors = ['green',
                   'orange',
@@ -386,13 +399,13 @@ def main():
     xloc_delta = 1.1 * boxwidth
 
     # Measurements
-    Fpulls_fingers = [[25.35, 22.95, 19.0, 26.05, 22.1], [26.45, 27.8, 25.1, 32.6, 18.5, 12.6], [23.5, 19.6, 25.15, 28.7, 13.4], [16.6, 29.95, 29.25, 37.5, 31.25]]
-    Fpulls_dual = [[33.95, 33.8, 36.9, 34.65, 32.1],
-                   [36.6, 32.1, 49.5, 35.6, 36.65, 38.9, 30.9, 23.2, 27.95, 29.6, 32.1],
-                   [36.7, 36.1, 33.1, 38.7, 39.2, 38.3], [36.75, 31.7, 47.9, 39.85, 39.3]]
-    Fpulls_suction = [[12.35, 11.9, 12.5, 11.9, 12.25, 11.95, 11.85, 12.3, 12.25, 11.95, 11.9],
-                      [12.85, 13.0, 12.6, 11.75, 11.7, 13.6], [11.65, 13.0, 13.8], [13.35, 12.0, 13.7]]
-    Force_lists = [Fpulls_fingers, Fpulls_dual, Fpulls_suction]
+    data_path = Path(r"C:\Users\avela\PycharmProjects\suction-gripper\data\mark10\exp2_fpull_omegas_beta0.yaml")
+    with open(data_path, "r") as f:
+        force_data = yaml.safe_load(f)
+
+    Force_lists = [force_data["Fpulls_fingers"],
+                   force_data["Fpulls_dual"],
+                   force_data["Fpulls_suction"]]
 
     position_list = [attr_values_deg,
                      [0 + xloc_delta, 15 + xloc_delta, 30 + xloc_delta, 45 + xloc_delta],
@@ -441,25 +454,12 @@ def main():
     model_plot, = ax.plot(attr_values_deg, Fpulls_mid, '-o', color='green', label='fingers model')
     ax.fill_between(attr_values_deg, Fpulls_min, Fpulls_max, color='green', alpha=.2)
 
-    # --- Part 2.2: Mark10 measurements ---
+    # --- Part 3.2: Mark10 measurements ---
     # Load data from YAML
-    # Relative to the script location
-    data_path = Path("C:/Users/avela/PycharmProjects/suction-gripper/data/mark10/fpull_omegasbeta90.yaml")
+    data_path = Path(r"C:\Users\avela\PycharmProjects\suction-gripper\data\mark10\exp3_fpull_omegas_beta90.yaml")
     with open(data_path, "r") as f:
-        force_data = f.read()
+        force_data = yaml.safe_load(f)
 
-    # Fpulls_dual = [[22.2, 22.9, 23.24, 22.18, 21.18],
-    #                [26.4, 25, 27.7, 28, 28],
-    #                [32.2, 31.25, 32.9, 33, 32.8],
-    #                [36.65, 36.95, 38.15, 37.5, 34.5]]
-    # Fpulls_suction = [[5.3, 5.18, 5.64, 5.18, 4.96],
-    #                   [7.65, 7.5, 7.1, 7.15, 7.35],
-    #                   [6.6, 6.45, 6.75, 8.95, 9.05],
-    #                   [12.15, 13.7, 14.6, 14.55, 14.65]]
-    # Fpulls_fingers = [[14.82, 12.04, 9.74, 16.3, 13.56, 17.52],
-    #                   [18.8, 20.95, 19.6, 20.85, 19.45],
-    #                   [22, 24.75, 24.4, 25.55, 26.3],
-    #                   [21.85, 21.4, 22.4, 18.15, 21.7]]
     Force_lists = [force_data["Fpulls_fingers"],
                    force_data["Fpulls_dual"],
                    force_data["Fpulls_suction"]]
