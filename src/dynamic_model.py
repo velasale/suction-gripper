@@ -248,6 +248,8 @@ def main():
 
     # ------------------ Experiment 1: Finger offsets ----------------------
     print("\nExperiment 1: Finger offsets")
+
+    # --- Part 1.1: Model ---
     mus = [0.7, 0.8, 0.9]
     offsets = [0, 5, 10, 15, 20]
 
@@ -270,43 +272,47 @@ def main():
     # Figure parameters
     x_size = 9
     y_size = 7.5
-    boxwidth = 3 * 20 / 45
-    xloc_delta = 1.1 * boxwidth
 
     fig, ax = plt.subplots(figsize=(x_size, y_size))
     model_plot, = ax.plot(offsets, Fpulls_mid, '-o', color='green', label='fingers model')
     ax.fill_between(offsets, Fpulls_min, Fpulls_max, color='green', alpha=.2)
+
     ax.set_ylim([0, 60])
     # ax.grid()
     ax.set_ylabel('Force [N]')
     ax.set_xlabel('offset [mm]')
 
+    # --- Part 1.2: Mark10 measurements ---
+    # Boxplot parameters
+    boxwidth = 3 * 20 / 45
+    xloc_delta = 1.1 * boxwidth
+
+    # Measurements
     Fpulls_fingers = [[25.35, 22.95, 19.0, 26.05, 22.1], [17.25, 19.25, 16.25, 19.6, 21.95],
                        [11.4, 14.7, 10.55, 13.5, 15.55],
                        [10.65, 11.55, 11.4, 11.4, 12.5], [7.8, 8.25, 8.0, 5.05, 9.35]]
-
-    ax.boxplot(Fpulls_fingers, positions=offsets, widths=boxwidth,
-               patch_artist=True,
-               boxprops=dict(facecolor='green', color='black'),
-               medianprops=dict(color='red')
-               )
-
-    Fpulls_dual = np.array(Fpulls_fingers) + 12.12          # simply add the suction force
+    Fpulls_dual = np.array(Fpulls_fingers) + 12.12  # simply add the suction force
     Fpulls_dual = Fpulls_dual.tolist()
-    ax.boxplot(Fpulls_dual, positions=[0+xloc_delta, 5+xloc_delta, 10+xloc_delta, 15+xloc_delta, 20+xloc_delta], widths=boxwidth,
-               patch_artist=True,
-               boxprops=dict(facecolor='orange', color='black'),
-               medianprops=dict(color='red')
-               )
-
     Fpulls_suction = [[12.35, 11.9, 12.5, 11.9, 12.25, 11.95, 11.85, 12.3, 12.25, 11.95, 11.9],
-                      [12.85, 13.0, 12.6, 11.75, 11.7, 13.6], [11.65, 13.0, 13.8], [13.35, 12.0, 13.7], [13.35, 12.0, 13.7]]
-    ax.boxplot(Fpulls_suction, positions=[0 - xloc_delta, 5 - xloc_delta, 10 - xloc_delta, 15 - xloc_delta, 20 - xloc_delta],
-               widths=boxwidth,
-               patch_artist=True,
-               boxprops=dict(facecolor='skyblue', color='black'),
-               medianprops=dict(color='red')
-               )
+                      [12.85, 13.0, 12.6, 11.75, 11.7, 13.6], [11.65, 13.0, 13.8], [13.35, 12.0, 13.7],
+                      [13.35, 12.0, 13.7]]
+
+    Force_lists = [Fpulls_fingers, Fpulls_dual, Fpulls_suction]
+
+    facecolors = ['green',
+                  'orange',
+                  'skyblue']
+
+    position_list = [offsets,
+                 [0+xloc_delta, 5+xloc_delta, 10+xloc_delta, 15+xloc_delta, 20+xloc_delta],
+                 [0 - xloc_delta, 5 - xloc_delta, 10 - xloc_delta, 15 - xloc_delta, 20 - xloc_delta]]
+
+    for force_list, facecolor, positions in zip(Force_lists, facecolors, position_list):
+        ax.boxplot(force_list, positions=positions, widths=boxwidth,
+                   patch_artist=True,
+                   boxprops=dict(facecolor=facecolor, color='black'),
+                   medianprops=dict(color='red')
+                   )
 
     ref_fdf = ax.axhline(y=16, xmin=0, xmax=20, linestyle='--', lw=2, label='median FDF', color='k')
 
@@ -326,6 +332,8 @@ def main():
 
     # ------------------ Experiment 2: Angled pull-back -----------------------------
     print("\nExperiment 2: Angled pull-back")
+
+    # --- Part 2.1: Model ---
     camfinger.finger_offset = 0
     omegas = [0, 15, 30, 45]
     for mu in mus:
@@ -348,29 +356,30 @@ def main():
     model_plot, = ax.plot(omegas, Fpulls_mid, '-o', color='green', label='fingers model')
     ax.fill_between(omegas, Fpulls_min, Fpulls_max, color='green', alpha=.2)
 
-    # Measurement values
-    Fpulls_fingers = [[25.35, 22.95, 19.0, 26.05, 22.1], [26.45, 27.8, 25.1, 32.6, 18.5, 12.6], [23.5, 19.6, 25.15, 28.7, 13.4], [16.6, 29.95, 29.25, 37.5, 31.25]]
+    # --- Part 2.2: Mark10 measurements ---
+    # Boxplot parameters
     boxwidth = 3
-    xloc_delta = 1.1* boxwidth
-    ax.boxplot(Fpulls_fingers, positions=omegas, widths=boxwidth,
-               patch_artist=True,
-               boxprops=dict(facecolor='green', color='black'),
-               medianprops=dict(color='red')
-               )
+    xloc_delta = 1.1 * boxwidth
 
-    Fpulls_dual = [[33.95, 33.8, 36.9, 34.65, 32.1], [36.6, 32.1, 49.5, 35.6, 36.65, 38.9, 30.9, 23.2, 27.95, 29.6, 32.1], [36.7, 36.1, 33.1, 38.7, 39.2, 38.3], [36.75, 31.7, 47.9, 39.85, 39.3]]
-    ax.boxplot(Fpulls_dual, positions=[0+xloc_delta,15+xloc_delta,30+xloc_delta,45+xloc_delta], widths=boxwidth,
-               patch_artist=True,
-               boxprops=dict(facecolor='orange', color='black'),
-               medianprops=dict(color='red')
-               )
+    # Measurements
+    Fpulls_fingers = [[25.35, 22.95, 19.0, 26.05, 22.1], [26.45, 27.8, 25.1, 32.6, 18.5, 12.6], [23.5, 19.6, 25.15, 28.7, 13.4], [16.6, 29.95, 29.25, 37.5, 31.25]]
+    Fpulls_dual = [[33.95, 33.8, 36.9, 34.65, 32.1],
+                   [36.6, 32.1, 49.5, 35.6, 36.65, 38.9, 30.9, 23.2, 27.95, 29.6, 32.1],
+                   [36.7, 36.1, 33.1, 38.7, 39.2, 38.3], [36.75, 31.7, 47.9, 39.85, 39.3]]
+    Fpulls_suction = [[12.35, 11.9, 12.5, 11.9, 12.25, 11.95, 11.85, 12.3, 12.25, 11.95, 11.9],
+                      [12.85, 13.0, 12.6, 11.75, 11.7, 13.6], [11.65, 13.0, 13.8], [13.35, 12.0, 13.7]]
+    Force_lists = [Fpulls_fingers, Fpulls_dual, Fpulls_suction]
 
-    Fpulls_suction = [[12.35, 11.9, 12.5, 11.9, 12.25, 11.95, 11.85, 12.3, 12.25, 11.95, 11.9], [12.85, 13.0, 12.6, 11.75, 11.7, 13.6], [11.65, 13.0, 13.8], [13.35, 12.0, 13.7]]
-    ax.boxplot(Fpulls_suction, positions=[0 - xloc_delta, 15 - xloc_delta, 30 - xloc_delta, 45 - xloc_delta], widths=boxwidth,
-               patch_artist=True,
-               boxprops=dict(facecolor='skyblue', color='black'),
-               medianprops=dict(color='red')
-               )
+    position_list = [omegas,
+                     [0 + xloc_delta, 15 + xloc_delta, 30 + xloc_delta, 45 + xloc_delta],
+                     [0 - xloc_delta, 15 - xloc_delta, 30 - xloc_delta, 45 - xloc_delta]]
+
+    for force_list, facecolor, positions in zip(Force_lists, facecolors, position_list):
+        ax.boxplot(force_list, positions=positions, widths=boxwidth,
+                   patch_artist=True,
+                   boxprops=dict(facecolor=facecolor, color='black'),
+                   medianprops=dict(color='red')
+                   )
 
     ref_fdf = ax.axhline(y=16, xmin=0, xmax=5, linestyle='--', lw=2, label='median FDF', color='k')
 
@@ -392,8 +401,10 @@ def main():
     ax.grid()
     plt.tight_layout()
 
-    #------------------------------------ Experiment 3: Angled pull back with Beta ------------------------------------
+    #-------------------------------- Experiment 3: Angled pull back with Beta --------------------------------
     print("\nExperiment 3: Angled pull-back with Beta")
+
+    # --- Part 3.1: Model ---
     camfinger.finger_offset = 0
     camfinger.beta = math.radians(90)
     omegas = [0, 15, 30, 45]
@@ -417,10 +428,7 @@ def main():
     model_plot, = ax.plot(omegas, Fpulls_mid, '-o', color='green', label='fingers model')
     ax.fill_between(omegas, Fpulls_min, Fpulls_max, color='green', alpha=.2)
 
-    # Mark10 Measurements
-    boxwidth = 3
-    xloc_delta = 1.1* boxwidth
-
+    # --- Part 2.2: Mark10 measurements ---
     Fpulls_dual = [[22.2, 22.9, 23.24, 22.18, 21.18],
                    [26.4, 25, 27.7, 28, 28],
                    [32.2, 31.25, 32.9, 33, 32.8],
@@ -433,23 +441,14 @@ def main():
                       [18.8, 20.95, 19.6, 20.85, 19.45],
                       [22, 24.75, 24.4, 25.55, 26.3],
                       [21.85, 21.4, 22.4, 18.15, 21.7]]
-    ax.boxplot(Fpulls_suction, positions=[0 - xloc_delta, 15 - xloc_delta, 30 - xloc_delta, 45 - xloc_delta], widths=boxwidth,
-               patch_artist=True,
-               boxprops=dict(facecolor='skyblue', color='black'),
-               medianprops=dict(color='red')
-               )
+    Force_lists = [Fpulls_fingers, Fpulls_dual, Fpulls_suction]
 
-    ax.boxplot(Fpulls_fingers, positions=omegas, widths=boxwidth,
-               patch_artist=True,
-               boxprops=dict(facecolor='green', color='black'),
-               medianprops=dict(color='red')
-               )
-
-    ax.boxplot(Fpulls_dual,  positions=[0+xloc_delta,15+xloc_delta,30+xloc_delta,45+xloc_delta], widths=boxwidth,
-               patch_artist=True,
-               boxprops=dict(facecolor='orange', color='black'),
-               medianprops=dict(color='red')
-               )
+    for force_list, facecolor, positions in zip(Force_lists, facecolors, position_list):
+        ax.boxplot(force_list, positions=positions, widths=boxwidth,
+                   patch_artist=True,
+                   boxprops=dict(facecolor=facecolor, color='black'),
+                   medianprops=dict(color='red')
+                   )
 
     ref_fdf = ax.axhline(y=16, xmin=0, xmax=45, linestyle='--', lw=2, label='median FDF', color='k')
 
