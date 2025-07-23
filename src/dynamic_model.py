@@ -1,10 +1,101 @@
 import math
 import matplotlib.pyplot as plt
 import numpy as np
+import yaml
+from pathlib import Path
 from matplotlib.patches import Patch
 from scipy.linalg import null_space
 
 from data_analysis_mark10 import *
+
+
+def add_box_plots_to_model_plot(ax, model_plot, Force_lists, attr_values, xlabel, boxwidth):
+    """
+    Summary: Adds boxplots to figure that has model plot
+
+    Args:
+        ax: Figure
+        Force_lists
+        positions_lists
+
+    Returns: Figure
+    """
+
+    # Boxplot parameters
+    xloc_delta = 1.1 * boxwidth
+    xlocs_lists = [attr_values,
+                   [x + xloc_delta for x in attr_values],
+                   [x - xloc_delta for x in attr_values]]
+
+    # Color: Fingers (green), Suction (skyblue), Tandem (orange)
+    facecolors = ['green',
+                  'orange',
+                  'skyblue']
+
+    for force_list, facecolor, xlocs in zip(Force_lists, facecolors, xlocs_lists):
+        ax.boxplot(force_list, positions=xlocs, widths=boxwidth,
+                   patch_artist=True,
+                   boxprops=dict(facecolor=facecolor, color='black'),
+                   medianprops=dict(color='red')
+                   )
+
+    ref_fdf = ax.axhline(y=16, xmin=0, xmax=45, linestyle='--', lw=2, label='median FDF', color='k')
+
+    # Add legend manually with proxy artists
+    legend_handles = [
+        ref_fdf,
+        Patch(facecolor='orange', edgecolor='black', label='tandem meas.'),
+        model_plot,
+        Patch(facecolor='green', edgecolor='black', label='fingers meas.'),
+        Patch(facecolor='skyblue', edgecolor='black', label='suction meas.')
+    ]
+    ax.legend(handles=legend_handles, loc='upper left')
+    ax.set_xticks([])
+    ax.set_xticks(attr_values)
+    if xlabel == '$\omega$':
+        ax.set_xticklabels(['0°', '15°', '30°', '45°'])
+    ax.set_ylim([0, 60])
+    ax.set_ylabel('Force [N]')
+    ax.set_xlabel(xlabel)
+    ax.grid()
+    plt.tight_layout()
+
+
+def fpull_range(object, attr_name, attr_values):
+    """
+    Summary: This function evaluates the Pull Force of the mechanism while changing the attribute.
+             It also provides a range for a deviation of the friction coefficient.
+
+    Args:
+        object: cam finger mechanism
+        attr_name: attribute to vary in for-loop
+        attr_values: values to assign to attribute
+
+    Returns:
+        Max, Med and Min Pull Forces
+    """
+
+
+
+    mus = [0.7, 0.8, 0.9]   # Friction coefficient range
+
+    for mu in mus:
+        object.mu = mu
+        Fpulls = []
+
+        for value in attr_values:
+            setattr(object, attr_name, value)
+            x = object.forces()
+            Fpulls.append(x[7].item())
+
+        if mu == mus[0]:
+            Fpulls_min = Fpulls
+        elif mu == mus[1]:
+            Fpulls_mid = Fpulls
+        elif mu == mus[2]:
+            Fpulls_max = Fpulls
+
+    return Fpulls_max, Fpulls_mid, Fpulls_min
 
 
 def latex_figure_settings():
@@ -81,7 +172,6 @@ class CamDrivenFinger():
         self.theta = 0.0
 
         # Experiment parameters
-
         self.finger_offset = 0
         self.psi = math.tan(self.finger_offset / self.apple_radius)
         self.omega = 0              # angle between gripper and apple main axis
@@ -179,9 +269,8 @@ def main():
     camfinger = CamDrivenFinger()
     screw = AcmeLeadScrew()
 
-    x, cam_force_ratios, levers = cam_driven_finger_model(camfinger)
-
-    ### Figure 1: Force Tranmission Ratio vs Distance ###
+    # --------------------- Figure 1: Force Transmission Ratio vs Distance -------------------------------
+    # --- Figure settings ---
     # Source: https://onelinerhub.com/python-matplotlib/how-to-add-third-y-axis
     latex_figure_settings()
     x_size = 11.5
@@ -191,7 +280,19 @@ def main():
     # twin2 = ax.twinx()
     # twin2.spines.right.set_position(("axes", 1.15))
 
-    p1, = ax.plot(x, cam_force_ratios, c='k', label=r"$F_{normal}$ / $F_{nut}$ ratio", linewidth=2)
+    # --- Transmission configuration ---
+    d5_lengths = [18, 18.5, 19, 19.5, 20]
+    d5_lengths = [18.5]        # RAL paper - Figure 1
+    d7_lengths = [12, 13, 14, 14.25]
+    # d7_lengths = [12.13]   # horizontal distance between pivot and nut
+    d6_lengths = [17,18,19,20]
+
+    for bar_length in d6_lengths:
+        print(bar_length)
+        camfinger.d6 = bar_length
+        x, cam_force_ratios, levers = cam_driven_finger_model(camfinger)
+        p1, = ax.plot(x, cam_force_ratios, c='k', label=r"$F_{normal}$ / $F_{nut}$ ratio", linewidth=2)
+
     ax.set_xlabel('nut travel $m$ [mm]')
     ax.set_ylabel(r"$F_{clamp}$/$F_{nut}$ ratio")
     ax.set_ylim([0, 3])
@@ -236,6 +337,8 @@ def main():
 
     # ------------------- MARK10 EXPERIMENTS ---------------------------------
     # First configure bar-linkage at the desired position
+    camfinger = CamDrivenFinger()
+    screw = AcmeLeadScrew()
     _, _ = camfinger.ratio(camfinger.d3 - camfinger.d4 - camfinger.m_threshold)
 
     efficiency = 0.2
@@ -248,219 +351,93 @@ def main():
 
     # ------------------ Experiment 1: Finger offsets ----------------------
     print("\nExperiment 1: Finger offsets")
-    mus = [0.7, 0.8, 0.9]
-    offsets = [0, 5, 10, 15, 20]
 
-    for mu in mus:
-        camfinger.mu = mu
-        Fpulls = []
-
-        for offset in offsets:
-            camfinger.finger_offset = offset
-            x = camfinger.forces()
-            Fpulls.append(x[7].item())
-
-        if mu == mus[0]:
-            Fpulls_min = Fpulls
-        elif mu == mus[1]:
-            Fpulls_mid = Fpulls
-        elif mu == mus[2]:
-            Fpulls_max = Fpulls
+    # --- Part 1.1: Model ---
+    attr_name = 'finger_offset'
+    attr_values = [0, 5, 10, 15, 20]
+    Fpulls_max, Fpulls_mid, Fpulls_min = fpull_range(camfinger, attr_name, attr_values)
 
     # Figure parameters
     x_size = 9
     y_size = 7.5
-    boxwidth = 3 * 20 / 45
-    xloc_delta = 1.1 * boxwidth
 
     fig, ax = plt.subplots(figsize=(x_size, y_size))
-    model_plot, = ax.plot(offsets, Fpulls_mid, '-o', color='green', label='fingers model')
-    ax.fill_between(offsets, Fpulls_min, Fpulls_max, color='green', alpha=.2)
-    ax.set_ylim([0, 60])
-    # ax.grid()
-    ax.set_ylabel('Force [N]')
-    ax.set_xlabel('offset [mm]')
+    model_plot, = ax.plot(attr_values, Fpulls_mid, '-o', color='green', label='fingers model')
+    ax.fill_between(attr_values, Fpulls_min, Fpulls_max, color='green', alpha=.2)
 
-    Fpulls_fingers = [[25.35, 22.95, 19.0, 26.05, 22.1], [17.25, 19.25, 16.25, 19.6, 21.95],
-                       [11.4, 14.7, 10.55, 13.5, 15.55],
-                       [10.65, 11.55, 11.4, 11.4, 12.5], [7.8, 8.25, 8.0, 5.05, 9.35]]
+    # --- Part 1.2: Mark10 measurements ---
+    # Measurements
+    data_path = Path(r"C:\Users\avela\PycharmProjects\suction-gripper\data\mark10\exp1_fpull_fingerOffsets.yaml")
+    with open(data_path, "r") as f:
+        force_data = yaml.safe_load(f)
 
-    ax.boxplot(Fpulls_fingers, positions=offsets, widths=boxwidth,
-               patch_artist=True,
-               boxprops=dict(facecolor='green', color='black'),
-               medianprops=dict(color='red')
-               )
-
-    Fpulls_dual = np.array(Fpulls_fingers) + 12.12          # simply add the suction force
+    Fpulls_dual = np.array(force_data["Fpulls_fingers"]) + 12.12  # simply add the suction force
     Fpulls_dual = Fpulls_dual.tolist()
-    ax.boxplot(Fpulls_dual, positions=[0+xloc_delta, 5+xloc_delta, 10+xloc_delta, 15+xloc_delta, 20+xloc_delta], widths=boxwidth,
-               patch_artist=True,
-               boxprops=dict(facecolor='orange', color='black'),
-               medianprops=dict(color='red')
-               )
+    Force_lists = [force_data["Fpulls_fingers"],
+                   Fpulls_dual,
+                   force_data["Fpulls_suction"]]
 
-    Fpulls_suction = [[12.35, 11.9, 12.5, 11.9, 12.25, 11.95, 11.85, 12.3, 12.25, 11.95, 11.9],
-                      [12.85, 13.0, 12.6, 11.75, 11.7, 13.6], [11.65, 13.0, 13.8], [13.35, 12.0, 13.7], [13.35, 12.0, 13.7]]
-    ax.boxplot(Fpulls_suction, positions=[0 - xloc_delta, 5 - xloc_delta, 10 - xloc_delta, 15 - xloc_delta, 20 - xloc_delta],
-               widths=boxwidth,
-               patch_artist=True,
-               boxprops=dict(facecolor='skyblue', color='black'),
-               medianprops=dict(color='red')
-               )
-
-    ref_fdf = ax.axhline(y=16, xmin=0, xmax=20, linestyle='--', lw=2, label='median FDF', color='k')
-
-    # Add legend manually with proxy artists
-    legend_handles = [
-        ref_fdf,
-        Patch(facecolor='orange', edgecolor='black', label='tandem meas.'),
-        model_plot,
-        Patch(facecolor='green', edgecolor='black', label='fingers meas.'),
-        Patch(facecolor='skyblue', edgecolor='black', label='suction meas.')
-    ]
-    ax.legend(handles=legend_handles, loc='upper left')
-    ax.set_xticks([])
-    ax.set_xticks([0, 5, 10, 15, 20])
-    ax.grid()
-    plt.tight_layout()
+    # --- Part 1.3: Combine Plots ---
+    boxwidth = 3 * 20 / 45
+    add_box_plots_to_model_plot(ax, model_plot, Force_lists, attr_values, 'offset [mm]', boxwidth)
 
     # ------------------ Experiment 2: Angled pull-back -----------------------------
     print("\nExperiment 2: Angled pull-back")
+
+    # --- Part 2.1: Model ---
     camfinger.finger_offset = 0
-    omegas = [0, 15, 30, 45]
-    for mu in mus:
-        camfinger.mu = mu
-        Fpulls = []
+    attr_name = 'omega'
+    attr_values_deg = [0, 15, 30, 45]
+    attr_values_rad = [math.radians(deg) for deg in attr_values_deg]
 
-        for omega in omegas:
-            camfinger.omega = math.radians(omega)
-            x = camfinger.forces()
-            Fpulls.append(x[7].item())
-
-        if mu == mus[0]:
-            Fpulls_min = Fpulls
-        elif mu == mus[1]:
-            Fpulls_mid = Fpulls
-        elif mu == mus[2]:
-            Fpulls_max = Fpulls
+    Fpulls_max, Fpulls_mid, Fpulls_min = fpull_range(camfinger, attr_name, attr_values_rad)
 
     fig, ax = plt.subplots(figsize=(x_size, y_size))
-    model_plot, = ax.plot(omegas, Fpulls_mid, '-o', color='green', label='fingers model')
-    ax.fill_between(omegas, Fpulls_min, Fpulls_max, color='green', alpha=.2)
+    model_plot, = ax.plot(attr_values_deg, Fpulls_mid, '-o', color='green', label='fingers model')
+    ax.fill_between(attr_values_deg, Fpulls_min, Fpulls_max, color='green', alpha=.2)
 
-    # Measurement values
-    Fpulls_fingers = [[25.35, 22.95, 19.0, 26.05, 22.1], [26.45, 27.8, 25.1, 32.6, 18.5, 12.6], [23.5, 19.6, 25.15, 28.7, 13.4], [16.6, 29.95, 29.25, 37.5, 31.25]]
+    # --- Part 2.2: Mark10 measurements ---
+    # Measurements
+    data_path = Path(r"C:\Users\avela\PycharmProjects\suction-gripper\data\mark10\exp2_fpull_omegas_beta0.yaml")
+    with open(data_path, "r") as f:
+        force_data = yaml.safe_load(f)
+
+    Force_lists = [force_data["Fpulls_fingers"],
+                   force_data["Fpulls_dual"],
+                   force_data["Fpulls_suction"]]
+
+    # --- Part 2.3: Combine Plots ---
     boxwidth = 3
-    xloc_delta = 1.1* boxwidth
-    ax.boxplot(Fpulls_fingers, positions=omegas, widths=boxwidth,
-               patch_artist=True,
-               boxprops=dict(facecolor='green', color='black'),
-               medianprops=dict(color='red')
-               )
+    add_box_plots_to_model_plot(ax, model_plot, Force_lists, attr_values_deg, '$\omega$', boxwidth)
 
-    Fpulls_dual = [[33.95, 33.8, 36.9, 34.65, 32.1], [36.6, 32.1, 49.5, 35.6, 36.65, 38.9, 30.9, 23.2, 27.95, 29.6, 32.1], [36.7, 36.1, 33.1, 38.7, 39.2, 38.3], [36.75, 31.7, 47.9, 39.85, 39.3]]
-    ax.boxplot(Fpulls_dual, positions=[0+xloc_delta,15+xloc_delta,30+xloc_delta,45+xloc_delta], widths=boxwidth,
-               patch_artist=True,
-               boxprops=dict(facecolor='orange', color='black'),
-               medianprops=dict(color='red')
-               )
-
-    Fpulls_suction = [[12.35, 11.9, 12.5, 11.9, 12.25, 11.95, 11.85, 12.3, 12.25, 11.95, 11.9], [12.85, 13.0, 12.6, 11.75, 11.7, 13.6], [11.65, 13.0, 13.8], [13.35, 12.0, 13.7]]
-    ax.boxplot(Fpulls_suction, positions=[0 - xloc_delta, 15 - xloc_delta, 30 - xloc_delta, 45 - xloc_delta], widths=boxwidth,
-               patch_artist=True,
-               boxprops=dict(facecolor='skyblue', color='black'),
-               medianprops=dict(color='red')
-               )
-
-    ref_fdf = ax.axhline(y=16, xmin=0, xmax=5, linestyle='--', lw=2, label='median FDF', color='k')
-
-    # Add legend manually with proxy artists
-    legend_handles = [
-        ref_fdf,
-        Patch(facecolor='orange', edgecolor='black', label='tandem meas.'),
-        model_plot,
-        Patch(facecolor='green', edgecolor='black', label='fingers meas.'),
-        Patch(facecolor='skyblue', edgecolor='black', label='suction meas.')
-    ]
-    ax.legend(handles=legend_handles)
-    ax.set_xticks([])
-    ax.set_xticks([0, 15, 30, 45])
-    ax.set_xticklabels(['0°', '15°', '30°', '45°'])
-    ax.set_ylim([0, 60])
-    ax.set_ylabel('Force [N]')
-    ax.set_xlabel('$\omega$')
-    ax.grid()
-    plt.tight_layout()
-
-    #------------------------------------ Experiment 3: Angled pull back with Beta ------------------------------------
+    #-------------------------------- Experiment 3: Angled pull back with Beta --------------------------------
     print("\nExperiment 3: Angled pull-back with Beta")
+
+    # --- Part 3.1: Model ---
     camfinger.finger_offset = 0
     camfinger.beta = math.radians(90)
-    omegas = [0, 15, 30, 45]
-    for mu in mus:
-        camfinger.mu = mu
-        Fpulls = []
+    attr_name = 'omega'
+    attr_values_deg = [0, 15, 30, 45]
+    attr_values_rad = [math.radians(deg) for deg in attr_values_deg]
 
-        for omega in omegas:
-            camfinger.omega = math.radians(omega)
-            x = camfinger.forces()
-            Fpulls.append(x[7].item())
-
-        if mu == mus[0]:
-            Fpulls_min = Fpulls
-        elif mu == mus[1]:
-            Fpulls_mid = Fpulls
-        elif mu == mus[2]:
-            Fpulls_max = Fpulls
+    Fpulls_max, Fpulls_mid, Fpulls_min = fpull_range(camfinger, attr_name, attr_values_rad)
 
     fig, ax = plt.subplots(figsize=(x_size, y_size))
-    model_plot, = ax.plot(omegas, Fpulls_mid, '-o', color='green', label='fingers model')
-    ax.fill_between(omegas, Fpulls_min, Fpulls_max, color='green', alpha=.2)
+    model_plot, = ax.plot(attr_values_deg, Fpulls_mid, '-o', color='green', label='fingers model')
+    ax.fill_between(attr_values_deg, Fpulls_min, Fpulls_max, color='green', alpha=.2)
 
-    # Mark10 Measurements
-    boxwidth = 3
-    xloc_delta = 1.1* boxwidth
+    # --- Part 3.2: Mark10 measurements ---
+    # Load data from YAML
+    data_path = Path(r"C:\Users\avela\PycharmProjects\suction-gripper\data\mark10\exp3_fpull_omegas_beta90.yaml")
+    with open(data_path, "r") as f:
+        force_data = yaml.safe_load(f)
 
-    Fpulls_dual = [22.2, 22.9, 23.24, 22.18, 21.18]
-    Fpulls_suction = [5.3, 5.18, 5.64, 5.18, 4.96]
-    Fpulls_fingers = [14.82, 12.04, 9.74, 16.3, 13.56, 17.52]
-    ax.boxplot(Fpulls_suction, positions=[0-xloc_delta], widths=boxwidth,
-               patch_artist=True,
-               boxprops=dict(facecolor='skyblue', color='black'),
-               medianprops=dict(color='red')
-               )
+    Force_lists = [force_data["Fpulls_fingers"],
+                   force_data["Fpulls_dual"],
+                   force_data["Fpulls_suction"]]
 
-    ax.boxplot(Fpulls_fingers, positions=[0], widths=boxwidth,
-               patch_artist=True,
-               boxprops=dict(facecolor='green', color='black'),
-               medianprops=dict(color='red')
-               )
-
-    ax.boxplot(Fpulls_dual, positions=[0+xloc_delta], widths=boxwidth,
-               patch_artist=True,
-               boxprops=dict(facecolor='orange', color='black'),
-               medianprops=dict(color='red')
-               )
-
-    ref_fdf = ax.axhline(y=16, xmin=0, xmax=45, linestyle='--', lw=2, label='median FDF', color='k')
-
-    # Add legend manually with proxy artists
-    legend_handles = [
-        ref_fdf,
-        Patch(facecolor='orange', edgecolor='black', label='tandem meas.'),
-        model_plot,
-        Patch(facecolor='green', edgecolor='black', label='fingers meas.'),
-        Patch(facecolor='skyblue', edgecolor='black', label='suction meas.')
-    ]
-    ax.legend(handles=legend_handles, loc='upper left')
-    ax.set_xticks([])
-    ax.set_xticks([0, 15, 30, 45])
-    ax.set_xticklabels(['0°', '15°', '30°', '45°'])
-    ax.set_ylim([0, 60])
-    ax.set_ylabel('Force [N]')
-    ax.set_xlabel('$\omega$')
-    ax.grid()
-    plt.tight_layout()
+    # --- Part 3.3: Combine Plots ---
+    add_box_plots_to_model_plot(ax, model_plot, Force_lists, attr_values_deg, '$\omega$', boxwidth)
 
     plt.show()
 

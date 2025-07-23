@@ -483,15 +483,15 @@ def mark10_pullback_experiments(folder):
     #              )
 
     # # # ---- EQUATOR OFFSET ----
-    mark10_plots(folder + 'experiment9_pullBack_fixedApple_equatorOffset/',
-                 # ['fingers', 'dual'],
-                 ['fingers'],
-                 # ['Fingers', 'Dual'],
-                     ['Fingers'],
-                 [0, 5, 10, 15, 20],
-                 10,
-                 'Fruit offset [mm]'
-                 )
+    # mark10_plots(folder + 'experiment9_pullBack_fixedApple_equatorOffset/',
+    #              # ['fingers', 'dual'],
+    #              ['fingers'],
+    #              # ['Fingers', 'Dual'],
+    #                  ['Fingers'],
+    #              [0, 5, 10, 15, 20],
+    #              10,
+    #              'Fruit offset [mm]'
+    #              )
 
     # ---- ANGLES ----
     # mark10_plots(folder + 'experiment4_pullingLoad_fixedApple_angled/',
@@ -502,13 +502,13 @@ def mark10_pullback_experiments(folder):
     #              '$\omega$ [deg]'
     #              )
 
-    # mark10_plots(folder + 'experiment10_pullBack_angled/',
-    #              ['fingers', 'dual', 'suction'],
-    #              ['Fingers', 'Dual', 'Suction cups'],
-    #              [0, 15, 30, 45],
-    #              10,
-    #              '$\omega$ [deg]'
-    #              )
+    mark10_plots(folder + 'experiment10_pullBack_angled/',
+                 ['fingers', 'dual', 'suction'],
+                 ['Fingers', 'Dual', 'Suction cups'],
+                 [0, 15, 30, 45],
+                 10,
+                 '$\omega$ [deg]'
+                 )
 
     # # ---- MOMENTS ----
     # mark10_plots(folder + 'experiment11_pullBack_moment/',
@@ -544,7 +544,7 @@ if __name__ == '__main__':
 
     ### Step 2 - Subfunctions ###
     # orthogonal_load_cell_experiments(folder)
-    push_load_cell_experiments(folder)
-    # mark10_pullback_experiments(folder)
+    # push_load_cell_experiments(folder)
+    mark10_pullback_experiments(folder)
 
     plt.show()
