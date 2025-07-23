@@ -92,13 +92,7 @@ void loop() {
 //    delay(50);  // Optional: slow down readings
   }
 
-    
-  delay(100);
-  openFingers();
-  delay(1000);  
-  closeFingers();  
-  delay(1000);
-
+  
   Serial.println("---- End of cycle ----\n");
 
   
@@ -110,32 +104,4 @@ void pcaselect(uint8_t channel) {
   Wire.beginTransmission(MUX_ADDR);
   Wire.write(1 << channel);
   Wire.endTransmission();
-}
-
-
-void closeFingers() {
-  motorSteps(closing_speed_fast, initial_distance);
-  delay(100);  
-   motorSteps(closing_speed, clamp_distance);  
-  delay(100);  
-}
-
-
-void openFingers() {
-  motorSteps(opening_speed,-distance);     
-  delay(100);
-}
-
-
-void motorSteps(int stp_speed, int stp_distance){    
-  digitalWrite(enablePinA, HIGH);
-  digitalWrite(enablePinB, HIGH);     
-   
-  myStepper.setSpeed(stp_speed);
-  myStepper.step(stp_distance);
-  
-  digitalWrite(enablePinA, LOW);
-  digitalWrite(enablePinB, LOW);      
-  delay(100);            
-  
 }
