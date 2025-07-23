@@ -1,0 +1,4 @@
+# PlatformIO configuration files
+.pio/
+.vscode/
+.lib/

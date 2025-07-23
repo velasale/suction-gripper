@@ -24,11 +24,9 @@
 #include <rmw_microxrcedds_c/config.h>
 #include <rmw_microros/rmw_microros.h>
 
-// #include "BluetoothSerial.h"
-// BluetoothSerial SerialBT;
-
+#include "BluetoothSerial.h"
+BluetoothSerial SerialBT;
 #include <WiFi.h>
-
 
 
 // === I2C + MUX Configuration ===
@@ -49,6 +47,13 @@
 #define HALL_OUT_PIN 5
 #define RELAY_PIN GPIO_NUM_15
 #define LED_PIN 2
+
+bool publish_failed = false;
+uint32_t last_sensor_read_ms = 0;
+const uint32_t SENSOR_PERIOD_MS = 30;
+bool ready_to_publish = false;
+
+String COMM_MODE = "wifi_hotspot";  //"wifi_router";  //"wifi_hotspot";  // "serial" or "bluetooth"
 
 
 // --- Stepper Driver ---
@@ -128,9 +133,13 @@ bool isStableLow(int pin, int samples = 3, int delayMs = 1) {
 // --- Move Stepper DOWN ---
 void move_down() {
   // Serial.println("Moving DOWN...");
+  unsigned long start = millis();
   while (!isStableLow(HALL_IN_PIN)) {
     myStepper.setSpeed(SPEED_DOWN);
     myStepper.runSpeed();
+
+    // In case hall sensor fail
+    if (millis() - start > 3000) break; // 3s timeout
   }
   myStepper.setCurrentPosition(0);
   // Serial.println("Reached DOWN limit.");
@@ -138,10 +147,15 @@ void move_down() {
 
 // --- Move Stepper UP ---
 void move_up() {
-  // Serial.println("Moving UP...");
+  unsigned long start = millis();
   while (!isStableLow(HALL_OUT_PIN)) {
     long pos = abs(myStepper.currentPosition());
     float speed;
+
+    // In case hall sensor fail
+    if (millis() - start > 3000) break; // 3s timeout
+
+
     if (pos < SLOWDOWN_START) speed = SPEED_UP_BASE;
     else if (pos >= SLOWDOWN_END) speed = SPEED_UP_MIN;
     else {
@@ -152,7 +166,6 @@ void move_up() {
     myStepper.runSpeed();
   }
   myStepper.setCurrentPosition(0);
-  // Serial.println("Reached UP limit.");
 }
 
 
@@ -172,27 +185,16 @@ float read_mprls_sensor(uint8_t mux_channel) {
 
 
 
-float read_tof_sensor(uint8_t mux_channel) {
-  select_mux_channel(mux_channel);  
-  // tof.startRangeContinuous(10);  // ensure it's running
-
-  while (!tof.isRangeComplete()) {
-    delayMicroseconds(50);  // blocking wait — OK for fast cycles
-  }
-
-  uint16_t distance = tof.readRange();
-  if (tof.readRangeStatus() == 0) {
-    return distance;
-  } else {
-    Serial.println("TOF invalid");
-    return -1.0;
-  }
-}
-
 // float read_tof_sensor(uint8_t mux_channel) {
-//   select_mux_channel(mux_channel);
+//   select_mux_channel(mux_channel);    
 
-//   if (!tof.isRangeComplete()) return -1.0;
+//   uint32_t start = millis();
+//   while (!tof.isRangeComplete()) {
+//     if (millis() - start > 100) {  // 100ms timeout      
+//       return -1.0;
+//     }
+//     delayMicroseconds(50);
+//   }
 
 //   uint16_t distance = tof.readRange();
 //   if (tof.readRangeStatus() == 0) {
@@ -205,16 +207,26 @@ float read_tof_sensor(uint8_t mux_channel) {
 
 
 
+float read_tof_sensor(uint8_t mux_channel) {
+  select_mux_channel(mux_channel);  
+  uint32_t start = millis();
+  while (!tof.isRangeComplete()) {
+    if (millis() - start > 10) {  // 10ms timeout
+      return -1.0;
+    }
+    delayMicroseconds(50);
+  }
+  return tof.readRange();
+}
+
+
+
+
 // === Timer Callback ===
 void sensor_timer_callback(rcl_timer_t *timer, int64_t last_call_time) {
   RCLC_UNUSED(last_call_time);
-  if (timer == NULL) return;
+  if (timer == NULL) return; 
   
-  // sensor_data[0] = read_mprls_sensor(0);
-  // sensor_data[1] = read_mprls_sensor(1);
-  // sensor_data[2] = read_mprls_sensor(2);
-  // sensor_data[3] = read_tof_sensor(3);
-
   sensor_data[0] = (int16_t)(read_mprls_sensor(0));
   sensor_data[1] = (int16_t)(read_mprls_sensor(1));
   sensor_data[2] = (int16_t)(read_mprls_sensor(2));
@@ -222,7 +234,13 @@ void sensor_timer_callback(rcl_timer_t *timer, int64_t last_call_time) {
   
   sensor_msg.data.data = sensor_data; // Assign the sensor data to the message
 
-  RCSOFTCHECK(rcl_publish(&sensor_pub, &sensor_msg, NULL));
+  // RCSOFTCHECK(rcl_publish(&sensor_pub, &sensor_msg, NULL));  
+  rcl_ret_t pub_ret = rcl_publish(&sensor_pub, &sensor_msg, NULL);
+  if (pub_ret != RCL_RET_OK) {
+      // Serial.printf("Publish failed: %d\n", pub_ret);
+      system_state = AGENT_DISCONNECTED;
+      publish_failed = true;
+  }
 }
 
 
@@ -264,6 +282,15 @@ bool create_rcl_entities() {
     const char* _node_name = "esp32";
     RCCHECK(rclc_node_init_default(&node, _node_name, _namespace, &support));
     
+    // Allocate message data array
+    // if (sensor_msg.data.data != NULL) {
+    //   free(sensor_msg.data.data);
+    // }
+    sensor_msg.data.data = sensor_data;
+    sensor_msg.data.capacity = 4;
+    sensor_msg.data.size = 4;
+
+
     // Initialize the publisher
     RCCHECK(rclc_publisher_init_default(
       &sensor_pub,
@@ -271,8 +298,6 @@ bool create_rcl_entities() {
       // ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray),
       ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int16MultiArray),
       "sensor_data"));
-    
-
 
     // create services
     rclc_service_init_default(&stepper_service, 
@@ -286,19 +311,19 @@ bool create_rcl_entities() {
       "toggle_valve");
 
 
-    // Initialize timer (every 35ms)
-    const unsigned int timer_period_ms = 35; // 35ms = 28.57Hz
-    RCCHECK(rclc_timer_init_default(
-      &sensor_timer,
-      &support,
-      RCL_MS_TO_NS(timer_period_ms),
-      sensor_timer_callback));
+    // // Initialize timer (every 35ms)
+    // const unsigned int timer_period_ms = 40; // 35ms = 28.57Hz
+    // RCCHECK(rclc_timer_init_default(
+    //   &sensor_timer,
+    //   &support,
+    //   RCL_MS_TO_NS(timer_period_ms),
+    //   sensor_timer_callback));
     
     
-    rclc_executor_init(&executor, &support.context, 5, &allocator);
+    rclc_executor_init(&executor, &support.context, 4, &allocator);
     RCCHECK(rclc_executor_add_service(&executor, &stepper_service, &stepper_req, &stepper_res, service_stepper_cb));
     RCCHECK(rclc_executor_add_service(&executor, &valve_service, &valve_req, &valve_res, service_valve_cb));
-    RCCHECK(rclc_executor_add_timer(&executor, &sensor_timer));
+    // RCCHECK(rclc_executor_add_timer(&executor, &sensor_timer));
     return true;
 }
 
@@ -316,6 +341,9 @@ rcl_ret_t destroy_rcl_entities() {
 
     ret_status = rcl_node_fini(&node);
     ret_status = rclc_support_fini(&support);
+
+    // free(sensor_msg.data.data);
+    sensor_msg.data.data = NULL;
     
     return RCL_RET_OK;
 }
@@ -336,6 +364,7 @@ void execute_every_n_ms(int64_t ms, SystemState system_state) {
     }
     while (0);
 }
+
 
 void init_all_sensors() {
   for (uint8_t ch = 0; ch < 3; ch++) {
@@ -365,35 +394,60 @@ void setup() {
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
 
-
   // Serial.begin(115200);
   // Serial.begin(921600);
   Serial.begin(2000000);
-  delay(500); // Wait for Serial to stabilize
-  
-  // Micro-ROS transport init
+  delay(500); // Wait for Serial to stabilize  
+    
+  // --- Wifi through Router ---
+  if (COMM_MODE == "wifi_router"){
+    char* ssid = "sas-network";
+    char* password = "marinerobotics"; 
+    // IPAddress agent_ip(192,168,0,123);  // Laptop-Router through LAN    
+    IPAddress agent_ip(192,168,0,101);  // Laptop-Router through wifi
+
+    int agent_port = 8888;
+    set_microros_wifi_transports(ssid, password, agent_ip, agent_port);
+    while (WiFi.status() != WL_CONNECTED) {
+      delay(500);
+      Serial.print(".");
+    }
+    Serial.println("\nWiFi connected: " + WiFi.localIP().toString());
+  } 
    
 
-  // char* ssid = "alejos";
-  // char* password = "harvesting";
-  // IPAddress agent_ip(10,42,0,1);  // <-- Replace with your ROS 2 computer IP
-  char* ssid = "sas-network";
-  char* password = "marinerobotics"; 
-  IPAddress agent_ip(192,168,0,123);
-  int agent_port = 8888;
-
-  set_microros_wifi_transports(ssid, password, agent_ip, agent_port);
-
-    // Wait for connection
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
+  // --- Wifi through laptop's hotspot ---
+  if (COMM_MODE == "wifi_hotspot") {
+    char* ssid = "alejos";
+    char* password = "harvesting";
+    IPAddress agent_ip(10,42,0,1);  // <-- Replace with your ROS 2 computer IP
+    int agent_port = 8888;
+    set_microros_wifi_transports(ssid, password, agent_ip, agent_port);
+    while (WiFi.status() != WL_CONNECTED) {
+      delay(500);
+      Serial.print(".");
+    }
+    Serial.println("\nWiFi connected: " + WiFi.localIP().toString());
   }
-  Serial.println("\nWiFi connected: " + WiFi.localIP().toString());
 
-  // set_microros_serial_transports(SerialBT);
-  // SerialBT.begin("ESP32_BT");  // You can name this as you wish
-  // Serial.println("Bluetooth started. Waiting for commands...");
+  
+
+  // //--- Transports through Bluetooth ---
+  // if (COMM_MODE == "bluetooth") {
+  //   set_microros_serial_transports(SerialBT);
+  //   SerialBT.begin("ESP32_BT");  // You can name this as you wish
+  //   while (!SerialBT.hasClient()) {
+  //     delay(100);
+  //     Serial.print(".");
+  //   }
+  //   Serial.println("\nBluetooth connected.");
+  // }
+
+  // // --- Transports through Serial Cable ---
+  // if (COMM_MODE == "serial"){
+  //   set_microros_serial_transports(Serial);
+  //   Serial.println("Serial transport initialized.");
+  // }
 
 
   // GPIO setup  
@@ -411,21 +465,10 @@ void setup() {
   // I2C Init
   Wire.begin(SDA_PIN, SCL_PIN, I2C_FREQ);
 
-  init_all_sensors();  
-
-  // Allocate message data array
-  sensor_msg.data.data = (int16_t*) malloc(4 * sizeof(int16_t));
-  sensor_msg.data.capacity = 4;
-  sensor_msg.data.size = 4;
-  // Allocate message data array
-    // sensor_msg.data.data = (float*) malloc(4 * sizeof(float));
-    // sensor_msg.data.capacity = 4;
-    // sensor_msg.data.size = 4;
-    
+  init_all_sensors();         
   
   // Initial state
   system_state = AGENT_WAIT;
-
 }
 
 void update_led() {
@@ -435,11 +478,11 @@ void update_led() {
 
     int blink_interval;
     switch (system_state) {
-        case AGENT_WAIT:         blink_interval = 200;  break; // Fast blink
-        case AGENT_AVAILABLE:    blink_interval = 500;  break; // Medium blink
+        case AGENT_WAIT:         blink_interval = 100;  break; // Fast blink
+        case AGENT_AVAILABLE:    blink_interval = 200;  break; // Medium blink
         case AGENT_CONNECTED:    blink_interval = 1000; break; // Slow blink
         case AGENT_DISCONNECTED: blink_interval = 100;  break; // Very fast blink
-        default:                 blink_interval = 1000; break;
+        default:                 blink_interval = 100; break;
     }
 
     if (now - last_toggle_time > blink_interval) {
@@ -449,60 +492,91 @@ void update_led() {
     }
 }
 
-
+bool should_ping(uint32_t interval_ms) {
+    static uint32_t last_ping = 0;
+    uint32_t now = millis();
+    if ((now - last_ping) >= interval_ms) {
+        last_ping = now;
+        return true;
+    }
+    return false;
+}
 
 void loop() {
 
     update_led();
     // Check system state for connection status to micro_ros_agent
     switch (system_state) {
-        case AGENT_WAIT:
-            execute_every_n_ms(500, system_state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_AVAILABLE : AGENT_WAIT);
+
+        case AGENT_WAIT: {
+            if (should_ping(100)) {
+                system_state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_AVAILABLE : AGENT_WAIT;
+            }
+            // execute_every_n_ms(100, system_state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_AVAILABLE : AGENT_WAIT);
             break;
-        case AGENT_AVAILABLE:
+          }
+
+        case AGENT_AVAILABLE: {
             system_state = (true == create_rcl_entities()) ? AGENT_CONNECTED : AGENT_WAIT;
 
             if (system_state == AGENT_WAIT) {
                 destroy_rcl_entities();
             }            
             break;
-        case AGENT_CONNECTED:
-            // Publish message
-            execute_every_n_ms(60000, system_state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_CONNECTED : AGENT_DISCONNECTED);
-            if (system_state == AGENT_CONNECTED) {
-                RCSOFTCHECK(rmw_uros_sync_session(10));                
-                rclc_executor_spin_some(&executor, RCL_MS_TO_NS(10));                     
-            }
-            
-            break;
+          }        
 
-        case AGENT_DISCONNECTED:
+        case AGENT_CONNECTED: {
+            static int ping_fail_count = 0;
+            static int publish_fail_count = 0;
+
+            if (should_ping(500)) {
+                if (RMW_RET_OK == rmw_uros_ping_agent(350, 1)) {
+                    ping_fail_count = 0;
+                } else {
+                    ping_fail_count++;
+                    if (ping_fail_count >= 3) {
+                        system_state = AGENT_DISCONNECTED;
+                        ping_fail_count = 0;
+                    }
+                }
+            }
+
+            uint32_t now = millis();
+            if (now - last_sensor_read_ms >= SENSOR_PERIOD_MS) {
+              last_sensor_read_ms = now;
+
+              sensor_data[0] = (int16_t)(read_mprls_sensor(0));
+              sensor_data[1] = (int16_t)(read_mprls_sensor(1));
+              sensor_data[2] = (int16_t)(read_mprls_sensor(2));
+              sensor_data[3] = (int16_t)min(read_tof_sensor(3), 300.0f);    // Limit TOF to 300mm for safety
+              ready_to_publish = true;
+            }
+
+            if (ready_to_publish) {
+              sensor_msg.data.data = sensor_data;
+              rcl_ret_t pub_ret = rcl_publish(&sensor_pub, &sensor_msg, NULL);
+              if (pub_ret != RCL_RET_OK) {
+                publish_fail_count++;
+                if (publish_fail_count >= 3) {
+                  system_state = AGENT_DISCONNECTED;
+                  publish_fail_count = 0;
+                }
+              } else {
+                publish_fail_count = 0;  // Reset on success
+              }
+              ready_to_publish = false;
+            }
+
+            // Run executor callbacks (services, etc.)
+            rclc_executor_spin_some(&executor, RCL_MS_TO_NS(5));           
+
+            break;
+          }
+
+        case AGENT_DISCONNECTED: {
             destroy_rcl_entities();
             system_state = AGENT_WAIT;
             break;
-        default:
-            break;
+        }
     }   
-
-    // if (SerialBT.available()) {
-    //   String bt_cmd = SerialBT.readStringUntil('\n');
-    //   bt_cmd.trim(); // Remove newline / spaces
-
-    //   if (bt_cmd.equalsIgnoreCase("UP")) {
-    //     move_up();
-    //     SerialBT.println("Moved up");
-    //   } else if (bt_cmd.equalsIgnoreCase("DOWN")) {
-    //     move_down();
-    //     SerialBT.println("Moved down");
-    //   } else if (bt_cmd.equalsIgnoreCase("SUCTION_ON")) {
-    //     gpio_set_level(RELAY_PIN, 1);
-    //     SerialBT.println("Valve turned ON");
-    //   } else if (bt_cmd.equalsIgnoreCase("SUCTION_OFF")) {
-    //     gpio_set_level(RELAY_PIN, 0);
-    //     SerialBT.println("Valve turned OFF");
-    //   } else {
-    //     SerialBT.println("Unknown command");
-    //   }
-    // }
-
 }
