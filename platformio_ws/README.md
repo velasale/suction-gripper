@@ -21,6 +21,7 @@ If you want to enable **more than one**, follow these steps using PlatformIO:
 Inside `colcon.meta`, find and modify the following line:
 ```yaml
 "DRMW_UXRCE_MAX_SERVICES": <your_desired_number>
+```
 
 4. **Clean the Micro-ROS Library**
 Manually delete the folder to force the rebuild:
