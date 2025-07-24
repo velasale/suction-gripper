@@ -29,7 +29,6 @@ Manually delete the folder to force the rebuild:
 
 ```bash
 rm -rf .pio/libdeps/esp32dev/micro_ros_platformio/libmicroros
-.pio/libdeps/esp32dev/micro_ros_platformio/libmicroros
 ```
 
 5. **Rebuild the Workspace**
