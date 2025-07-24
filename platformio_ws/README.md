@@ -13,7 +13,9 @@ If you want to enable **more than one**, follow these steps using PlatformIO:
 
 2. **Navigate to the `colcon.meta` File**  
    Go to:  
+```bash
 .pio/libdeps/esp32dev/micro_ros_platformio/metas/colcon.meta
+```
 
 
 
@@ -25,8 +27,11 @@ Inside `colcon.meta`, find and modify the following line:
 
 4. **Clean the Micro-ROS Library**
 Manually delete the folder to force the rebuild:
-.pio/libdeps/esp32dev/micro_ros_platformio/libmicroros
 
+```bash
+rm -rf .pio/libdeps/esp32dev/micro_ros_platformio/libmicroros
+.pio/libdeps/esp32dev/micro_ros_platformio/libmicroros
+```
 
 5. **Rebuild the Workspace**
 This will regenerate libmicroros with your updated configuration.
