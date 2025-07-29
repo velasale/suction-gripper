@@ -1,3 +1,4 @@
+import os
 import math
 import matplotlib.pyplot as plt
 import numpy as np
@@ -367,7 +368,12 @@ def main():
 
     # --- Part 1.2: Mark10 measurements ---
     # Measurements
-    data_path = Path(r"C:\Users\avela\PycharmProjects\suction-gripper\data\mark10\exp1_fpull_fingerOffsets.yaml")
+    current_path = Path(__file__).resolve()
+    parent_path = current_path.parent.parent 
+    data_path = Path("data/mark10/exp1_fpull_fingerOffsets.yaml")    
+
+    data_path = parent_path / data_path  # safely join paths
+
     with open(data_path, "r") as f:
         force_data = yaml.safe_load(f)
 
@@ -397,8 +403,10 @@ def main():
     ax.fill_between(attr_values_deg, Fpulls_min, Fpulls_max, color='green', alpha=.2)
 
     # --- Part 2.2: Mark10 measurements ---
-    # Measurements
-    data_path = Path(r"C:\Users\avela\PycharmProjects\suction-gripper\data\mark10\exp2_fpull_omegas_beta0.yaml")
+    # Measurements   
+    data_path = Path("data/mark10/exp2_fpull_omegas_beta0.yaml")    
+    data_path = parent_path / data_path  # safely join paths
+
     with open(data_path, "r") as f:
         force_data = yaml.safe_load(f)
 
@@ -427,8 +435,10 @@ def main():
     ax.fill_between(attr_values_deg, Fpulls_min, Fpulls_max, color='green', alpha=.2)
 
     # --- Part 3.2: Mark10 measurements ---
-    # Load data from YAML
-    data_path = Path(r"C:\Users\avela\PycharmProjects\suction-gripper\data\mark10\exp3_fpull_omegas_beta90.yaml")
+    # Load data from YAML        
+    data_path = Path("data/mark10/exp3_fpull_omegas_beta90.yaml")    
+    data_path = parent_path / data_path  # safely join paths
+
     with open(data_path, "r") as f:
         force_data = yaml.safe_load(f)
 
