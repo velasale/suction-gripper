@@ -539,8 +539,8 @@ if __name__ == '__main__':
     else:                   # Ubuntu OS
         storage = '/media/alejo/Elements/'
 
-    # folder = 'Alejo - Mark10 Gripper Tests/Mark10_experiments/'
-    # folder = storage + folder
+    folder = 'Alejo - Mark10 Gripper Tests/Mark10_experiments/'
+    folder = storage + folder
 
     ### Step 2 - Subfunctions ###
     # orthogonal_load_cell_experiments(folder)
