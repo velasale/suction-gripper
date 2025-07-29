@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-This code read the coordinates taken with a probe in the real apple tree, and shows them in RVIZ
+This script reads coordinates taken with a probe in the real apple tree, and displays them in RVIZ
 velasale@oregonstate.edu
 """
 
