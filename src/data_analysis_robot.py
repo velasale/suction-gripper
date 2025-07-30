@@ -5,6 +5,7 @@
 import json
 import math
 import os
+import sys
 import re
 import csv
 import time
@@ -24,13 +25,13 @@ from operator import sub, add
 import cv2
 import itertools
 
-import bagpy
+# import bagpy
 from matplotlib import pyplot as plt
 
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 from mpl_toolkits.mplot3d import Axes3D
 import pandas as pd
-from bagpy import bagreader
+# from bagpy import bagreader
 
 from sklearn.metrics import r2_score
 from sklearn.cluster import KMeans
@@ -41,6 +42,10 @@ import pyautogui
 from tqdm import tqdm
 #
 ######## Self developed imports ########
+# Add the project root (parent of src/) to the path
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, project_root)
+
 # from ros_scripts import *
 from src.plot_scripts import *
 from src.datascience_concepts import *
@@ -2758,9 +2763,12 @@ def real_trials():
                 # a,d,e: successful, b,c: un-successful
                 # if pick != 'c':         # c: unsuccessful
                 # if pick == 'a' or pick == 'd' or pick == 'e':     # Successful picks
+                if apple_id == 25:
+                    print('I am here')
 
                 # if apple_id != 19:
                 if mode == 'dual' and apple_id != 19:
+                # if apple_id == 25:
                 # if experiment.sequence == 1 and experiment.stiffness == 'high' and experiment.offset_eef_apple == 1:
 
                     print('\n\n', file)
@@ -2955,7 +2963,7 @@ def real_trials():
 
         plt.xlabel(r'$\omega$')
         plt.ylabel('Pull force [N]')
-        plt.title(r'Gripper-Fruit angle vs $F_{\text{pull}}$')
+        plt.title(r'Gripper-Fruit angle vs $F_{\mathrm{pull}}$')
         plt.xlim([0, 120])
         plt.ylim([0, 50])
         plt.grid(True)
@@ -2984,7 +2992,7 @@ def real_trials():
 
         plt.xlabel(r'$\beta$')
         plt.ylabel('Pull force [N]')
-        plt.title(r'Fruit-Force angle vs $F_{\text{pull}}$')
+        plt.title(r'Fruit-Force angle vs $F_{\mathrm{pull}}$')
         plt.xlim([0, 150])
         plt.ylim([0, 50])
         plt.grid(True)
@@ -3001,6 +3009,7 @@ def real_trials():
             pick_label = str(pick_success_labels[i])
             apple = str(apple_ids[i])
 
+            
             if (np.isfinite(x_coord) and np.isfinite(y_coord)):
                 # Green labels
                 if pick_label in ['a', 'd', 'e', 'b']:
@@ -3008,10 +3017,10 @@ def real_trials():
                     marker = 'o'
 
                     if not plotted_good:
-                        plt.scatter(x_coord, y_coord, color=color, marker=marker, s=180, alpha=0.65, label='successful pick')
+                        plt.scatter(x_coord, y_coord, color=color, marker=marker, s=200, alpha=0.75, label='successful pick')
                         plotted_good = True
                     else:
-                        plt.scatter(x_coord, y_coord, color=color, marker=marker, s=180, alpha=0.65)
+                        plt.scatter(x_coord, y_coord, color=color, marker=marker, s=200, alpha=0.75)
 
                 else:
 
@@ -3019,12 +3028,17 @@ def real_trials():
                     marker = '^'
 
                     if not plotted_bad:
-                        plt.scatter(x_coord, y_coord, color=color, marker=marker, s=180, alpha=0.65, label='failed pick')
+                        plt.scatter(x_coord, y_coord, color=color, marker=marker, s=200, alpha=0.75, label='failed pick')
                         plotted_bad = True
                     else:
-                        plt.scatter(x_coord, y_coord, color=color, marker=marker, s=180, alpha=0.65)
+                        plt.scatter(x_coord, y_coord, color=color, marker=marker, s=200, alpha=0.75)
 
-                plt.text(x_coord + 0.15, y_coord + 0.15, str(apple), fontsize=12, ha='left', va='bottom')
+                if apple == '1':
+                    plt.text(x_coord - 2.5, y_coord - 2.5, str(apple), fontsize=12, ha='left', va='bottom')
+                
+                else:
+                    plt.text(x_coord + 0.25, y_coord + 0.25, str(apple), fontsize=12, ha='left', va='bottom')
+
             else:
                 print('i=', i)
 
@@ -3034,10 +3048,10 @@ def real_trials():
         plt.xticks(xticks, xtick_labels)
 
         plt.axvline(x=40, color='black', linestyle='--', linewidth=2)
-        plt.xlabel(r'Gripper-$F_{\text{pull}}$ angle $\psi = \beta + \omega$')
+        plt.xlabel(r'Gripper-$F_{\mathrm{pull}}$ angle $\psi = \beta + \omega$')
         plt.ylabel('Force [N]')
-        plt.title(r'Gripper-Force angle ($\beta + \omega$) vs $F_{\text{pull}}$')
-        plt.xlim([0, 80])
+        plt.title(r'Gripper-Force angle ($\beta + \omega$) vs $F_{\mathrm{pull}}$')
+        plt.xlim([0, 140])
         plt.ylim([0, 40])
         plt.grid(True)
         plt.legend()
@@ -3076,8 +3090,8 @@ def main():
     # noise_experiments_pitch(exp_type='horizontal', radius=radius, variable=variable)
     # simple_suction_experiment()
 
-    proxy_trials()
-    # real_trials()
+    # proxy_trials()
+    real_trials()
 
     ### Step4: Build video from pngs and a plot beside of it with a vertical line running ###
     # plot_and_video()
