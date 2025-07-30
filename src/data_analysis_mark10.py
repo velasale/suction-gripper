@@ -8,7 +8,7 @@ import numpy as np
 from scipy.ndimage import gaussian_filter, median_filter
 
 ### Self developed imports ###
-from dynamic_model import *
+from gripper_dynamic_model import *
 
 
 ################################ HANDY FUNCTIONS ##################################################

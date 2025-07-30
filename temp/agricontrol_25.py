@@ -1,10 +1,18 @@
 import pandas as pd
 import numpy as np
-import os
 import statistics as st
-from src.data_analysis_robot import ur5e_fk_dh
 from matplotlib import pyplot as plt
 import math
+
+import sys
+import os
+
+# Add the project root (parent of src/) to the path
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, project_root)
+
+from src.data_analysis_robot import ur5e_fk_dh
+
 
 
 # Function to search for the subfolder recursively and open joint_states.csv
