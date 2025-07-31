@@ -3002,7 +3002,7 @@ def real_trials():
         plotted_good = False
         plotted_bad = False
 
-        fig = plt.figure(figsize=(9,5))
+        fig = plt.figure(figsize=(9,4.5))
         for i in range(len(pick_success_labels)):
             x_coord = abs(float(betas_deg[i][0]) + float(omegas_deg[i][0]))     # same as 90 - theta
             y_coord = float(max_netForces[i])
@@ -3050,7 +3050,7 @@ def real_trials():
         plt.axvline(x=40, color='black', linestyle='--', linewidth=2)
         plt.xlabel(r'Gripper-$F_{\mathrm{pull}}$ angle $\psi = \beta + \omega$')
         plt.ylabel('Force [N]')
-        plt.title(r'Gripper-Force angle ($\beta + \omega$) vs $F_{\mathrm{pull}}$')
+        # plt.title(r'Gripper-Force angle ($\beta + \omega$) vs $F_{\mathrm{pull}}$')
         plt.xlim([0, 140])
         plt.ylim([0, 40])
         plt.grid(True)
@@ -3058,6 +3058,8 @@ def real_trials():
         # plt.tight_layout()
 
     ### Choice 1 for plotting ####
+    print(matplotlib.rcParams['font.serif'])
+    print(matplotlib.get_cachedir())
     plt.show()
 
     ### Choice 2 for plotting ###
@@ -3077,8 +3079,15 @@ def main():
 
     ### Step2: Adjust plot parameters (for papers) ###
     plt.rcParams["font.family"] = "serif"
-    plt.rcParams["font.serif"] = ["Times New Roman"]
-    plt.rcParams["font.size"] = 20
+    # plt.rcParams["font.serif"] = ["Times New Roman"]
+    plt.rcParams["font.serif"] = ["DejaVu Serif", "Liberation Serif"]
+    plt.rcParams['mathtext.fontset'] = "dejavuserif"
+    # plt.rcParams['mathtext.rm'] = 'Times'
+    # plt.rcParams['mathtext.it'] = 'Times:italic'
+    # plt.rcParams['mathtext.bf'] = 'Times:bold'
+
+
+    plt.rcParams["font.size"] = 16
     plt.rc('legend', fontsize=14)  # using a size in points
 
     ### Step3: Uncomment desired experiment ###
