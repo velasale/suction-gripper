@@ -3080,12 +3080,20 @@ def main():
     ### Step2: Adjust plot parameters (for papers) ###
     plt.rcParams["font.family"] = "serif"
     # plt.rcParams["font.serif"] = ["Times New Roman"]
-    plt.rcParams["font.serif"] = ["DejaVu Serif", "Liberation Serif"]
-    plt.rcParams['mathtext.fontset'] = "dejavuserif"
+    # plt.rcParams["font.serif"] = ["DejaVu Serif", "Liberation Serif"]
+    # plt.rcParams['mathtext.fontset'] = "dejavuserif"
     # plt.rcParams['mathtext.rm'] = 'Times'
     # plt.rcParams['mathtext.it'] = 'Times:italic'
     # plt.rcParams['mathtext.bf'] = 'Times:bold'
 
+    plt.rcParams.update({
+        "text.usetex": True,
+        "font.family": "serif",
+        "font.size": 16,
+        "axes.labelsize": 16,
+        "xtick.labelsize": 14,
+        "ytick.labelsize": 14,
+    })
 
     plt.rcParams["font.size"] = 16
     plt.rc('legend', fontsize=14)  # using a size in points
