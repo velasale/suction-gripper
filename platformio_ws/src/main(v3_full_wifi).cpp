@@ -114,13 +114,11 @@ volatile StepperState stepper_state = STEPPER_IDLE;
 unsigned long stepper_start_time = 0;
 
 
-
 void IRAM_ATTR onStepperTimer() {
     if (stepper_state != STEPPER_IDLE) {
         myStepper.runSpeed();  // ISR-safe: no malloc, no Serial, no millis
     }
 }
-
 
 
 
@@ -150,44 +148,6 @@ bool isStableLow(int pin, int samples = 3, int delayMs = 1) {
     delay(delayMs);
   }
   return true; // All samples were LOW
-}
-
-// === Move Stepper DOWN ===
-void move_down() {
-  // Serial.println("Moving DOWN...");
-  unsigned long start = millis();
-  while (!isStableLow(HALL_IN_PIN)) {
-    myStepper.setSpeed(SPEED_DOWN);
-    myStepper.runSpeed();
-
-    // In case hall sensor fail
-    if (millis() - start > 3000) break; // 3s timeout
-  }
-  myStepper.setCurrentPosition(0);
-  // Serial.println("Reached DOWN limit.");
-}
-
-// === Move Stepper UP ===
-void move_up() {
-  unsigned long start = millis();
-  while (!isStableLow(HALL_OUT_PIN)) {
-    long pos = abs(myStepper.currentPosition());
-    float speed;
-
-    // In case hall sensor fail
-    if (millis() - start > 3000) break; // 3s timeout
-
-
-    if (pos < SLOWDOWN_START) speed = SPEED_UP_BASE;
-    else if (pos >= SLOWDOWN_END) speed = SPEED_UP_MIN;
-    else {
-      float t = float(pos - SLOWDOWN_START) / (SLOWDOWN_END - SLOWDOWN_START);
-      speed = SPEED_UP_BASE * (1 - t) + SPEED_UP_MIN * t;
-    }
-    myStepper.setSpeed(speed);
-    myStepper.runSpeed();
-  }
-  myStepper.setCurrentPosition(0);
 }
 
 
@@ -246,28 +206,6 @@ float read_mprls_sensor(uint8_t mux_channel) {
 
 
 
-// float read_tof_sensor(uint8_t mux_channel) {
-//   select_mux_channel(mux_channel);    
-
-//   uint32_t start = millis();
-//   while (!tof.isRangeComplete()) {
-//     if (millis() - start > 100) {  // 100ms timeout      
-//       return -1.0;
-//     }
-//     delayMicroseconds(50);
-//   }
-
-//   uint16_t distance = tof.readRange();
-//   if (tof.readRangeStatus() == 0) {
-//     return distance;
-//   } else {
-//     Serial.println("TOF invalid");
-//     return -1.0;
-//   }
-// }
-
-
-
 float read_tof_sensor(uint8_t mux_channel) {
   select_mux_channel(mux_channel);  
   uint32_t start = millis();
@@ -303,6 +241,7 @@ void sensor_timer_callback(rcl_timer_t *timer, int64_t last_call_time) {
 }
 
 
+// === Service callback for stepper ===
 void service_stepper_cb(const void *req, void *res) {
     const std_srvs__srv__SetBool_Request *request = (const std_srvs__srv__SetBool_Request *)req;
     std_srvs__srv__SetBool_Response *response = (std_srvs__srv__SetBool_Response *)res;
@@ -333,6 +272,8 @@ void service_valve_cb(const void *req, void *res) {
   response->message.capacity = strlen(response->message.data) + 1;
 }
 
+
+// === Destroy all ROS client entities ===
 rcl_ret_t destroy_rcl_entities() {   
 
     rcl_ret_t final_status = RCL_RET_OK;
@@ -504,6 +445,7 @@ void init_all_sensors() {
   }
 }
 
+// === Microros transports ===
 void esp32_laptop_comm(){
 
   // === Wifi through Router ===
