@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <micro_ros_platformio.h>
 
-
 #include "driver/gpio.h"
 #include "driver/i2c.h"
 #include <AccelStepper.h>
@@ -32,23 +31,22 @@ BluetoothSerial SerialBT;
 
 
 // === I2C + MUX Configuration ===
+#define SDA_PIN 21
+#define SCL_PIN 22
+#define I2C_FREQ 400000     // 400 KHz
 #define MUX_ADDR 0x70
-// --- MPRLS Pin Definitions (shared per sensor) ---
+// MPRLS Pin Definitions (shared per sensor)
 #define MPRLS_RESET_PIN -1  // Unused or shared, set to -1 if NC
 #define MPRLS_EOC_PIN   -1  // Unused or shared, set to -1 if NC
 
-// #define TOF_MUX_CHANNEL 3
-#define SDA_PIN 21
-#define SCL_PIN 22
-#define I2C_FREQ 400000
 
-// --- Hardware Pins ---
-#define STEP_PIN 26
-#define DIR_PIN 25
-#define HALL_IN_PIN 4
-#define HALL_OUT_PIN 5
+// === Hardware Pins ===
+#define STEP_PIN GPIO_NUM_26
+#define DIR_PIN GPIO_NUM_25
+#define HALL_IN_PIN GPIO_NUM_4
+#define HALL_OUT_PIN GPIO_NUM_5
 #define RELAY_PIN GPIO_NUM_15
-#define LED_PIN 2
+#define LED_PIN GPIO_NUM_2
 
 bool publish_failed = false;
 uint32_t last_sensor_read_ms = 0;
@@ -59,9 +57,8 @@ bool ready_to_publish = false;
 // COMM_MODEs: "wifi_router", "wifi_hotspot", "serial", "bluetooth"
 String COMM_MODE = "wifi_hotspot";
 
-// --- Stepper Driver ---
+// === Hardware objects ===
 AccelStepper myStepper(AccelStepper::DRIVER, STEP_PIN, DIR_PIN);
-// === TOF Sensor ===
 Adafruit_VL53L0X tof;
 Adafruit_MPRLS mprls_sensors = Adafruit_MPRLS(MPRLS_RESET_PIN, MPRLS_EOC_PIN);
     
@@ -76,9 +73,6 @@ rcl_publisher_t sensor_pub;
 rcl_timer_t sensor_timer;
 std_msgs__msg__Int16 tof_msg;
 std_msgs__msg__Int16MultiArray sensor_msg;
-// std_msgs__msg__Float32 tof_msg;
-// std_msgs__msg__Float32MultiArray sensor_msg;
-
 // Services
 rcl_service_t stepper_service;
 rcl_service_t valve_service;
@@ -87,8 +81,6 @@ std_srvs__srv__SetBool_Response stepper_res;
 std_srvs__srv__SetBool_Request valve_req;
 std_srvs__srv__SetBool_Response valve_res;  
 
-
-// float sensor_data[4]; // [mprls1, mprls2, mprls3, tof]
 int16_t sensor_data[4]; // [mprls1, mprls2, mprls3, tof]
 
 // --- Motion Settings ---
@@ -113,6 +105,24 @@ enum SystemState {
 } system_state;
 
 
+enum StepperState {
+    STEPPER_IDLE,
+    STEPPER_MOVING_DOWN,
+    STEPPER_MOVING_UP
+};
+volatile StepperState stepper_state = STEPPER_IDLE;
+unsigned long stepper_start_time = 0;
+
+
+
+void IRAM_ATTR onStepperTimer() {
+    if (stepper_state != STEPPER_IDLE) {
+        myStepper.runSpeed();  // ISR-safe: no malloc, no Serial, no millis
+    }
+}
+
+
+
 
 void print_heap_info(const char* tag) {
     multi_heap_info_t info;
@@ -131,7 +141,7 @@ void select_mux_channel(uint8_t channel) {
   delayMicroseconds(250);  // Give time to switch  
 }
 
-// --- Function to check for a stable low signal --- 
+// === Function to check for a stable low signal from Hall Sensors === 
 bool isStableLow(int pin, int samples = 3, int delayMs = 1) {
   for (int i = 0; i < samples; i++) {
     if (digitalRead(pin) == HIGH) {
@@ -142,7 +152,7 @@ bool isStableLow(int pin, int samples = 3, int delayMs = 1) {
   return true; // All samples were LOW
 }
 
-// --- Move Stepper DOWN ---
+// === Move Stepper DOWN ===
 void move_down() {
   // Serial.println("Moving DOWN...");
   unsigned long start = millis();
@@ -157,7 +167,7 @@ void move_down() {
   // Serial.println("Reached DOWN limit.");
 }
 
-// --- Move Stepper UP ---
+// === Move Stepper UP ===
 void move_up() {
   unsigned long start = millis();
   while (!isStableLow(HALL_OUT_PIN)) {
@@ -181,6 +191,46 @@ void move_up() {
 }
 
 
+void stepperTask(void *pvParameters) {
+    for (;;) {
+        switch (stepper_state) {
+            case STEPPER_MOVING_DOWN:
+                if (!isStableLow(HALL_IN_PIN) && millis() - stepper_start_time < 3000) {
+                    myStepper.setSpeed(SPEED_DOWN);
+                } else {
+                    stepper_state = STEPPER_IDLE;
+                    myStepper.setCurrentPosition(0);
+                }
+                break;
+
+            case STEPPER_MOVING_UP:
+                if (!isStableLow(HALL_OUT_PIN) && millis() - stepper_start_time < 3000) {
+                    long pos = abs(myStepper.currentPosition());
+                    float speed;
+                    if (pos < SLOWDOWN_START) speed = SPEED_UP_BASE;
+                    else if (pos >= SLOWDOWN_END) speed = SPEED_UP_MIN;
+                    else {
+                        float t = float(pos - SLOWDOWN_START) / (SLOWDOWN_END - SLOWDOWN_START);
+                        speed = SPEED_UP_BASE * (1 - t) + SPEED_UP_MIN * t;
+                    }
+                    myStepper.setSpeed(speed);
+                } else {
+                    stepper_state = STEPPER_IDLE;
+                    myStepper.setCurrentPosition(0);
+                }
+                break;
+
+            case STEPPER_IDLE:
+            default:
+                break;
+        }
+        vTaskDelay(1); // Yield to keep Wi-Fi/micro-ROS happy
+    }
+}
+
+
+
+
 
 float read_mprls_sensor(uint8_t mux_channel) {
   select_mux_channel(mux_channel);  
@@ -191,7 +241,6 @@ float read_mprls_sensor(uint8_t mux_channel) {
     Serial.printf("Sensor %d read failed\n", mux_channel);
     return -1.0;
   }
-
   return pressure;
 }
 
@@ -233,7 +282,6 @@ float read_tof_sensor(uint8_t mux_channel) {
 
 
 
-
 // === Timer Callback ===
 void sensor_timer_callback(rcl_timer_t *timer, int64_t last_call_time) {
   RCLC_UNUSED(last_call_time);
@@ -245,8 +293,7 @@ void sensor_timer_callback(rcl_timer_t *timer, int64_t last_call_time) {
   sensor_data[3] = (int16_t)(read_tof_sensor(3));
   
   sensor_msg.data.data = sensor_data; // Assign the sensor data to the message
-
-  // RCSOFTCHECK(rcl_publish(&sensor_pub, &sensor_msg, NULL));  
+  
   rcl_ret_t pub_ret = rcl_publish(&sensor_pub, &sensor_msg, NULL);
   if (pub_ret != RCL_RET_OK) {
       // Serial.printf("Publish failed: %d\n", pub_ret);
@@ -256,19 +303,26 @@ void sensor_timer_callback(rcl_timer_t *timer, int64_t last_call_time) {
 }
 
 
-// Service callback for stepper control
 void service_stepper_cb(const void *req, void *res) {
-  const std_srvs__srv__SetBool_Request *request = (const std_srvs__srv__SetBool_Request *)req;
-  std_srvs__srv__SetBool_Response *response = (std_srvs__srv__SetBool_Response *)res;
-  if (request->data) move_up();
-  else move_down();
-  response->success = true;
-  response->message.data = (char *)(request->data ? "Moved up" : "Moved down");
-  response->message.size = strlen(response->message.data);
-  response->message.capacity = strlen(response->message.data) + 1;
+    const std_srvs__srv__SetBool_Request *request = (const std_srvs__srv__SetBool_Request *)req;
+    std_srvs__srv__SetBool_Response *response = (std_srvs__srv__SetBool_Response *)res;
+
+    if (request->data) {
+        stepper_state = STEPPER_MOVING_UP;
+    } else {
+        stepper_state = STEPPER_MOVING_DOWN;
+    }
+    stepper_start_time = millis();
+
+    response->success = true;
+    response->message.data = (char *)(request->data ? "Started moving up" : "Started moving down");
+    response->message.size = strlen(response->message.data);
+    response->message.capacity = response->message.size + 1;
 }
 
-// Service callback for valve control
+
+
+// === Service callback for valve control ===
 void service_valve_cb(const void *req, void *res) {
   const std_srvs__srv__SetBool_Request *request = (const std_srvs__srv__SetBool_Request *)req;
   std_srvs__srv__SetBool_Response *response = (std_srvs__srv__SetBool_Response *)res;
@@ -384,7 +438,6 @@ bool create_rcl_entities() {
     }
 
 
-
     // // Initialize timer (every 35ms)
     // const unsigned int timer_period_ms = 40; // 35ms = 28.57Hz
     // RCCHECK(rclc_timer_init_default(
@@ -428,24 +481,7 @@ bool create_rcl_entities() {
 
 
 
-
-void execute_every_n_ms(int64_t ms, SystemState system_state) {
-    /* Method for periodically pinging the micro_ros_agent */
-    RCL_UNUSED(system_state);
-    do {
-        static volatile int64_t init = -1;
-        if (init == -1) {
-            init = uxr_millis();
-        }
-        if (uxr_millis() - init > ms) {
-            // system_state;
-            init = uxr_millis();
-        }
-    }
-    while (0);
-}
-
-
+// === Method to initialize all sensors ===
 void init_all_sensors() {
   for (uint8_t ch = 0; ch < 3; ch++) {
     select_mux_channel(ch);
@@ -470,13 +506,13 @@ void init_all_sensors() {
 
 void esp32_laptop_comm(){
 
-  // --- Wifi through Router ---
+  // === Wifi through Router ===
   if (COMM_MODE == "wifi_router"){
     const char* ssid = "sas-network";
     const char* password = "marinerobotics"; 
+    
     // IPAddress agent_ip(192,168,0,123);  // Laptop-Router through LAN    
     IPAddress agent_ip(192,168,0,100);  // Laptop-Router through wifi
-
     int agent_port = 8888;
     set_microros_wifi_transports((char*)ssid, (char*)password, agent_ip, agent_port);
     while (WiFi.status() != WL_CONNECTED) {
@@ -484,16 +520,17 @@ void esp32_laptop_comm(){
       Serial.print(".");
     }
     Serial.println("\nWiFi connected: " + WiFi.localIP().toString());
+    
     WiFi.setSleep(false);  // Keep Wi-Fi fully powered, reduces latency
     int ch = WiFi.channel();
     esp_wifi_set_channel(ch, WIFI_SECOND_CHAN_NONE);
-  } 
-   
+  }    
 
-  // --- Wifi through laptop's hotspot ---
+  // === Wifi through laptop's hotspot ===
   if (COMM_MODE == "wifi_hotspot") {
     const char* ssid = "alejos";
     const char* password = "harvesting";    
+    
     IPAddress agent_ip(10,42,0,1);  // <-- Replace with your ROS 2 computer IP
     int agent_port = 8888;
     set_microros_wifi_transports((char*)ssid, (char*)password, agent_ip, agent_port);
@@ -502,6 +539,7 @@ void esp32_laptop_comm(){
       Serial.print(".");
     }
     Serial.println("\nWiFi connected: " + WiFi.localIP().toString());
+    
     WiFi.setSleep(false);  // Keep Wi-Fi fully powered, reduces latency
     int ch = WiFi.channel();
     esp_wifi_set_channel(ch, WIFI_SECOND_CHAN_NONE);
@@ -529,34 +567,49 @@ void esp32_laptop_comm(){
 
 void setup() {
 
-  pinMode(LED_PIN, OUTPUT);
-  digitalWrite(LED_PIN, LOW);
-
   // Serial.begin(115200);
   // Serial.begin(921600);
   Serial.begin(2000000);
   delay(500); // Wait for Serial to stabilize  
-  
+
+  // GPIO setup
+  gpio_reset_pin(RELAY_PIN);
+  gpio_set_direction(RELAY_PIN, GPIO_MODE_OUTPUT);
+  gpio_set_level(RELAY_PIN, 0); // optional: start OFF
+
+  gpio_reset_pin(HALL_IN_PIN);
+  gpio_set_direction(HALL_IN_PIN, GPIO_MODE_INPUT);
+  gpio_pullup_en(HALL_IN_PIN);
+
+  gpio_reset_pin(HALL_OUT_PIN);
+  gpio_set_direction(HALL_OUT_PIN, GPIO_MODE_INPUT);
+  gpio_pullup_en(HALL_OUT_PIN);
+
+  gpio_reset_pin(LED_PIN);
+  gpio_set_direction(LED_PIN, GPIO_MODE_OUTPUT);
+  gpio_set_level(LED_PIN, 0); // LOW
+   
+  // ROS2 transports setup
   esp32_laptop_comm(); 
-
-
-  // GPIO setup  
-  gpio_pad_select_gpio(RELAY_PIN);
-  gpio_set_direction(RELAY_PIN, GPIO_MODE_OUTPUT); 
-
-  pinMode(HALL_IN_PIN, INPUT_PULLUP);
-  pinMode(HALL_OUT_PIN, INPUT_PULLUP);
+    
+  // I2C Init
+  Wire.begin(SDA_PIN, SCL_PIN, I2C_FREQ);
+  init_all_sensors();         
 
   // Stepper
   myStepper.setMaxSpeed(2000);     // steps per second
   myStepper.setAcceleration(250);  // steps/sec^2
   myStepper.setCurrentPosition(0);  // Set starting position to zero
 
-  // I2C Init
-  Wire.begin(SDA_PIN, SCL_PIN, I2C_FREQ);
+  // Start stepper task
+  xTaskCreatePinnedToCore(stepperTask, "StepperTask", 4096, NULL, 2, NULL, 1);
 
-  init_all_sensors();         
-  
+  // Timer for precise stepping (0.5 ms = 2 kHz)
+  hw_timer_t *stepperTimer = timerBegin(0, 80, true); // 80 prescaler = 1µs ticks
+  timerAttachInterrupt(stepperTimer, &onStepperTimer, true);
+  timerAlarmWrite(stepperTimer, 250, true); // 500µs
+  timerAlarmEnable(stepperTimer);
+
   // Initial state
   system_state = AGENT_WAIT;
 }
@@ -569,7 +622,7 @@ void update_led() {
     int blink_interval;
     switch (system_state) {
         case AGENT_WAIT:         blink_interval = 100;  break; // Fast blink
-        case AGENT_AVAILABLE:    blink_interval = 200;  break; // Medium blink
+        case AGENT_AVAILABLE:    blink_interval = 100;  break; // Medium blink
         case AGENT_CONNECTED:    blink_interval = 1000; break; // Slow blink
         case AGENT_DISCONNECTED: blink_interval = 100;  break; // Very fast blink
         default:                 blink_interval = 100; break;
@@ -594,15 +647,15 @@ bool should_ping(uint32_t interval_ms) {
 
 void loop() {
 
-    update_led();
+    update_led();    
+
     // Check system state for connection status to micro_ros_agent
     switch (system_state) {
 
         case AGENT_WAIT: {
             if (should_ping(100)) {
                 system_state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_AVAILABLE : AGENT_WAIT;
-            }
-            // execute_every_n_ms(100, system_state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_AVAILABLE : AGENT_WAIT);
+            }            
             break;
           }
 
@@ -628,9 +681,9 @@ void loop() {
               print_heap_info("5s check");
             }
 
-            // If connected for more than 30 sec, force reconnect
+            // If connected for more than 30 sec, check connection
             if (millis() - connected_start > 30000) {
-                Serial.println("Restarting connection to keep it fresh...");
+                Serial.println("\nRestarting connection to keep it fresh...");
 
                 // Quick ping to see if agent is alive
                 if (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) {
@@ -657,6 +710,7 @@ void loop() {
                 break;
             } 
 
+            // Ping agent regularly
             if (should_ping(500)) {
                 if (RMW_RET_OK == rmw_uros_ping_agent(50, 1)) {      // 800ms timeout
                     ping_fail_count = 0;
@@ -669,10 +723,10 @@ void loop() {
                 }
             }
 
+            // Read sensors at fixed period
             uint32_t now = millis();
             if (now - last_sensor_read_ms >= SENSOR_PERIOD_MS) {
               last_sensor_read_ms = now;
-
               sensor_data[0] = (int16_t)(read_mprls_sensor(0));
               sensor_data[1] = (int16_t)(read_mprls_sensor(1));
               sensor_data[2] = (int16_t)(read_mprls_sensor(2));
@@ -680,9 +734,10 @@ void loop() {
               ready_to_publish = true;
             }
 
+            // Publish if ready
             if (ready_to_publish) {
               sensor_msg.data.data = sensor_data;
-              delay(2); // yield to Wi-Fi stack
+              // delay(2); // yield to Wi-Fi stack
               rcl_ret_t pub_ret = rcl_publish(&sensor_pub, &sensor_msg, NULL);
               if (pub_ret != RCL_RET_OK) {
                 publish_fail_count++;
@@ -697,8 +752,7 @@ void loop() {
             }
 
             // Run executor callbacks (services, etc.)
-            rclc_executor_spin_some(&executor, RCL_MS_TO_NS(5));           
-
+            rclc_executor_spin_some(&executor, RCL_MS_TO_NS(1)); 
             break;
           }
 
