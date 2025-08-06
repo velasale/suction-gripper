@@ -37,7 +37,7 @@ This will regenerate libmicroros with your updated configuration.
 ---
 ## ✅ Notes about ROS2 transports
 
-1. **Wifi transports**  
+1. **WIFI TRANSPORTS**  
    Make sure to **include** or **uncomment** the following line inside `platform.ini`
    ```yaml
    board_microros_transport = wifi
@@ -59,7 +59,7 @@ This will regenerate libmicroros with your updated configuration.
    ros2 run micro_ros_agent micro_ros_agent udp4 --port 8888
    ``` 
 
-2. **Serial transports**
+2. **SERIAL TRANSPORTS**  
    Make sure to **exclude** or **comment** the following line inside `platform.ini`
    ```yaml
    ;board_microros_transport = wifi
@@ -67,21 +67,20 @@ This will regenerate libmicroros with your updated configuration.
 
    And run the micro-ros agent depending on your case:
 
-   2.1. ***Serial cable***
+   2.1. ***Serial cable***  
+   Run the micro-ros agent. Adjust the parameters as needed (i.e. baudrate, device)
    
    ```bash
    ros2 run micro_ros_agent micro_ros_agent serial --dev /dev/ttyUSB0 --baudrate 2000000
    ```
 
-   2.2. ***Bluetooth***
-   * First look for the IP address of your bluetooth, and pair to it.
-   * Then, bind it to the serial port
+   2.2. ***Bluetooth***  
+   First look for the IP address *XX:XX:XX:XX:XX:XX* of your ESP32 bluetooth, and pair to it. You can find this in **bluetooth** settings. Then, bind it to the serial port:
 
    ```bash
    sudo rfcomm bind /dev/rfcomm0 <XX:XX:XX:XX:XX:XX>
    ```
-   * Finally, run the micro-ros agent
-
+   Finally, run the micro-ros agent:
 
    ```bash
    ros2 run micro_ros_agent micro_ros_agent serial --dev /dev/rfcomm0
