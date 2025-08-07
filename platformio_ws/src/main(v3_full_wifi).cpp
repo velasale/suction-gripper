@@ -47,6 +47,7 @@ BluetoothSerial SerialBT;
 #define HALL_OUT_PIN GPIO_NUM_5
 #define RELAY_PIN GPIO_NUM_15
 #define LED_PIN GPIO_NUM_2
+#define ENABLE_MOTOR_PIN GPIO_NUM_14
 
 bool publish_failed = false;
 uint32_t last_sensor_read_ms = 0;
@@ -84,11 +85,12 @@ std_srvs__srv__SetBool_Response valve_res;
 int16_t sensor_data[4]; // [mprls1, mprls2, mprls3, tof]
 
 // --- Motion Settings ---
-const int SPEED_DOWN = 1200;
-const int SPEED_UP_BASE = -1200;
-const int SPEED_UP_MIN = -600;
-const int SLOWDOWN_START = 800;
-const int SLOWDOWN_END = 1000;
+const int STEP_MODE = 4;          // Stepper Driver https://www.pololu.com/product/2133 DRV8825 configure at 1/4 step.
+const int SPEED_DOWN = 1200*STEP_MODE;
+const int SPEED_UP_BASE = -1200*STEP_MODE;
+const int SPEED_UP_MIN = -600*STEP_MODE;
+const int SLOWDOWN_START = 800*STEP_MODE;
+const int SLOWDOWN_END = 1000*STEP_MODE;
 
 
 /* microROS setup */
@@ -152,9 +154,20 @@ bool isStableLow(int pin, int samples = 3, int delayMs = 1) {
 
 
 void stepperTask(void *pvParameters) {
+    const uint32_t idle_timeout_ms = 1000; // disable after 1 sec idle
+    uint32_t last_move_time = millis();
+    bool motor_enabled = false;
+
     for (;;) {
         switch (stepper_state) {
             case STEPPER_MOVING_DOWN:
+
+                if (!motor_enabled){
+                    gpio_set_level(ENABLE_MOTOR_PIN,0);
+                    motor_enabled = true;
+                }
+                last_move_time = millis();
+
                 if (!isStableLow(HALL_IN_PIN) && millis() - stepper_start_time < 3000) {
                     myStepper.setSpeed(SPEED_DOWN);
                 } else {
@@ -164,6 +177,12 @@ void stepperTask(void *pvParameters) {
                 break;
 
             case STEPPER_MOVING_UP:
+
+                if (!motor_enabled){
+                    gpio_set_level(ENABLE_MOTOR_PIN,0);
+                    motor_enabled = true;
+                }
+
                 if (!isStableLow(HALL_OUT_PIN) && millis() - stepper_start_time < 3000) {
                     long pos = abs(myStepper.currentPosition());
                     float speed;
@@ -182,6 +201,11 @@ void stepperTask(void *pvParameters) {
 
             case STEPPER_IDLE:
             default:
+                // Disable motor if idle for too long
+                if (motor_enabled && millis() - last_move_time > idle_timeout_ms) {
+                    gpio_set_level(ENABLE_MOTOR_PIN, 1); // disable motor
+                    motor_enabled = false;
+                }
                 break;
         }
         vTaskDelay(1); // Yield to keep Wi-Fi/micro-ROS happy
@@ -530,6 +554,10 @@ void setup() {
   gpio_reset_pin(LED_PIN);
   gpio_set_direction(LED_PIN, GPIO_MODE_OUTPUT);
   gpio_set_level(LED_PIN, 0); // LOW
+
+  gpio_reset_pin(ENABLE_MOTOR_PIN);
+  gpio_set_direction(ENABLE_MOTOR_PIN, GPIO_MODE_OUTPUT);
+  gpio_set_level(ENABLE_MOTOR_PIN,1);    // disable motor at startup
    
   // ROS2 transports setup
   esp32_laptop_comm(); 
@@ -539,8 +567,8 @@ void setup() {
   init_all_sensors();         
 
   // Stepper
-  myStepper.setMaxSpeed(2000);     // steps per second
-  myStepper.setAcceleration(250);  // steps/sec^2
+  myStepper.setMaxSpeed(2000*STEP_MODE);     // steps per second
+  myStepper.setAcceleration(250*STEP_MODE);  // steps/sec^2
   myStepper.setCurrentPosition(0);  // Set starting position to zero
 
   // Start stepper task
