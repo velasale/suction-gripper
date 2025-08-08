@@ -102,6 +102,7 @@ def fpull_range(object, attr_name, attr_values):
 def latex_figure_settings():
     plt.rcParams["font.family"] = "serif"
     plt.rcParams["font.serif"] = ["Times New Roman"]
+    plt.rcParams["figure.dpi"] = 50     # lower DPI to make it smaller
 
     # --- Plot Font Sizes ---
     SMALL_SIZE = 19
@@ -109,8 +110,6 @@ def latex_figure_settings():
     BIGGER_SIZE = 24
 
     # --- Image size ---
-
-
     plt.rc('font', size=SMALL_SIZE)  # controls default text sizes
     plt.rc('axes', titlesize=SMALL_SIZE)  # fontsize of the axes title
     plt.rc('axes', labelsize=MEDIUM_SIZE)  # fontsize of the x and y labels
