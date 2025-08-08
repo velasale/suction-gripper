@@ -86,11 +86,12 @@ int16_t sensor_data[4]; // [mprls1, mprls2, mprls3, tof]
 
 // --- Motion Settings ---
 const int STEP_MODE = 4;          // Stepper Driver https://www.pololu.com/product/2133 DRV8825 configure at 1/4 step.
-const int SPEED_DOWN = 1200*STEP_MODE;
-const int SPEED_UP_BASE = -1200*STEP_MODE;
-const int SPEED_UP_MIN = -600*STEP_MODE;
-const int SLOWDOWN_START = 800*STEP_MODE;
-const int SLOWDOWN_END = 1000*STEP_MODE;
+const int SPEED_DOWN = 1200 * STEP_MODE;
+const int SPEED_UP_BASE = -1200 * STEP_MODE;
+const int SPEED_UP_MIN = -600 * STEP_MODE;
+const int SLOWDOWN_START = 800 * STEP_MODE;
+const int SLOWDOWN_END = 1000 * STEP_MODE;
+const int STEPS_PER_MM = 25;
 
 
 /* microROS setup */
@@ -160,7 +161,11 @@ void stepperTask(void *pvParameters) {
 
     for (;;) {
         switch (stepper_state) {
-            case STEPPER_MOVING_DOWN:
+            case STEPPER_MOVING_DOWN:{
+
+                long pos = abs(myStepper.currentPosition());
+                float full_steps;
+                float full_dist;
 
                 if (!motor_enabled){
                     gpio_set_level(ENABLE_MOTOR_PIN,0);
@@ -171,12 +176,20 @@ void stepperTask(void *pvParameters) {
                 if (!isStableLow(HALL_IN_PIN) && millis() - stepper_start_time < 3000) {
                     myStepper.setSpeed(SPEED_DOWN);
                 } else {
+                    full_steps = pos / STEP_MODE;
+                    full_dist = full_steps / STEPS_PER_MM;
+                    Serial.printf("Distance Moving-Down: %.2f steps, %.2f mm \n", full_steps, full_dist);
                     stepper_state = STEPPER_IDLE;
                     myStepper.setCurrentPosition(0);
                 }
                 break;
+              }
 
-            case STEPPER_MOVING_UP:
+            case STEPPER_MOVING_UP:{
+
+                long pos = abs(myStepper.currentPosition());
+                float full_steps;
+                float full_dist;
 
                 if (!motor_enabled){
                     gpio_set_level(ENABLE_MOTOR_PIN,0);
@@ -184,7 +197,7 @@ void stepperTask(void *pvParameters) {
                 }
 
                 if (!isStableLow(HALL_OUT_PIN) && millis() - stepper_start_time < 3000) {
-                    long pos = abs(myStepper.currentPosition());
+                    pos = abs(myStepper.currentPosition());
                     float speed;
                     if (pos < SLOWDOWN_START) speed = SPEED_UP_BASE;
                     else if (pos >= SLOWDOWN_END) speed = SPEED_UP_MIN;
@@ -194,10 +207,14 @@ void stepperTask(void *pvParameters) {
                     }
                     myStepper.setSpeed(speed);
                 } else {
-                    stepper_state = STEPPER_IDLE;
+                    full_steps = pos / STEP_MODE;
+                    full_dist = full_steps / STEPS_PER_MM;
+                    Serial.printf("Distance Moving-Up: %.2f steps, %.2f mm \n", full_steps, full_dist);
+                    stepper_state = STEPPER_IDLE;                    
                     myStepper.setCurrentPosition(0);
                 }
                 break;
+              }
 
             case STEPPER_IDLE:
             default:
