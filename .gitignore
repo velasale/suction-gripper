@@ -3,7 +3,7 @@
 *.bag
 *.csv
 *.bag.active
-*.png
+# *.png
 *.idea
 *.xlsx
 *.avi
