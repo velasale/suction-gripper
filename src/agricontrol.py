@@ -4,9 +4,20 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from matplotlib.animation import FFMpegWriter
+import glob
+from PIL import Image
+
+
 
 path = '/media/alejo/Elements/Alejo - Air Pressure Servoing/Joes Videos/'
 trial = '20240911__stf_high__offset_2__seq_1__rep_todo/'
+
+# --- Images from fixed cam ---
+image_folder = os.path.join(path, trial, 'pngs_fixed_cam/')
+image_files = sorted(glob.glob(os.path.join(image_folder, '*.png')))  # or .jpg
+
+# Extract timestamps from filenames
+img_timestamps = np.array([int(os.path.splitext(os.path.basename(f))[0]) / 1000 for f in image_files])  # seconds
 
 # --- Load the three CSV files ---
 df1 = pd.read_csv(path + trial + "gripper-pressure-sc1.csv")
@@ -33,7 +44,7 @@ unit_vectors = np.array([[np.cos(a), np.sin(a)] for a in angles_rad])
 colors = ['r', 'g', 'b']
 
 # --- Setup figure with 2 subplots ---
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
+fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 6))
 fig.tight_layout(pad=4)
 
 # --- Subplot 1: Vector plot ---
@@ -77,6 +88,12 @@ ax2.set_xlabel("Time (s)")
 ax2.set_ylabel("Pressure [kPa]")
 ax2.legend()
 ax2.grid(True)
+
+# Ax3: image display
+ax3.axis('off')
+img_display = ax3.imshow(np.zeros((100,100,3), dtype=np.uint8))  # placeholder
+ax3.set_title("Camera View")
+
 
 # Vertical line showing current time
 time_marker = ax2.axvline(timestamps[0], color='k', linestyle='--')
@@ -122,7 +139,15 @@ def update(frame):
     # Move vertical line
     time_marker.set_xdata(elapsed_time[frame])
 
-    return quiver, quiver_sum, quiver_perp, time_marker, *texts, txt_sum, txt_perp
+    # --- Update image ---
+    t = elapsed_time[frame]
+    # Find nearest image
+    idx = np.argmin(np.abs(img_timestamps - t))
+    img = Image.open(image_files[idx])
+    img_display.set_data(np.array(img))
+
+
+    return quiver, quiver_sum, quiver_perp, time_marker, *texts, txt_sum, txt_perp, img_display
 
 # Compute intervals in ms from timestamps
 dt = np.diff(timestamps, prepend=timestamps[0])  # seconds
