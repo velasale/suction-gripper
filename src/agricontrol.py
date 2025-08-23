@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -23,6 +24,8 @@ timestamps = t1
 elapsed_time = timestamps - timestamps[0]  # <--- elapsed time in seconds
 magnitudes = np.vstack([m1, m2, m3]).T
 
+magnitudes = magnitudes / 10  # hPa → kPa
+
 # Angles for the 3 vectors
 angles_deg = [60, 180, 300]
 angles_rad = np.deg2rad(angles_deg)
@@ -41,7 +44,12 @@ ax1.set_ylim(-max_val*1.2, max_val*1.2)
 ax1.set_title("Air Pressure Vectors")
 ax1.grid(True)
 
-img = plt.imread('/path/to/your/image.png')  
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+img_path = os.path.join(script_dir, '..', 'media', 'gripper_topview.png')
+img_path = os.path.normpath(img_path)  # cleans up the path
+img = plt.imread(img_path)  
+ax1.imshow(img, extent=[-max_val*1.2, max_val*1.2, -max_val*1.2, max_val*1.2], aspect='auto', zorder=0, alpha=0.5)
 
 quiver = ax1.quiver([0,0,0], [0,0,0], [0,0,0], [0,0,0],
                     angles='xy', scale_units='xy', scale=1, color=colors)
@@ -52,15 +60,21 @@ texts = [ax1.text(0, 0, '', color=c, fontsize=10, weight='bold') for c in colors
 quiver_sum = ax1.quiver([0], [0], [0], [0], angles='xy', scale_units='xy', scale=1, color='k', width=0.02)
 txt_sum = ax1.text(0, 0, '', color='k', fontsize=10, weight='bold')
 
+# --- Perpendicular vector ---
+quiver_perp = ax1.quiver([0], [0], [0], [0], angles='xy', scale_units='xy', scale=1, 
+                         color='purple', width=0.02, linestyle='dashed')
+txt_perp = ax1.text(0, 0, '', color='purple', fontsize=10, weight='bold')
+
+
 
 # --- Subplot 2: Time series ---
-ax2.plot(elapsed_time, m1, color='r', label='scA')
-ax2.plot(elapsed_time, m2, color='g', label='scB')
-ax2.plot(elapsed_time, m3, color='b', label='scC')
+ax2.plot(elapsed_time, m1/10, color='r', label='scA')
+ax2.plot(elapsed_time, m2/10, color='g', label='scB')
+ax2.plot(elapsed_time, m3/10, color='b', label='scC')
 ax2.set_xlim(elapsed_time[0], elapsed_time[-1])
 ax2.set_ylim(np.min(magnitudes)*0.9, np.max(magnitudes)*1.1)
 ax2.set_xlabel("Time (s)")
-ax2.set_ylabel("Pressure [hPa]")
+ax2.set_ylabel("Pressure [kPa]")
 ax2.legend()
 ax2.grid(True)
 
@@ -83,37 +97,52 @@ def update(frame):
             offset = 0
         elif i == 1:
             cup = 'B'
-            offset = 15
+            offset = 2
         else:
             cup = 'C'
             offset = 0
         txt.set_position((U[i], V[i]+offset))
-        txt.set_text(f"sc{cup}: {mags[i]:.1f} hPa")
+        txt.set_text(f"sc{cup}: {mags[i]:.2f} kPa")
     
     U_sum = sum(U)
     V_sum = sum(V)
     quiver_sum.set_UVC([U_sum], [V_sum])
-
     txt_sum.set_position((U_sum, V_sum))
-    txt_sum.set_text(f"Sum: {np.linalg.norm([U_sum, V_sum]):.1f} hPa")
+    txt_sum.set_text(f"Sum: {np.linalg.norm([U_sum, V_sum]):.1f} kPa")
 
-    ax1.set_title(f"Timestamp: {elapsed_time[frame]:.3f}")
+    # Perpendicular vector
+    U_perp = -V_sum
+    V_perp = U_sum
+    quiver_perp.set_UVC([U_perp], [V_perp])
+    txt_perp.set_position((U_perp + 0.02*max_val, V_perp + 0.02*max_val))
+    txt_perp.set_text(f"$\omega$ (⊥ Sum)")
+
+    # ax1.set_title(f"Timestamp: {elapsed_time[frame]:.3f}")
 
     # Move vertical line
     time_marker.set_xdata(elapsed_time[frame])
 
-    return quiver, quiver_sum, time_marker, *texts, txt_sum
+    return quiver, quiver_sum, quiver_perp, time_marker, *texts, txt_sum, txt_perp
 
 # Compute intervals in ms from timestamps
 dt = np.diff(timestamps, prepend=timestamps[0])  # seconds
 intervals = (dt * 1000).astype(int)
 
 # --- Animate ---
+speed_factor = 4
+
+# Compute intervals in ms from timestamps
+dt = np.diff(timestamps, prepend=timestamps[0])  # seconds
+intervals = (dt * 1000).astype(int)
+
+# Slow down by 4×
+interval_slow = intervals.mean() * speed_factor
+
 ani = animation.FuncAnimation(fig, update, frames=n,
-                              interval=intervals.mean(), blit=True)
+                              interval=interval_slow, blit=True)
 
 # Save video
-writer = FFMpegWriter(fps=30, metadata=dict(artist="Me"), bitrate=1800)
+writer = FFMpegWriter(fps=30 / speed_factor, metadata=dict(artist="Me"), bitrate=1800)
 ani.save("vectors_with_timeseries.mp4", writer=writer)
 
 plt.show()
