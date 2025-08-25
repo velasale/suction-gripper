@@ -1,280 +1,216 @@
 import os
+import glob
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-import matplotlib.patches as patches
 from matplotlib.lines import Line2D
 from matplotlib.animation import FFMpegWriter
-import glob
+import matplotlib.patches as patches
 from PIL import Image
+import matplotlib as mpl
+
+# ----------------------- SETTINGS ------------------------------------#
+environment = 'ubuntu'
+base_paths = {
+    'ubuntu': '/media/alejo/Elements/Alejo - Air Pressure Servoing/Joes Videos/',
+    'windows': r'D:/Alejo - Air Pressure Servoing/Joes Videos/'
+}
+path = base_paths[environment]
+
+trial = '20240911__stf_high__offset_3__seq_1__rep_todo/'
+
+# --- Air pressure settings ---
+pressure_threshold = 60.0  # kPa
+colors = ['r', 'orange', 'b']  # color for each sensor
+vector_angles_deg = [60, 180, 300]  # vector directions
+unit_vectors = np.array([[np.cos(np.deg2rad(a)), np.sin(np.deg2rad(a))] for a in vector_angles_deg])
+
+# --- Figure style ---
+mpl.rcParams.update({
+    'font.size': 14,
+    'axes.titlesize': 16,
+    'axes.labelsize': 14,
+    'xtick.labelsize': 12,
+    'ytick.labelsize': 12,
+    'legend.fontsize': 12
+})
 
 
-# ----------------------- IMPORT DATA ------------------------------------#
-environment = 'windows'
-if environment == 'ubuntu':
-    path = r'/media/alejo/Elements/Alejo - Air Pressure Servoing/Joes Videos/'
-else:
-    path = r'D:/Alejo - Air Pressure Servoing/Joes Videos/'
+# ----------------------- DATA LOADING ------------------------------------#
+def load_pressure_csvs(path, trial, sensors=3):
+    dfs = [pd.read_csv(os.path.join(path, trial, f"gripper-pressure-sc{i+1}.csv")) for i in range(sensors)]
+    t_min = min(df['Time'].min() for df in dfs)
+    t_max = max(df['Time'].max() for df in dfs)
+    dt = min(np.median(np.diff(df['Time'])) for df in dfs)
+    t_uniform = np.arange(t_min, t_max, dt)
+    magnitudes = np.vstack([np.interp(t_uniform, df['Time'], df['data']) for df in dfs]).T / 10
+    return t_uniform, magnitudes
 
-# folder = 'Alejo - Air Pressure Servoing/Joes Videos/'
-# trial = r'20240911__stf_high__offset_2__seq_1__rep_todo/'
-trial = r'20240911__stf_high__offset_3__seq_1__rep_todo/'
-
-# --- Images from fixed cam ---
-image_folder = os.path.join(path, trial, 'pngs_fixed_cam/')
-image_files = sorted(
-    glob.glob(os.path.join(image_folder, '*.png')),
-    key=lambda f: int(os.path.splitext(os.path.basename(f))[0])
-)
-
-# Extract timestamps from filenames (divide by 10 for seconds)
-img_timestamps = np.array([
-    int(os.path.splitext(os.path.basename(f))[0]) / 10
-    for f in image_files
-])
-
-# --- Load Air Pressure CSV files ---
-df1 = pd.read_csv(path + trial + "gripper-pressure-sc1.csv")
-df2 = pd.read_csv(path + trial + "gripper-pressure-sc2.csv")
-df3 = pd.read_csv(path + trial + "gripper-pressure-sc3.csv")
-
-# Find global min/max
-t_min = min(df1['Time'].min(), df2['Time'].min(), df3['Time'].min())
-t_max = max(df1['Time'].max(), df2['Time'].max(), df3['Time'].max())
-
-# Choose step as the smallest median dt across signals
-dt = min(
-    np.median(np.diff(df1['Time'])),
-    np.median(np.diff(df2['Time'])),
-    np.median(np.diff(df3['Time']))
-)
-
-t_uniform = np.arange(t_min, t_max, dt)
-
-p1_uniform = np.interp(t_uniform, df1['Time'], df1['data'])
-p2_uniform = np.interp(t_uniform, df2['Time'], df2['data'])
-p3_uniform = np.interp(t_uniform, df3['Time'], df3['data'])
-
-# --- Interpolate onto uniform grid ---
-m1 = np.interp(t_uniform, df1['Time'], df1['data'])
-m2 = np.interp(t_uniform, df2['Time'], df2['data'])
-m3 = np.interp(t_uniform, df3['Time'], df3['data'])
-
-# Use resampled timeline
+t_uniform, magnitudes = load_pressure_csvs(path, trial)
 elapsed_time = t_uniform - t_uniform[0]
-n = len(elapsed_time)
+n_frames = len(elapsed_time)
 
-magnitudes = np.vstack([m1, m2, m3]).T
-magnitudes = magnitudes / 10  # hPa → kPa
 
-# -------------------------- FIGURES SETUP -----------------------------#
-# Angles for the 3 vectors
-angles_deg = [60, 180, 300]
-angles_rad = np.deg2rad(angles_deg)
-unit_vectors = np.array([[np.cos(a), np.sin(a)] for a in angles_rad])
-colors = ['r', 'g', 'b']
+# --- Load camera images ---
+image_folder = os.path.join(path, trial, 'pngs_fixed_cam/')
+image_files = sorted(glob.glob(os.path.join(image_folder, '*.png')),
+                     key=lambda f: int(os.path.splitext(os.path.basename(f))[0]))
+img_timestamps = np.array([int(os.path.splitext(os.path.basename(f))[0])/10 for f in image_files])
 
-# --- Setup figure with 3 subplots ---
-fig, (ax2, ax1, ax3) = plt.subplots(1, 3, figsize=(18, 6))
-fig.tight_layout(pad=4)
 
-# --- Subplot 1: Vector plot ---
-ax1.set_aspect('equal')
+# ----------------------- FIGURE SETUP ------------------------------------#
+fig = plt.figure(figsize=(18,5))
+fig_width, fig_height = fig.get_size_inches()
+h_axes, bottom, margin, min_w2 = 0.75, 0.1, 0.05, 0.25
+
+# Load background image once
+script_dir = os.path.dirname(os.path.abspath(__file__))
+img_bg_path = os.path.normpath(os.path.join(script_dir, '..', 'media', 'gripper_topview.png'))
+bg_img = plt.imread(img_bg_path)
+h1, w1 = bg_img.shape[:2]
+aspect1 = w1/h1
+
+# Load sample camera image to get aspect
+sample_img = Image.open(image_files[0])
+h3, w3 = sample_img.size[1], sample_img.size[0]
+aspect3 = w3/h3
+
+# --- Compute normalized widths ---
+w1_norm = aspect1 * h_axes / (fig_height / fig_width)
+w3_norm = aspect3 * h_axes / (fig_height / fig_width)
+total_w = w1_norm + w3_norm + 3*margin
+if total_w > 1 - min_w2:
+    scale = (1 - min_w2 - 3*margin) / (w1_norm + w3_norm)
+    w1_norm *= scale
+    w3_norm *= scale
+w2_norm = 1 - w1_norm - w3_norm - 3*margin
+
+left1 = margin
+left2 = left1 + w1_norm + margin
+left3 = left2 + w2_norm + margin
+
+# --- Create axes ---
+ax2 = fig.add_axes([left1, bottom, w2_norm, h_axes])
+ax1 = fig.add_axes([left2, bottom, w1_norm, h_axes])
+ax3 = fig.add_axes([left3, bottom, w3_norm, h_axes])
+
+# Camera subplot
+img_display = ax3.imshow(sample_img)
+# ax3.set_aspect(aspect3,adjustable='box')
+ax3.set_aspect(1.0)
+ax3.axis('off')
+ax3.set_title("Camera View")
+
+# Vector subplot setup
 max_val = np.max(magnitudes)
 ax1.set_xlim(-max_val*1.2, max_val*1.2)
 ax1.set_ylim(-max_val*1.2, max_val*1.2)
 ax1.set_title("Air Pressure Vectors")
-
-# Remove box and put axes in the middle
 ax1.spines['left'].set_position('center')
 ax1.spines['bottom'].set_position('center')
 ax1.spines['right'].set_color('none')
 ax1.spines['top'].set_color('none')
 ax1.xaxis.set_ticks_position('bottom')
 ax1.yaxis.set_ticks_position('left')
-ax1.grid(False)  # optional: remove grid
+ax1.imshow(bg_img, extent=[-max_val*1.2, max_val*1.2, -max_val*1.2, max_val*1.2], zorder=0, alpha=0.5)
+ax1.set_aspect(w1/h1, adjustable='box')
 
-# Circles to emulate suction cup engagement
-angles = [60, 180, -60]  # degrees
-r = 70
-coords = [(r*np.cos(np.deg2rad(a)), r*np.sin(np.deg2rad(a))) for a in angles]
-colors = ['red', 'orange', 'blue']
-circles = []
-for (x, y), color in zip(coords, colors):
-    c = patches.Circle((x, y), radius=25, color=color, alpha=0.3, visible=False)
-    ax1.add_patch(c)
-    circles.append(c)
+# Suction cups and lines
+cup_coords = [(70*np.cos(np.deg2rad(a)), 70*np.sin(np.deg2rad(a))) for a in [60,180,-60]]
+cup_colors = ['red', 'orange', 'blue']
+circles = [ax1.add_patch(patches.Circle(c, radius=25, color=col, alpha=0.3, visible=False))
+           for c, col in zip(cup_coords, cup_colors)]
+cup_line = ax1.add_line(Line2D([0,0],[0,0], color='gray', linestyle='--', linewidth=1.5, visible=False))
+projection_line = ax1.add_line(Line2D([0,0],[0,0], color='purple', linestyle='--', linewidth=1.5, visible=False))
+engaged_label = ax1.text(0, -max_val*1.3, "All suction cups engaged!", ha='center', va='top', fontsize=18, color='green', weight='bold')
+engaged_label.set_visible(False)
 
-# Dashed line between cups (initially invisible)
-cup_line = Line2D([0,0], [0,0], color='gray', linestyle='--', linewidth=1.5, visible=False)
-ax1.add_line(cup_line)
-
-projection_line = Line2D([0,0], [0,0], color='purple', linestyle='--', linewidth=1.5, visible=False)
-ax1.add_line(projection_line)
-
-# Background image
-script_dir = os.path.dirname(os.path.abspath(__file__))
-img_path = os.path.join(script_dir, '..', 'media', 'gripper_topview.png')
-img_path = os.path.normpath(img_path)  # cleans up the path
-img = plt.imread(img_path)
-ax1.imshow(img, extent=[-max_val*1.2, max_val*1.2, -max_val*1.2, max_val*1.2], aspect='auto', zorder=0, alpha=0.5)
-
-quiver = ax1.quiver([0,0,0], [0,0,0], [0,0,0], [0,0,0],
-                    angles='xy', scale_units='xy', scale=1, color=colors)
-
-texts = [ax1.text(0, 0, '', color=c, fontsize=10, weight='bold') for c in colors]
-
-# THETA (Sum vector)
+# Quivers
+quiver = ax1.quiver([0]*3, [0]*3, [0]*3, [0]*3, angles='xy', scale_units='xy', scale=1, color=colors)
 quiver_sum = ax1.quiver([0], [0], [0], [0], angles='xy', scale_units='xy', scale=1, color='k', width=0.02)
-txt_sum = ax1.text(0, 0, '', color='k', fontsize=10, weight='bold')
+quiver_perp = ax1.quiver([0], [0], [0], [0], angles='xy', scale_units='xy', scale=1, color='purple', width=0.02)
+texts = [ax1.text(0,0,'', color=c, fontsize=12, weight='bold') for c in colors]
+txt_sum = ax1.text(0,0,'', color='k', fontsize=12, weight='bold')
+txt_perp = ax1.text(0,0,'', color='purple', fontsize=12, weight='bold')
 
-# OMEGA (Perpendicular vector)
-quiver_perp = ax1.quiver([0], [0], [0], [0], angles='xy', scale_units='xy', scale=1,
-                         color='purple', width=0.02, linestyle='dashed')
-txt_perp = ax1.text(0, 0, '', color='purple', fontsize=10, weight='bold')
-
-
-# --- Subplot 2: Time series ---
-ax2.plot(elapsed_time, m1/10, color='r', label='scA')
-ax2.plot(elapsed_time, m2/10, color='orange', label='scB')
-ax2.plot(elapsed_time, m3/10, color='b', label='scC')
+# Time series subplot
+ax2.plot(elapsed_time, magnitudes[:,0], color='r', label='scA')
+ax2.plot(elapsed_time, magnitudes[:,1], color='orange', label='scB')
+ax2.plot(elapsed_time, magnitudes[:,2], color='b', label='scC')
 ax2.set_xlim(elapsed_time[0], elapsed_time[-1])
-ax2.set_ylim(0, np.max(magnitudes)*1.1)
+ax2.set_ylim(0, max_val*1.1)
+ax2.set_title("Time Series")
 ax2.set_xlabel("Time (s)")
 ax2.set_ylabel("Air Pressure [kPa]")
-# Horizontal line at threshold (green dashed)
-threshold_kPa = 60
-ax2.axhline(y=threshold_kPa, color='green', linestyle='--', linewidth=1.5, label='Engagement Threshold')
-
-# Vertical line showing current time
-time_marker = ax2.axvline(elapsed_time[0], color='k', linestyle='--')
-
+ax2.axhline(y=pressure_threshold, color='green', linestyle='--', linewidth=2, label='Engagement Threshold')
+time_marker = ax2.axvline(elapsed_time[0], color='k', linestyle=(0,(5,5)))
 ax2.legend()
 ax2.grid(True)
-
-
-# --- Subplot 3: Camera display ---
-ax3.axis('off')
-
-# Load one sample image to get dimensions
-sample_img = Image.open(image_files[0])
-h, w = sample_img.size[1], sample_img.size[0]
-
-img_display = ax3.imshow(sample_img, aspect='equal', extent=[0, w, h, 0])  # extent matches pixel grid
-ax3.set_xlim(0, w)
-ax3.set_ylim(h, 0)  # flip y to keep image orientation
-ax3.set_title("Camera View")
 
 
 # -------------------------- UPDATE FUNCTION ---------------------------------
 def update(frame):
     mags = magnitudes[frame]
-    U = [m * uv[0] for m, uv in zip(mags, unit_vectors)]
-    V = [m * uv[1] for m, uv in zip(mags, unit_vectors)]
-
+    U = mags * unit_vectors[:,0]
+    V = mags * unit_vectors[:,1]
     quiver.set_UVC(U, V)
 
-    # --- Update vector labels ---
     for i, txt in enumerate(texts):
-        cup = ['A', 'B', 'C'][i]
-        offset = 2 if i == 1 else 0
-        txt.set_position((U[i], V[i] + offset))
-        txt.set_text(f"sc{cup}: {mags[i]:.2f} kPa")
+        txt.set_position((U[i], V[i]))
+        txt.set_text(f"sc{['A','B','C'][i]}: {mags[i]:.2f} kPa")
 
-    # --- Update SUM vector ---
-    U_sum = sum(U)
-    V_sum = sum(V)
+    U_sum, V_sum = sum(U), sum(V)
     quiver_sum.set_UVC([U_sum], [V_sum])
     txt_sum.set_position((U_sum, V_sum))
-    txt_sum.set_text(f"Sum: {np.linalg.norm([U_sum, V_sum]):.1f} kPa")
+    txt_sum.set_text(f"Sum: {np.linalg.norm([U_sum,V_sum]):.1f} kPa")
 
-    # --- Update circle visibility and get active cups ---
-    threshold = 60.0  # kPa
-    active_indices = []
+    active_idx = [i for i, m in enumerate(mags) if m < pressure_threshold]
     for i, c in enumerate(circles):
-        if mags[i] < threshold:
-            c.set_visible(True)
-            active_indices.append(i)
-        else:
-            c.set_visible(False)
+        c.set_visible(i in active_idx)
+    engaged_label.set_visible(len(active_idx)==3)
 
-    # --- Determine omega vector origin ---
-    origin_x, origin_y = 0, 0
+    origin_x, origin_y = 0,0
     cup_line.set_visible(False)
     projection_line.set_visible(False)
 
-    if len(active_indices) == 1:
-        # One cup active
-        origin_x, origin_y = coords[active_indices[0]]
-
-    elif len(active_indices) == 2:
-        # Two cups active
-        idx1, idx2 = active_indices
-        x1, y1 = coords[idx1]
-        x2, y2 = coords[idx2]
-
-        # Show dashed line between cups
-        cup_line.set_data([x1, x2], [y1, y2])
+    if len(active_idx)==1:
+        origin_x, origin_y = cup_coords[active_idx[0]]
+    elif len(active_idx)==2:
+        idx1, idx2 = active_idx
+        x1, y1 = cup_coords[idx1]
+        x2, y2 = cup_coords[idx2]
+        cup_line.set_data([x1,x2],[y1,y2])
         cup_line.set_visible(True)
-
-        line_vec = np.array([x2 - x1, y2 - y1])
+        line_vec = np.array([x2-x1, y2-y1])
         line_start = np.array([x1, y1])
         sum_vec = np.array([U_sum, V_sum])
-
-        # Intersection of sum vector with line between cups
-        A = np.column_stack((line_vec, -sum_vec))
-        b = -line_start
         try:
-            s, t = np.linalg.lstsq(A, b, rcond=None)[0]
+            s, t = np.linalg.lstsq(np.column_stack((line_vec,-sum_vec)), -line_start, rcond=None)[0]
         except np.linalg.LinAlgError:
             s = 0.5
-        s = np.clip(s, 0, 1)
-        origin_vec = line_start + s * line_vec
-        origin_x, origin_y = origin_vec
-
-        # Projection line along sum vector from intersection
-        projection_line.set_data([origin_x, origin_x + U_sum], [origin_y, origin_y + V_sum])
+        s = np.clip(s,0,1)
+        origin_x, origin_y = line_start + s*line_vec
+        projection_line.set_data([origin_x, origin_x+U_sum], [origin_y, origin_y+V_sum])
         projection_line.set_visible(True)
 
-    # --- Omega (perpendicular) vector ---
-    U_perp = -V_sum
-    V_perp = U_sum
+    U_perp, V_perp = -V_sum, U_sum
     quiver_perp.set_offsets([[origin_x, origin_y]])
     quiver_perp.set_UVC([U_perp], [V_perp])
-
-    # Place omega text at tip of vector
-    tip_x = origin_x + U_perp
-    tip_y = origin_y + V_perp
-    txt_perp.set_position((tip_x + 2, tip_y + 2))  # small offset to avoid overlap
+    txt_perp.set_position((origin_x+U_perp+2, origin_y+V_perp+2))
     txt_perp.set_text("$\\omega$ (⊥ Sum)")
 
-    # --- Move vertical line in time series ---
     time_marker.set_xdata(elapsed_time[frame])
+    idx_img = np.argmin(np.abs(img_timestamps - elapsed_time[frame]))
+    img_display.set_data(np.array(Image.open(image_files[idx_img])))
 
-    # --- Update camera image ---
-    t = elapsed_time[frame]
-    idx = np.argmin(np.abs(img_timestamps - t))
-    img = Image.open(image_files[idx])
-    img_display.set_data(np.array(img))
+    return quiver, quiver_sum, quiver_perp, time_marker, *texts, txt_sum, txt_perp, img_display, cup_line, projection_line, engaged_label
 
-    return quiver, quiver_sum, quiver_perp, time_marker, *texts, txt_sum, txt_perp, img_display, cup_line, projection_line
-
-
-# Compute intervals in ms from timestamps
-dt = np.diff(elapsed_time, prepend=elapsed_time[0])  # seconds
-intervals = (dt * 1000).astype(int)
 
 # --- Animate ---
-# Compute intervals in ms from timestamps
-dt = np.diff(elapsed_time, prepend=elapsed_time[0])  # seconds
-intervals = (dt * 1000).astype(int)
-# Slow down by 4×
-speed_factor = 4
-interval_slow = intervals.mean() * speed_factor
-ani = animation.FuncAnimation(fig, update, frames=n, interval=interval_slow, blit=True)
-# Save video
-writer = FFMpegWriter(fps=30 / speed_factor, metadata=dict(artist="Me"), bitrate=1800)
+interval_ms = np.diff(elapsed_time, prepend=elapsed_time[0]).mean()*1000*4  # slower
+ani = animation.FuncAnimation(fig, update, frames=n_frames, interval=interval_ms, blit=True)
+writer = FFMpegWriter(fps=30/4, metadata=dict(artist="Me"), bitrate=1800)
 ani.save("vectors_with_timeseries.mp4", writer=writer)
 
 plt.show()
