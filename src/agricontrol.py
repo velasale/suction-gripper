@@ -26,8 +26,11 @@ colors = ['r', 'orange', 'b']  # color for each sensor
 vector_angles_deg = [60, 180, 300]  # vector directions
 unit_vectors = np.array([[np.cos(np.deg2rad(a)), np.sin(np.deg2rad(a))] for a in vector_angles_deg])
 
-# --- Figure style ---
+# ------------------- FIGURE STYLE -------------------
 mpl.rcParams.update({
+    'text.usetex': False,         # disable system LaTeX
+    'mathtext.fontset': 'cm',     # Computer Modern fonts
+    'font.family': 'serif',
     'font.size': 14,
     'axes.titlesize': 16,
     'axes.labelsize': 14,
