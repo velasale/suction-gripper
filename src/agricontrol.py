@@ -7,6 +7,7 @@ import matplotlib.animation as animation
 from matplotlib.lines import Line2D
 from matplotlib.animation import FFMpegWriter
 import matplotlib.patches as patches
+from matplotlib.patches import FancyArrowPatch
 from PIL import Image
 import matplotlib as mpl
 
@@ -63,7 +64,7 @@ img_timestamps = np.array([int(os.path.splitext(os.path.basename(f))[0])/10 for 
 
 
 # ----------------------- FIGURE SETUP ------------------------------------#
-fig = plt.figure(figsize=(18,5))
+fig = plt.figure(figsize=(18,6))
 fig_width, fig_height = fig.get_size_inches()
 h_axes, bottom, margin, min_w2 = 0.75, 0.1, 0.05, 0.25
 
@@ -153,62 +154,110 @@ ax2.grid(True)
 
 
 # -------------------------- UPDATE FUNCTION ---------------------------------
+rotational_arrows = []  # keep track of the rotational arrow + text
+
 def update(frame):
     mags = magnitudes[frame]
     U = mags * unit_vectors[:,0]
     V = mags * unit_vectors[:,1]
     quiver.set_UVC(U, V)
 
+    # --- Text for individual sensors ---
+    offsets = [(5,5), (-40,5), (5,5)]  # offsets in data units (x,y) for A, B, C
     for i, txt in enumerate(texts):
-        txt.set_position((U[i], V[i]))
-        txt.set_text(f"sc{['A','B','C'][i]}: {mags[i]:.2f} kPa")
+        txt.set_position((U[i] + offsets[i][0], V[i] + offsets[i][1]))
+        txt.set_text(f"sc{['A','B','C'][i]}: {mags[i]:.0f} kPa")
 
+    # --- Sum vector ---
     U_sum, V_sum = sum(U), sum(V)
     quiver_sum.set_UVC([U_sum], [V_sum])
     txt_sum.set_position((U_sum, V_sum))
-    txt_sum.set_text(f"Sum: {np.linalg.norm([U_sum,V_sum]):.1f} kPa")
+    txt_sum.set_text(f"Sum: {np.linalg.norm([U_sum,V_sum]):.0f} kPa")
 
+    # --- Active suction cups ---
     active_idx = [i for i, m in enumerate(mags) if m < pressure_threshold]
     for i, c in enumerate(circles):
         c.set_visible(i in active_idx)
-    engaged_label.set_visible(len(active_idx)==3)
+    engaged_label.set_visible(len(active_idx) == 3)
 
-    origin_x, origin_y = 0,0
+    # --- Determine origin for lines ---
+    origin_x, origin_y = 0, 0
     cup_line.set_visible(False)
     projection_line.set_visible(False)
 
-    if len(active_idx)==1:
+    if len(active_idx) == 1:
         origin_x, origin_y = cup_coords[active_idx[0]]
-    elif len(active_idx)==2:
+    elif len(active_idx) == 2:
         idx1, idx2 = active_idx
         x1, y1 = cup_coords[idx1]
         x2, y2 = cup_coords[idx2]
-        cup_line.set_data([x1,x2],[y1,y2])
+        cup_line.set_data([x1, x2], [y1, y2])
         cup_line.set_visible(True)
         line_vec = np.array([x2-x1, y2-y1])
         line_start = np.array([x1, y1])
         sum_vec = np.array([U_sum, V_sum])
         try:
-            s, t = np.linalg.lstsq(np.column_stack((line_vec,-sum_vec)), -line_start, rcond=None)[0]
+            s, t = np.linalg.lstsq(np.column_stack((line_vec, -sum_vec)), -line_start, rcond=None)[0]
         except np.linalg.LinAlgError:
             s = 0.5
-        s = np.clip(s,0,1)
+        s = np.clip(s, 0, 1)
         origin_x, origin_y = line_start + s*line_vec
         projection_line.set_data([origin_x, origin_x+U_sum], [origin_y, origin_y+V_sum])
         projection_line.set_visible(True)
 
-    U_perp, V_perp = -V_sum, U_sum
-    quiver_perp.set_offsets([[origin_x, origin_y]])
-    quiver_perp.set_UVC([U_perp], [V_perp])
-    txt_perp.set_position((origin_x+U_perp+2, origin_y+V_perp+2))
-    txt_perp.set_text("$\\omega$ (⊥ Sum)")
+    # --- Perpendicular vector + rotational arrow & text only if 1 or 2 cups engaged ---
+    if 1 <= len(active_idx) <= 2:
+        # Perpendicular vector
+        U_perp, V_perp = -V_sum, U_sum
+        quiver_perp.set_offsets([[origin_x, origin_y]])
+        quiver_perp.set_UVC([U_perp], [V_perp])
+        quiver_perp.set_visible(True)
+        txt_perp.set_position((origin_x + U_perp + 2, origin_y + V_perp + 2))
+        txt_perp.set_text("$\\omega$ (⊥ Sum)")
+        txt_perp.set_visible(True)
 
+        # Rotational arrow
+        for arr in rotational_arrows:
+            arr.remove()
+        rotational_arrows.clear()
+
+        radius = 10
+        theta = np.linspace(0, 1.5*np.pi, 20)
+        x_arc = origin_x + radius * np.cos(theta)
+        y_arc = origin_y + radius * np.sin(theta)
+
+        # Arc line
+        arc_line, = ax1.plot(x_arc, y_arc, color='purple', lw=2)
+        rotational_arrows.append(arc_line)
+
+        # Arrowhead at end
+        arrow = FancyArrowPatch(
+            posA=(x_arc[-2], y_arc[-2]), posB=(x_arc[-1], y_arc[-1]),
+            arrowstyle='-|>', mutation_scale=15, color='purple', lw=2
+        )
+        ax1.add_patch(arrow)
+        rotational_arrows.append(arrow)
+
+        # Text along the arc
+        mid_idx = len(x_arc) // 2
+        txt_rot_x = x_arc[mid_idx] + -8
+        txt_rot_y = y_arc[mid_idx] + 8
+        rotational_text = ax1.text(txt_rot_x, txt_rot_y, r"$\dot{\theta}  \propto$ Sum",
+                                    color='purple', fontsize=12, weight='bold')
+        rotational_arrows.append(rotational_text)
+    else:
+        quiver_perp.set_visible(False)
+        txt_perp.set_visible(False)
+        for arr in rotational_arrows:
+            arr.remove()
+        rotational_arrows.clear()
+
+    # --- Time series + camera ---
     time_marker.set_xdata(elapsed_time[frame])
     idx_img = np.argmin(np.abs(img_timestamps - elapsed_time[frame]))
     img_display.set_data(np.array(Image.open(image_files[idx_img])))
 
-    return quiver, quiver_sum, quiver_perp, time_marker, *texts, txt_sum, txt_perp, img_display, cup_line, projection_line, engaged_label
-
+    return quiver, quiver_sum, quiver_perp, time_marker, *texts, txt_sum, txt_perp, img_display, cup_line, projection_line, engaged_label, *rotational_arrows
 
 # --- Animate ---
 interval_ms = np.diff(elapsed_time, prepend=elapsed_time[0]).mean()*1000*4  # slower

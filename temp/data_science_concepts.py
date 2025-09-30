@@ -2,6 +2,11 @@ import math
 import statistics as st
 import random
 
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import multivariate_normal
+
+
 import matplotlib.pyplot as plt
 
 
@@ -62,12 +67,35 @@ def rolling_die():
 
 def gaussian_mixture_model():
 
-    # Step 0: Generate the ground truth
-    cluster_1 =
+   
+    # Mean vector and covariance matrix
+    mean = [0, 0]
+    cov = [[1, 0.99], [0.99, 1]]  # covariance matrix
 
+    # Create a grid of (x, y) points
+    x = np.linspace(-3, 3, 500)
+    y = np.linspace(-3, 3, 500)
+    X, Y = np.meshgrid(x, y)
+    pos = np.dstack((X, Y))
+
+    # Create a multivariate normal distribution
+    rv = multivariate_normal(mean, cov)
+
+    # Compute the probability density function (PDF) over the grid
+    Z = rv.pdf(pos)
+
+    # Plot contour with color
+    plt.figure(figsize=(8,6))
+    contour = plt.contourf(X, Y, Z, cmap='viridis')  # colored contour
+    plt.colorbar(contour, label='Probability Density')
+    plt.title('2D Multivariate Normal Distribution')
+    plt.xlabel('X')
+    plt.ylabel('Y')
+    plt.show()
 
 
 if __name__ == '__main__':
 
     # montecarlo_simulation_circle()
-    rolling_die()
+    # rolling_die()
+    gaussian_mixture_model()
