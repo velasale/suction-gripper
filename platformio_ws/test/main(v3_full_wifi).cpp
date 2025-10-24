@@ -489,25 +489,25 @@ void init_all_sensors() {
 // === Microros transports ===
 void esp32_laptop_comm(){
 
-  // === Wifi through Router ===
-  if (COMM_MODE == "wifi_router"){
-    const char* ssid = "sas-network";
-    const char* password = "marinerobotics"; 
+  // // === Wifi through Router ===
+  // if (COMM_MODE == "wifi_router"){
+  //   const char* ssid = "sas-network";
+  //   const char* password = "marinerobotics"; 
     
-    // IPAddress agent_ip(192,168,0,123);  // Laptop-Router through LAN    
-    IPAddress agent_ip(192,168,0,100);  // Laptop-Router through wifi
-    int agent_port = 8888;
-    set_microros_wifi_transports((char*)ssid, (char*)password, agent_ip, agent_port);
-    while (WiFi.status() != WL_CONNECTED) {
-      delay(50);
-      Serial.print(".");
-    }
-    Serial.println("\nWiFi connected: " + WiFi.localIP().toString());
+  //   // IPAddress agent_ip(192,168,0,123);  // Laptop-Router through LAN    
+  //   IPAddress agent_ip(192,168,0,100);  // Laptop-Router through wifi
+  //   int agent_port = 8888;
+  //   set_microros_wifi_transports((char*)ssid, (char*)password, agent_ip, agent_port);
+  //   while (WiFi.status() != WL_CONNECTED) {
+  //     delay(50);
+  //     Serial.print(".");
+  //   }
+  //   Serial.println("\nWiFi connected: " + WiFi.localIP().toString());
     
-    WiFi.setSleep(false);  // Keep Wi-Fi fully powered, reduces latency
-    int ch = WiFi.channel();
-    esp_wifi_set_channel(ch, WIFI_SECOND_CHAN_NONE);
-  }    
+  //   WiFi.setSleep(false);  // Keep Wi-Fi fully powered, reduces latency
+  //   int ch = WiFi.channel();
+  //   esp_wifi_set_channel(ch, WIFI_SECOND_CHAN_NONE);
+  // }    
 
   // === Wifi through laptop's hotspot ===
   if (COMM_MODE == "wifi_hotspot") {
@@ -553,7 +553,8 @@ void setup() {
   // Serial.begin(115200);
   // Serial.begin(921600);
   Serial.begin(2000000);
-  delay(500); // Wait for Serial to stabilize  
+  delay(2000); // Wait for Serial to stabilize  
+  
 
   // GPIO setup
   gpio_reset_pin(RELAY_PIN);
