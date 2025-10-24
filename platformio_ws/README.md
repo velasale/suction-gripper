@@ -2,7 +2,7 @@
 
 By default, both `micro-ros-platformio` and `micro-ros-arduino` **only support one ROS service**.
 
-If you want to enable **more than one**, follow these steps using PlatformIO:
+This grippers should provide two services: switch valve, operate fingres. Hence, make sure to enable **more than one**, following these steps using PlatformIO:
 
 ---
 
