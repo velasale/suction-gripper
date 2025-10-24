@@ -58,7 +58,7 @@ bool ready_to_publish = false;
 
 
 // COMM_MODEs: "wifi_router", "wifi_hotspot", "serial", "bluetooth"
-String COMM_MODE = "serial";
+String COMM_MODE = "wifi_hotspot";
 
 // === Hardware objects ===
 AccelStepper myStepper(AccelStepper::DRIVER, STEP_PIN, DIR_PIN);
@@ -577,42 +577,42 @@ void esp32_laptop_comm(){
   //   esp_wifi_set_channel(ch, WIFI_SECOND_CHAN_NONE);
   // }    
 
-  // // === Wifi through laptop's hotspot ===
-  // if (COMM_MODE == "wifi_hotspot") {
-  //   const char* ssid = "alejos";
-  //   const char* password = "harvesting";    
+  // === Wifi through laptop's hotspot ===
+  if (COMM_MODE == "wifi_hotspot") {
+    const char* ssid = "alejos";
+    const char* password = "harvesting";    
     
-  //   IPAddress agent_ip(10,42,0,1);  // <-- Replace with your ROS 2 computer IP
-  //   int agent_port = 8888;
-  //   set_microros_wifi_transports((char*)ssid, (char*)password, agent_ip, agent_port);
-  //   while (WiFi.status() != WL_CONNECTED) {
-  //     delay(50);
-  //     Serial.print(".");
-  //   }
-  //   Serial.println("\nWiFi connected: " + WiFi.localIP().toString());
-    
-  //   WiFi.setSleep(false);  // Keep Wi-Fi fully powered, reduces latency
-  //   int ch = WiFi.channel();
-  //   esp_wifi_set_channel(ch, WIFI_SECOND_CHAN_NONE);
-  // }
-  
-
-  //--- Transports through Bluetooth ---
-  if (COMM_MODE == "bluetooth") {
-    set_microros_serial_transports(SerialBT);
-    SerialBT.begin("ESP32_BT");  // You can name this as you wish
-    while (!SerialBT.hasClient()) {
-      delay(100);
+    IPAddress agent_ip(10,42,0,1);  // <-- Replace with your ROS 2 computer IP
+    int agent_port = 8888;
+    set_microros_wifi_transports((char*)ssid, (char*)password, agent_ip, agent_port);
+    while (WiFi.status() != WL_CONNECTED) {
+      delay(50);
       Serial.print(".");
     }
-    Serial.println("\nBluetooth connected.");
+    Serial.println("\nWiFi connected: " + WiFi.localIP().toString());
+    
+    WiFi.setSleep(false);  // Keep Wi-Fi fully powered, reduces latency
+    int ch = WiFi.channel();
+    esp_wifi_set_channel(ch, WIFI_SECOND_CHAN_NONE);
   }
+  
 
-  // --- Transports through Serial Cable ---
-  if (COMM_MODE == "serial"){
-    set_microros_serial_transports(Serial);
-    Serial.println("Serial transport initialized.");
-  }
+  // //--- Transports through Bluetooth ---
+  // if (COMM_MODE == "bluetooth") {
+  //   set_microros_serial_transports(SerialBT);
+  //   SerialBT.begin("ESP32_BT");  // You can name this as you wish
+  //   while (!SerialBT.hasClient()) {
+  //     delay(100);
+  //     Serial.print(".");
+  //   }
+  //   Serial.println("\nBluetooth connected.");
+  // }
+
+  // // --- Transports through Serial Cable ---
+  // if (COMM_MODE == "serial"){
+  //   set_microros_serial_transports(Serial);
+  //   Serial.println("Serial transport initialized.");
+  // }
 }
 
 
@@ -646,9 +646,7 @@ void setup() {
   gpio_set_level(ENABLE_MOTOR_PIN,1);    // disable motor at startup
    
   // ROS2 transports setup
-  esp32_laptop_comm(); 
-    
-  
+  esp32_laptop_comm();     
         
 
   // Stepper
